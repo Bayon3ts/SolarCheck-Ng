@@ -46,18 +46,24 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
   if (!post) notFound();
 
+  interface CTAProps {
+    title?: string;
+    description?: string;
+    buttonText?: string;
+  }
+
   // MDX Components mapping can be expanded here
   const components = {
-    h1: (props: any) => <h1 className="text-3xl font-bold mt-8 mb-4 text-text-primary" {...props} />,
-    h2: (props: any) => <h2 className="text-2xl font-bold mt-8 mb-4 text-text-primary" {...props} />,
-    h3: (props: any) => <h3 className="text-xl font-bold mt-6 mb-3 text-text-primary" {...props} />,
-    p: (props: any) => <p className="text-text-muted leading-relaxed mb-6" {...props} />,
-    ul: (props: any) => <ul className="list-disc pl-6 mb-6 text-text-muted space-y-2" {...props} />,
-    ol: (props: any) => <ol className="list-decimal pl-6 mb-6 text-text-muted space-y-2" {...props} />,
-    li: (props: any) => <li {...props} />,
-    blockquote: (props: any) => <blockquote className="border-l-4 border-primary pl-4 italic text-text-primary my-6" {...props} />,
-    a: (props: any) => <a className="text-primary hover:underline underline-offset-4" {...props} />,
-    CTA: (props: any) => (
+    h1: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h1 className="text-3xl font-bold mt-8 mb-4 text-text-primary" {...props} />,
+    h2: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h2 className="text-2xl font-bold mt-8 mb-4 text-text-primary" {...props} />,
+    h3: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h3 className="text-xl font-bold mt-6 mb-3 text-text-primary" {...props} />,
+    p: (props: React.HTMLAttributes<HTMLParagraphElement>) => <p className="text-text-muted leading-relaxed mb-6" {...props} />,
+    ul: (props: React.HTMLAttributes<HTMLUListElement>) => <ul className="list-disc pl-6 mb-6 text-text-muted space-y-2" {...props} />,
+    ol: (props: React.HTMLAttributes<HTMLOListElement>) => <ol className="list-decimal pl-6 mb-6 text-text-muted space-y-2" {...props} />,
+    li: (props: React.LiHTMLAttributes<HTMLLIElement>) => <li {...props} />,
+    blockquote: (props: React.BlockquoteHTMLAttributes<HTMLQuoteElement>) => <blockquote className="border-l-4 border-primary pl-4 italic text-text-primary my-6" {...props} />,
+    a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a className="text-primary hover:underline underline-offset-4" {...props} />,
+    CTA: (props: CTAProps) => (
       <div className="bg-primary/5 border border-primary/10 rounded-2xl p-8 my-8 text-center">
         <h3 className="text-2xl font-bold text-primary-dark mb-4">{props.title || "Ready to switch to solar?"}</h3>
         <p className="text-text-muted mb-6 max-w-lg mx-auto">{props.description || "Get competitive quotes from verified installers in your area."}</p>

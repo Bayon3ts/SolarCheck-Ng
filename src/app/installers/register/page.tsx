@@ -41,7 +41,7 @@ function InstallerRegistrationForm() {
   const handleNext = () => setStep((p) => p + 1);
   const handleBack = () => setStep((p) => p - 1);
 
-  const updateField = (field: keyof typeof formData, value: any) => {
+  const updateField = (field: keyof typeof formData, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -56,7 +56,7 @@ function InstallerRegistrationForm() {
     });
   };
 
-  const processPayment = async (_installerId: string) => {
+  const processPayment = async () => {
     // In a real app, you'd initialize Paystack here
     // const paystack = new PaystackPop();
     // paystack.newTransaction({
@@ -96,7 +96,7 @@ function InstallerRegistrationForm() {
         if (formData.plan === "featured" || formData.plan === "premium") {
           // Move to payment step
           setStep(5);
-          await processPayment(data.data.id);
+          await processPayment();
         } else {
           setIsSuccess(true);
         }

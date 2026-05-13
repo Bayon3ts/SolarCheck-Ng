@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronRight, MapPin, BadgeCheck, Globe, Phone, CheckCircle2, Star } from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
 import Navbar from "@/components/layout/navbar";
@@ -108,12 +109,13 @@ export default async function InstallerProfilePage({ params }: { params: { slug:
               {/* Profile Header Card */}
               <div className="card overflow-hidden">
                 {/* Cover Image Placeholder */}
-                <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 w-full object-cover">
+                <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 w-full object-cover relative">
                   {installer.cover_image_url && (
-                    <img 
+                    <Image 
                       src={installer.cover_image_url} 
                       alt={`${installer.company_name} cover`} 
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   )}
                 </div>
@@ -121,9 +123,9 @@ export default async function InstallerProfilePage({ params }: { params: { slug:
                 <div className="p-8">
                   <div className="flex flex-col md:flex-row gap-6 items-start">
                     {/* Logo */}
-                    <div className="-mt-16 h-24 w-24 shrink-0 rounded-xl border-4 border-white bg-white shadow-md overflow-hidden">
+                    <div className="-mt-16 h-24 w-24 shrink-0 rounded-xl border-4 border-white bg-white shadow-md overflow-hidden relative">
                       {installer.logo_url ? (
-                        <img src={installer.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                        <Image src={installer.logo_url} alt="Logo" fill className="object-contain" />
                       ) : (
                         <div className="w-full h-full bg-primary flex items-center justify-center text-3xl font-bold text-white">
                           {installer.company_name.charAt(0)}

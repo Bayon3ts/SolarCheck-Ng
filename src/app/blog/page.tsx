@@ -4,7 +4,6 @@ import { ChevronRight } from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
-import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Solar Energy Guide & Blog | SolarCheck Nigeria",

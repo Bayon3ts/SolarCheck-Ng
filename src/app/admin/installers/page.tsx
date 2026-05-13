@@ -1,5 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server";
-import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function AdminInstallersPage() {

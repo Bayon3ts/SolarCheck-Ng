@@ -108,7 +108,7 @@ export default async function DashboardPage() {
         <div className="flex justify-between items-end mb-8">
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Welcome back, {installer.company_name}</h1>
-            <p className="text-text-muted mt-1">Here's what's happening with your SolarCheck profile today.</p>
+            <p className="text-text-muted mt-1">Here&apos;s what&apos;s happening with your SolarCheck profile today.</p>
           </div>
           <Button variant="outline" asChild>
             <Link href={`/installers/${installer.slug}`} target="_blank">View Public Profile</Link>

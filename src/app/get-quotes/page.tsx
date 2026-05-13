@@ -343,7 +343,7 @@ function GetQuotesForm() {
       </div>
       
       <p className="text-center text-xs text-text-muted mt-6">
-        By submitting, you agree to SolarCheck's Terms of Service and Privacy Policy.
+        By submitting, you agree to SolarCheck&apos;s Terms of Service and Privacy Policy.
       </p>
     </div>
   );
