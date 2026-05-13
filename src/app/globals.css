@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════ */
+/* SolarCheck Nigeria — Global Styles     */
+/* Design Source: Stitch Reference         */
+/* ═══════════════════════════════════════ */
+
+@layer base {
+  :root {
+    --background: #F9F8F4;
+    --foreground: #1A1A1A;
+    --primary: #0A5C36;
+    --primary-dark: #0D1B12;
+    --accent: #F5A623;
+    --surface: #FFFFFF;
+    --text-muted: #6B7280;
+    --border: #E5E7EB;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-text-primary font-sans leading-relaxed;
+  }
+
+  /* Typography hierarchy from Stitch */
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply text-3xl md:text-5xl font-bold tracking-tight;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl font-semibold;
+  }
+
+  h4 {
+    @apply text-lg font-semibold;
+  }
+
+  p {
+    @apply text-base leading-relaxed;
+  }
+}
+
+@layer components {
+  /* ── Buttons (Stitch: pill shape) ── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+      rounded-full bg-primary px-8 py-3.5
+      text-sm font-semibold text-white
+      transition-all duration-200
+      hover:bg-primary-dark hover:scale-[1.02]
+      active:scale-[0.98]
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+      rounded-full bg-accent px-8 py-3.5
+      text-sm font-semibold text-text-primary
+      transition-all duration-200
+      hover:bg-accent-dark hover:scale-[1.02]
+      active:scale-[0.98]
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2
+      rounded-full border-2 border-primary px-8 py-3
+      text-sm font-semibold text-primary
+      transition-all duration-200
+      hover:bg-primary hover:text-white hover:scale-[1.02]
+      active:scale-[0.98]
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2;
+  }
+
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2
+      rounded-full bg-text-primary px-8 py-3.5
+      text-sm font-semibold text-white
+      transition-all duration-200
+      hover:bg-black hover:scale-[1.02]
+      active:scale-[0.98];
+  }
+
+  /* ── Cards (Stitch: 16px radius, shadow-md) ── */
+  .card {
+    @apply bg-surface rounded-2xl shadow-card
+      transition-all duration-300
+      hover:shadow-card-hover;
+  }
+
+  /* ── Section padding (Stitch spacing system) ── */
+  .section-padding {
+    @apply py-20 md:py-28;
+  }
+
+  .section-padding-sm {
+    @apply py-12 md:py-16;
+  }
+
+  /* ── Container (max 1280px, Stitch spec) ── */
+  .container-custom {
+    @apply mx-auto max-w-8xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* ── Verified badge (Stitch: green pill + checkmark) ── */
+  .badge-verified {
+    @apply inline-flex items-center gap-1
+      rounded-full bg-primary/10 px-3 py-1
+      text-xs font-medium text-primary;
+  }
+
+  .badge-featured {
+    @apply inline-flex items-center gap-1
+      rounded-full bg-accent/10 px-3 py-1
+      text-xs font-medium text-accent-dark;
+  }
+
+  /* ── Tags (Stitch: text-xs, uppercase, wide spacing) ── */
+  .tag {
+    @apply inline-block rounded-full bg-gray-100 px-3 py-1
+      text-xs font-medium uppercase tracking-wide text-text-muted;
+  }
+
+  /* ── Star rating ── */
+  .star-filled {
+    @apply text-accent;
+  }
+
+  .star-empty {
+    @apply text-gray-300;
+  }
+
+  /* ── Form inputs ── */
+  .input-field {
+    @apply w-full rounded-xl border border-border bg-surface
+      px-4 py-3 text-sm text-text-primary
+      placeholder:text-text-muted
+      transition-all duration-200
+      focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+  }
+
+  .select-field {
+    @apply w-full rounded-xl border border-border bg-surface
+      px-4 py-3 text-sm text-text-primary
+      appearance-none cursor-pointer
+      transition-all duration-200
+      focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+  }
+
+  /* ── Scrollbar styling ── */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Gradient text utility */
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent;
+  }
+
+  /* Glass effect for overlays */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+
+  .glass-dark {
+    @apply bg-black/30 backdrop-blur-md border border-white/10;
+  }
+}
