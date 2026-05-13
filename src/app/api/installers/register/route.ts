@@ -8,23 +8,40 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     
+    // Helper to get string from FormData
+    const getString = (key: string) => {
+      const val = formData.get(key);
+      return typeof val === "string" ? val : "";
+    };
+
+    // Helper to get JSON from FormData
+    const getJSON = (key: string) => {
+      const val = formData.get(key);
+      if (typeof val !== "string") return [];
+      try {
+        return JSON.parse(val);
+      } catch {
+        return [];
+      }
+    };
+
     // Extract textual data
     const rawData = {
-      company_name: formData.get("company_name") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      whatsapp: (formData.get("whatsapp") as string) || undefined,
-      state: formData.get("state") as string,
-      city: formData.get("city") as string,
-      lga: (formData.get("lga") as string) || undefined,
-      address: formData.get("address") as string,
-      cac_number: (formData.get("cac_number") as string) || undefined,
-      description: formData.get("description") as string,
-      website: (formData.get("website") as string) || undefined,
-      services: JSON.parse((formData.get("services") as string) || "[]"),
-      system_sizes: JSON.parse((formData.get("system_sizes") as string) || "[]"),
-      brands_used: JSON.parse((formData.get("brands_used") as string) || "[]"),
-      plan: (formData.get("plan") as string) || "free",
+      company_name: getString("company_name"),
+      email: getString("email"),
+      phone: getString("phone"),
+      whatsapp: getString("whatsapp") || undefined,
+      state: getString("state"),
+      city: getString("city"),
+      lga: getString("lga") || undefined,
+      address: getString("address"),
+      cac_number: getString("cac_number") || undefined,
+      description: getString("description"),
+      website: getString("website") || undefined,
+      services: getJSON("services"),
+      system_sizes: getJSON("system_sizes"),
+      brands_used: getJSON("brands_used"),
+      plan: getString("plan") || "free",
     };
 
     const validation = installerRegistrationSchema.safeParse(rawData);
