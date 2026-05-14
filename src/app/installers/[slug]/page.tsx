@@ -58,7 +58,7 @@ export default async function InstallerProfilePage({ params }: { params: { slug:
   return (
     <>
       <Navbar />
-      
+
       {/* LocalBusiness JSON-LD */}
       <script
         type="application/ld+json"
@@ -111,15 +111,15 @@ export default async function InstallerProfilePage({ params }: { params: { slug:
                 {/* Cover Image Placeholder */}
                 <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 w-full object-cover relative">
                   {installer.cover_image_url && (
-                    <Image 
-                      src={installer.cover_image_url} 
-                      alt={`${installer.company_name} cover`} 
+                    <Image
+                      src={installer.cover_image_url}
+                      alt={`${installer.company_name} cover`}
                       fill
                       className="object-cover"
                     />
                   )}
                 </div>
-                
+
                 <div className="p-8">
                   <div className="flex flex-col md:flex-row gap-6 items-start">
                     {/* Logo */}
@@ -140,7 +140,7 @@ export default async function InstallerProfilePage({ params }: { params: { slug:
                           <span className="badge-verified"><BadgeCheck className="h-4 w-4" /> Verified Installer</span>
                         )}
                       </div>
-                      
+
                       <div className="mt-2 flex flex-wrap items-center gap-4 text-text-muted">
                         <div className="flex items-center gap-1">
                           <MapPin className="h-4 w-4" />
@@ -227,7 +227,7 @@ export default async function InstallerProfilePage({ params }: { params: { slug:
               {/* Contact Info Card */}
               <div className="card p-6 space-y-4">
                 <h3 className="font-bold text-text-primary">Contact Information</h3>
-                
+
                 {installer.phone && (
                   <div className="flex items-center gap-3 text-text-muted">
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -236,7 +236,7 @@ export default async function InstallerProfilePage({ params }: { params: { slug:
                     <span>{installer.phone}</span>
                   </div>
                 )}
-                
+
                 {installer.website && (
                   <div className="flex items-center gap-3 text-text-muted">
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -252,7 +252,7 @@ export default async function InstallerProfilePage({ params }: { params: { slug:
               {/* Details Card */}
               <div className="card p-6">
                 <h3 className="font-bold text-text-primary mb-4">Company Details</h3>
-                
+
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Services</h4>
