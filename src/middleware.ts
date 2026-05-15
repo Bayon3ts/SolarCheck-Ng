@@ -61,7 +61,7 @@ export async function middleware(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
-  const path = request.nextUrl.pathname
+  // ✅ Removed duplicate `const path = ...` that was here
 
   if (path.startsWith('/admin')) {
     if (!session) {
@@ -82,7 +82,6 @@ export async function middleware(request: NextRequest) {
     if (!session) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
-    // Both installer and admin can access /dashboard
   }
 
   return response

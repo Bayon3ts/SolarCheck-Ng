@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import HeroLeadForm from "@/components/forms/hero-lead-form";
 import TrustBarMarquee from "@/components/animations/trust-bar-marquee";
 
@@ -10,6 +11,9 @@ import TrustBarMarquee from "@/components/animations/trust-bar-marquee";
 /* ═══════════════════════════════════════ */
 
 export default function HeroSection() {
+  const line1Words = ["Stop", "Overpaying", "for", "Power."];
+  const line2Words = ["Find", "Out", "What", "Solar", "Really", "Costs", "You."];
+
   return (
     <section className="relative flex min-h-screen flex-col justify-center overflow-hidden">
       
@@ -57,53 +61,110 @@ export default function HeroSection() {
       />
 
       {/* Content */}
-      <div className="container-custom relative z-10 pt-32 pb-24">
+      <div className="container-custom relative z-10 pt-24 pb-16">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           {/* Left: Text */}
-          <div className="space-y-6">
-            <motion.h1
-              className="text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl lg:text-7xl"
-              initial="hidden"
-              animate="visible"
-              variants={{
-                hidden: {},
-                visible: {
-                  transition: {
-                    staggerChildren: 0.08,
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <motion.h1
+                className="text-3xl font-extrabold leading-tight tracking-tight text-white md:text-4xl lg:text-5xl"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: {},
+                  visible: {
+                    transition: {
+                      staggerChildren: 0.08,
+                    },
                   },
-                },
-              }}
-            >
-              {["Find", "Trusted", "Solar", "Installers", "Near", "You"].map(
-                (word, i) => (
-                  <motion.span
-                    key={i}
-                    className="mr-3 inline-block md:mr-4"
-                    variants={{
-                      hidden: { opacity: 0, y: 30 },
-                      visible: {
-                        opacity: 1,
-                        y: 0,
-                        transition: { duration: 0.5, ease: "easeOut" },
-                      },
-                    }}
-                  >
-                    {word}
-                  </motion.span>
-                )
-              )}
-            </motion.h1>
+                }}
+              >
+                <div className="block mb-2">
+                  {line1Words.map((word, i) => (
+                    <motion.span
+                      key={`l1-${i}`}
+                      className="mr-3 inline-block md:mr-4"
+                      variants={{
+                        hidden: { opacity: 0, y: 30 },
+                        visible: {
+                          opacity: 1,
+                          y: 0,
+                          transition: { duration: 0.5, ease: "easeOut" },
+                        },
+                      }}
+                    >
+                      {word}
+                    </motion.span>
+                  ))}
+                </div>
+                <div className="block text-[#F5A623]">
+                  {line2Words.map((word, i) => (
+                    <motion.span
+                      key={`l2-${i}`}
+                      className="mr-3 inline-block md:mr-4"
+                      variants={{
+                        hidden: { opacity: 0, y: 30 },
+                        visible: {
+                          opacity: 1,
+                          y: 0,
+                          transition: { 
+                            duration: 0.5, 
+                            ease: "easeOut",
+                            delay: 0.2 + (line1Words.length * 0.08) // Starts 0.2s after Line 1 sequence begins
+                          },
+                        },
+                      }}
+                    >
+                      {word}
+                    </motion.span>
+                  ))}
+                </div>
+              </motion.h1>
 
-            <motion.p
-              className="max-w-lg text-lg text-white/70 leading-relaxed"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-            >
-              Compare verified solar installers across Nigeria. Get free quotes, 
-              read real reviews, and find the best solar energy system for your 
-              home or business.
-            </motion.p>
+              <motion.p
+                className="max-w-lg text-lg text-white/70 leading-relaxed"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.8 }}
+              >
+                Based on your location and monthly bill — we show you exactly 
+                what solar costs and how much you save vs your generator. 
+                Free. No obligation. Results in 60 seconds.
+              </motion.p>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="space-y-4">
+              <motion.div 
+                className="flex flex-col md:flex-row items-center gap-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 1.0 }}
+              >
+                <Link
+                  href="/solar-calculator"
+                  className="w-full md:w-auto px-8 py-4 bg-[#F5A623] text-[#0D1B12] font-bold rounded-full text-base text-center transition-all duration-300 hover:brightness-110 hover:scale-[1.02] active:scale-95"
+                >
+                  Calculate My Savings →
+                </Link>
+                <Link
+                  href="/get-quotes"
+                  className="w-full md:w-auto px-8 py-4 bg-transparent text-white border-2 border-white/50 rounded-full text-base text-center transition-all duration-300 hover:border-white hover:bg-white/10 active:scale-95"
+                >
+                  Get Free Quotes
+                </Link>
+              </motion.div>
+
+              {/* Trust Line */}
+              <motion.p
+                className="text-xs md:text-sm text-white/60 mt-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 1.2 }}
+              >
+                ⚡ 500+ verified installers · ₦0 cost to homeowners · Results in 60 seconds
+              </motion.p>
+            </div>
           </div>
 
           {/* Right: Lead Form */}

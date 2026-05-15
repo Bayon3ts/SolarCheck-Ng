@@ -1,126 +1,154 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { calculatorSubmitSchema } from "@/lib/validations";
+import { z } from "zod";
 
-/* ═══════════════════════════════════════ */
-/* POST /api/calculator/submit             */
-/* Save calculator result, warm lead       */
-/* ═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════ */
+/* POST /api/calculator/submit                     */
+/* Saves full calculator submission + creates lead */
+/* ═══════════════════════════════════════════════ */
 
-// Appliance power consumption in watts (typical Nigerian usage)
-const APPLIANCE_WATTAGE: Record<string, number> = {
-  ac: 1500,
-  fridge: 200,
-  tv: 150,
-  fan: 75,
-  washing_machine: 500,
-  microwave: 1200,
-  iron: 1000,
-  water_heater: 2000,
-  lighting: 200,
-  laptop: 65,
-  desktop: 300,
-  water_pump: 750,
-};
+const submitSchema = z.object({
+  // Screen 1
+  state:           z.string().min(1),
+  monthly_bill:    z.number().min(0),
+  generator_spend: z.number().min(0).default(0),
 
-function estimateSystemSize(monthlyBill: number, appliances: Record<string, boolean>): {
-  systemSize: string;
-  costMin: number;
-  costMax: number;
-} {
-  // Estimate based on monthly bill (₦/kWh ~ ₦65 average in Nigeria)
-  const estimatedKwh = monthlyBill / 65;
-  const dailyKwh = estimatedKwh / 30;
+  // Screen 2
+  property_type: z.string().optional(),
+  appliances:    z.array(z.string()).optional(),
+  coverage_pct:  z.number().optional(),
+  autonomy_days: z.number().optional(),
+  battery_type:  z.string().optional(),
 
-  // Add appliance load
-  let totalWatts = 0;
-  for (const [appliance, selected] of Object.entries(appliances)) {
-    if (selected && APPLIANCE_WATTAGE[appliance]) {
-      totalWatts += APPLIANCE_WATTAGE[appliance];
-    }
-  }
+  // Results
+  system_pv_kwp:       z.number().optional(),
+  system_inverter_kva: z.number().optional(),
+  system_battery_kwh:  z.number().optional(),
+  cost_low:            z.number().optional(),
+  cost_mid:            z.number().optional(),
+  cost_high:           z.number().optional(),
+  monthly_savings:     z.number().optional(),
+  payback_months:      z.number().optional(),
+  five_year_savings:   z.number().optional(),
 
-  // Calculate recommended system size (with 20% headroom)
-  const applianceKva = (totalWatts / 1000) * 1.2;
-  const billBasedKva = dailyKwh / 4; // ~4 hours peak sun in Nigeria
+  // Lead data (optional — only present on final submit)
+  full_name: z.string().optional(),
+  whatsapp:  z.string().optional(),
+  timeline:  z.string().optional(),
+});
 
-  const recommendedKva = Math.max(applianceKva, billBasedKva, 1);
-
-  let systemSize: string;
-  let costMin: number;
-  let costMax: number;
-
-  if (recommendedKva <= 1.5) {
-    systemSize = "1KVA";
-    costMin = 350000;
-    costMax = 600000;
-  } else if (recommendedKva <= 2.5) {
-    systemSize = "2KVA";
-    costMin = 600000;
-    costMax = 1000000;
-  } else if (recommendedKva <= 4) {
-    systemSize = "3KVA";
-    costMin = 900000;
-    costMax = 1500000;
-  } else if (recommendedKva <= 6) {
-    systemSize = "5KVA";
-    costMin = 1500000;
-    costMax = 2500000;
-  } else if (recommendedKva <= 8.5) {
-    systemSize = "7.5KVA";
-    costMin = 2500000;
-    costMax = 4000000;
-  } else {
-    systemSize = "10KVA+";
-    costMin = 4000000;
-    costMax = 8000000;
-  }
-
-  return { systemSize, costMin, costMax };
+function billRange(bill: number): string {
+  if (bill < 15000)  return "₦5,000 - ₦15,000";
+  if (bill < 30000)  return "₦15,000 - ₦30,000";
+  if (bill < 50000)  return "₦30,000 - ₦50,000";
+  if (bill < 100000) return "₦50,000 - ₦100,000";
+  if (bill < 200000) return "₦100,000 - ₦200,000";
+  if (bill < 500000) return "₦200,000 - ₦500,000";
+  return "₦500,000+";
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const parsed = submitSchema.safeParse(body);
 
-    const validation = calculatorSubmitSchema.safeParse(body);
-    if (!validation.success) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Validation failed", details: validation.error.flatten() },
+        { success: false, error: "Validation failed", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    const data = validation.data;
-    const estimate = estimateSystemSize(data.monthly_bill, data.appliances as Record<string, boolean>);
-
+    const data = parsed.data;
     const supabase = createAdminClient();
 
-    // Save submission
-    const { error } = await supabase.from("calculator_submissions").insert({
-      monthly_bill: data.monthly_bill,
-      appliances: data.appliances,
-      estimated_system_size: estimate.systemSize,
-      estimated_cost_min: estimate.costMin,
-      estimated_cost_max: estimate.costMax,
-      state: data.state,
-      phone: data.phone || null,
-      converted_to_lead: false,
+    // ── 1. Save to calculator_submissions ──
+    const { error: calcError } = await supabase.from("calculator_submissions").insert({
+      // existing columns
+      monthly_bill:           data.monthly_bill,
+      appliances:             data.appliances ?? [],
+      estimated_system_size:  data.system_inverter_kva ? `${data.system_inverter_kva}KVA` : null,
+      estimated_cost_min:     data.cost_low ?? null,
+      estimated_cost_max:     data.cost_high ?? null,
+      state:                  data.state,
+      phone:                  data.whatsapp ?? null,
+      converted_to_lead:      false,
+
+      // new columns (added via ALTER TABLE)
+      property_type:       data.property_type ?? null,
+      coverage_pct:        data.coverage_pct  ?? null,
+      autonomy_days:       data.autonomy_days ?? null,
+      battery_type:        data.battery_type  ?? null,
+      generator_spend:     data.generator_spend,
+      system_pv_kwp:       data.system_pv_kwp      ?? null,
+      system_inverter_kva: data.system_inverter_kva ?? null,
+      system_battery_kwh:  data.system_battery_kwh  ?? null,
+      cost_low:            data.cost_low   ?? null,
+      cost_mid:            data.cost_mid   ?? null,
+      cost_high:           data.cost_high  ?? null,
+      monthly_savings:     data.monthly_savings  ?? null,
+      payback_months:      data.payback_months   ?? null,
+      five_year_savings:   data.five_year_savings ?? null,
+      full_name:           data.full_name ?? null,
+      whatsapp:            data.whatsapp  ?? null,
+      timeline:            data.timeline  ?? null,
     });
 
-    if (error) {
-      console.error("[Calculator] Save error:", error);
+    if (calcError) {
+      console.error("[Calculator] Save error:", calcError);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        system_size: estimate.systemSize,
-        cost_min: estimate.costMin,
-        cost_max: estimate.costMax,
-        monthly_savings_vs_generator: Math.round(data.monthly_bill * 0.6),
-      },
-    });
+    // ── 2. If lead data present, create lead + notify installers ──
+    if (data.full_name && data.whatsapp) {
+      try {
+        // Map timeline string to the enum the leads table expects
+        const timelineMap: Record<string, string> = {
+          "asap":        "asap",
+          "1-3months":   "1-3months",
+          "researching": "researching",
+        };
+        const mappedTimeline = timelineMap[data.timeline ?? ""] ?? "researching";
+
+        // POST to the existing /api/leads/submit endpoint (do NOT modify that file)
+        const leadPayload = {
+          full_name:            data.full_name,
+          phone:                data.whatsapp,
+          whatsapp:             data.whatsapp,
+          state:                data.state,
+          city:                 "",
+          monthly_bill_range:   billRange(data.monthly_bill),
+          system_size_interest: data.system_inverter_kva ? `${data.system_inverter_kva}KVA` : undefined,
+          timeline:             mappedTimeline,
+          lead_type:            "shared",
+        };
+
+        const leadRes = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3001"}/api/leads/submit`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(leadPayload),
+          }
+        );
+
+        if (leadRes.ok) {
+          // Mark as converted
+          await supabase
+            .from("calculator_submissions")
+            .update({ converted_to_lead: true })
+            .eq("state", data.state)
+            .eq("whatsapp", data.whatsapp)
+            .order("created_at", { ascending: false })
+            .limit(1);
+        } else {
+          console.error("[Calculator] Lead creation failed:", await leadRes.text());
+        }
+      } catch (leadErr) {
+        console.error("[Calculator] Lead error (non-fatal):", leadErr);
+      }
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[Calculator] Error:", error);
     return NextResponse.json(
