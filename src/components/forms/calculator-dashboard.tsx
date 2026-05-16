@@ -114,7 +114,7 @@ export default function CalculatorDashboard() {
 
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* Left Column - 1/3 Width */}
-        <div className="w-full lg:w-1/3 space-y-6 shrink-0 lg:sticky lg:top-24 max-h-[calc(100vh-6rem)] lg:overflow-y-auto pb-8 custom-scrollbar">
+        <div className="w-full lg:w-1/3 space-y-6 shrink-0 lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto pb-8 custom-scrollbar">
           <CalcInputSidebar
             inputs={inputs}
             onChange={updateInputs}

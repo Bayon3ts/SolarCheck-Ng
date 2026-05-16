@@ -90,6 +90,12 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <Link
+              href="/solar-calculator"
+              className="text-sm font-semibold text-accent hover:underline transition-colors"
+            >
+              Calculate Savings →
+            </Link>
           </div>
 
           {/* Desktop CTA */}
@@ -125,7 +131,7 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-white pt-20 md:hidden"
+            className="fixed inset-0 z-40 bg-white pt-20 md:hidden overflow-y-auto pb-6"
           >
             <div className="container-custom flex flex-col gap-1 py-6">
               {NAV_LINKS.map((link) => (
@@ -150,6 +156,17 @@ export default function Navbar() {
                 <Button variant="outline" size="lg" className="w-full" asChild>
                   <Link href="/for-installers">List Your Company</Link>
                 </Button>
+              </div>
+              <div className="border-t border-gray-100 mt-4 pt-4 px-5 pb-4">
+                <p className="text-xs text-gray-500 font-medium mb-2">
+                  Free solar calculator
+                </p>
+                <Link 
+                  href="/solar-calculator"
+                  className="block w-full text-center bg-primary text-white font-semibold py-3 rounded-xl text-sm"
+                >
+                  Calculate My Savings →
+                </Link>
               </div>
             </div>
           </motion.div>

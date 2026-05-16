@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import CalculatorDashboard from "@/components/forms/calculator-dashboard";
+import { CalculatorLoadingWrapper } from "@/components/ui/loading-screen";
 
 export const metadata: Metadata = {
   title: "Nigerian Solar Calculator — Size & Cost Your System | SolarCheck Nigeria",
@@ -20,22 +21,38 @@ export default function SolarCalculatorPage() {
             ☀️ Free Solar Sizing Tool
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-text-primary leading-tight">
-            How Much Does Solar Cost{" "}
-            <span className="text-primary">In Nigeria?</span>
+            Nigerian Solar Cost <br className="hidden md:block"/>
+            <span className="text-primary">and Savings Calculator</span>
           </h1>
           <p className="mt-4 text-lg text-text-muted max-w-2xl mx-auto">
-            Answer a few quick questions to get your recommended system size, real cost range,
-            and an exact breakdown of your monthly savings and payback period.
+            Using your state and monthly electricity bills, our calculator gives you an accurate
+            estimate of solar system cost, monthly savings vs generator, and payback period
+            — all based on real Nigerian market data.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-6 text-sm text-text-muted">
-            <span className="flex items-center gap-1.5">✅ Real Nigerian market prices</span>
-            <span className="flex items-center gap-1.5">✅ All 36 states supported</span>
-            <span className="flex items-center gap-1.5">✅ Advanced battery scenarios</span>
+          <p className="mt-2 text-sm font-medium text-gray-500">
+            Last updated: May 2026 · Fuel price: ₦1,000/L · NERC tariff: Band A–E
+          </p>
+          
+          <div className="flex flex-wrap items-center justify-center gap-6 mt-8 mb-6 text-sm text-gray-600">
+            <div className="flex items-center gap-1.5">
+              <span className="text-primary font-bold">500+</span>
+              <span>verified Nigerian installers</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-primary font-bold">36</span>
+              <span>states covered</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-primary font-bold">Free</span>
+              <span>for homeowners · always</span>
+            </div>
           </div>
         </div>
 
         {/* Dashboard */}
-        <CalculatorDashboard />
+        <CalculatorLoadingWrapper>
+          <CalculatorDashboard />
+        </CalculatorLoadingWrapper>
       </main>
       <Footer />
     </>
