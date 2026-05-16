@@ -127,7 +127,7 @@ export default function HeroSection() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.8 }}
               >
-                Based on your location and monthly bill — we show you exactly 
+                Based on your location and monthly bill we show you exactly 
                 what solar costs and how much you save vs your generator. 
                 Free. No obligation. Results in 60 seconds.
               </motion.p>

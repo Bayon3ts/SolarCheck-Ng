@@ -3,7 +3,9 @@
 /* Lagos market rates — Updated May 2026               */
 /* ═══════════════════════════════════════════════════ */
 
-import { CalculatorInputs, CalculatorResults, CostBand } from './types';
+import { CalculatorInputs, CalculatorResults, CostBand, RoofType } from './types';
+import { MONTHLY_PSH, DEFAULT_MONTHLY_PSH } from './irradiance';
+
 
 // ── Appliance data (client + server share) ────────────────
 export const APPLIANCES = [
@@ -17,7 +19,8 @@ export const APPLIANCES = [
     kwhPerDay: 4.4,
     note: '8hrs/day',
     category: 'Cooling',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'ac_1_5hp_inv',
@@ -28,7 +31,8 @@ export const APPLIANCES = [
     kwhPerDay: 6.0,
     note: '8hrs/day',
     category: 'Cooling',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'ac_1_5hp_std',
@@ -39,7 +43,8 @@ export const APPLIANCES = [
     kwhPerDay: 8.8,
     note: '8hrs/day',
     category: 'Cooling',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'ac_2hp_inv',
@@ -50,7 +55,8 @@ export const APPLIANCES = [
     kwhPerDay: 8.0,
     note: '8hrs/day',
     category: 'Cooling',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'ac_2hp_std',
@@ -61,7 +67,8 @@ export const APPLIANCES = [
     kwhPerDay: 12.0,
     note: '8hrs/day',
     category: 'Cooling',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'ac_3hp',
@@ -72,7 +79,8 @@ export const APPLIANCES = [
     kwhPerDay: 17.6,
     note: '8hrs/day',
     category: 'Cooling',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'air_cooler',
@@ -83,7 +91,8 @@ export const APPLIANCES = [
     kwhPerDay: 1.6,
     note: '8hrs/day',
     category: 'Cooling',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 
   // ── REFRIGERATION (25-30% of Nigerian home consumption) ──────────────
@@ -96,7 +105,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.9,
     note: 'Always on',
     category: 'Refrigeration',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'fridge_md',
@@ -107,7 +117,8 @@ export const APPLIANCES = [
     kwhPerDay: 1.5,
     note: 'Always on',
     category: 'Refrigeration',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'fridge_lg',
@@ -118,7 +129,8 @@ export const APPLIANCES = [
     kwhPerDay: 2.8,
     note: 'Always on',
     category: 'Refrigeration',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'freezer_sm',
@@ -129,7 +141,8 @@ export const APPLIANCES = [
     kwhPerDay: 1.4,
     note: 'Always on',
     category: 'Refrigeration',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'freezer_lg',
@@ -140,7 +153,8 @@ export const APPLIANCES = [
     kwhPerDay: 2.2,
     note: 'Always on',
     category: 'Refrigeration',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'fridge_comm',
@@ -151,7 +165,8 @@ export const APPLIANCES = [
     kwhPerDay: 4.5,
     note: 'Always on',
     category: 'Refrigeration',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 
   // ── LIGHTING & FANS ───────────────────────────────────────────────────
@@ -164,7 +179,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.3,
     note: '8hrs/day',
     category: 'Lighting & Fans',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'lights_8',
@@ -175,7 +191,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.6,
     note: '8hrs/day',
     category: 'Lighting & Fans',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'lights_12',
@@ -186,7 +203,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.9,
     note: '8hrs/day',
     category: 'Lighting & Fans',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'outdoor_lights',
@@ -197,7 +215,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.6,
     note: '10hrs/day',
     category: 'Lighting & Fans',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'fan_ceil',
@@ -208,7 +227,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.5,
     note: '8hrs/day',
     category: 'Lighting & Fans',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'fan_stand',
@@ -219,7 +239,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.4,
     note: '8hrs/day',
     category: 'Lighting & Fans',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 
   // ── ENTERTAINMENT ─────────────────────────────────────────────────────
@@ -232,7 +253,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.18,
     note: '6hrs/day',
     category: 'Entertainment',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'tv_32',
@@ -243,7 +265,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.24,
     note: '6hrs/day',
     category: 'Entertainment',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'tv_43',
@@ -254,7 +277,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.39,
     note: '6hrs/day',
     category: 'Entertainment',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'tv_55',
@@ -265,7 +289,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.6,
     note: '6hrs/day',
     category: 'Entertainment',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'dstv',
@@ -276,7 +301,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.18,
     note: '6hrs/day',
     category: 'Entertainment',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'sound',
@@ -287,7 +313,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.32,
     note: '4hrs/day',
     category: 'Entertainment',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 
   // ── COMPUTING & CONNECTIVITY ──────────────────────────────────────────
@@ -300,7 +327,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.36,
     note: '8hrs/day',
     category: 'Computing',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'desktop',
@@ -311,7 +339,8 @@ export const APPLIANCES = [
     kwhPerDay: 1.6,
     note: '8hrs/day',
     category: 'Computing',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'phone_chrg',
@@ -322,7 +351,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.2,
     note: 'Daily charging',
     category: 'Computing',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'router',
@@ -333,7 +363,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.24,
     note: 'Always on',
     category: 'Computing',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'printer',
@@ -344,7 +375,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.1,
     note: 'Light use',
     category: 'Computing',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 
   // ── WATER ─────────────────────────────────────────────────────────────
@@ -357,7 +389,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.75,
     note: '2hrs/day',
     category: 'Water',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'pump_1hp',
@@ -368,7 +401,8 @@ export const APPLIANCES = [
     kwhPerDay: 2.2,
     note: '3hrs/day',
     category: 'Water',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'pump_1_5hp',
@@ -379,7 +413,8 @@ export const APPLIANCES = [
     kwhPerDay: 3.3,
     note: '3hrs/day',
     category: 'Water',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'water_heater',
@@ -390,7 +425,8 @@ export const APPLIANCES = [
     kwhPerDay: 1.5,
     note: '30min/day',
     category: 'Water',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'water_dispenser',
@@ -401,7 +437,8 @@ export const APPLIANCES = [
     kwhPerDay: 1.2,
     note: 'Always on',
     category: 'Water',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 
   // ── KITCHEN ───────────────────────────────────────────────────────────
@@ -414,7 +451,8 @@ export const APPLIANCES = [
     kwhPerDay: 1.0,
     note: '1hr/day',
     category: 'Kitchen',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'electric_cooker',
@@ -425,7 +463,8 @@ export const APPLIANCES = [
     kwhPerDay: 3.0,
     note: '2hrs/day',
     category: 'Kitchen',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'induction',
@@ -436,7 +475,8 @@ export const APPLIANCES = [
     kwhPerDay: 3.0,
     note: '1.5hrs/day',
     category: 'Kitchen',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'kettle',
@@ -447,7 +487,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.75,
     note: '30min/day',
     category: 'Kitchen',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'blender',
@@ -458,7 +499,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.1,
     note: '20min/day',
     category: 'Kitchen',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'toaster',
@@ -469,7 +511,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.2,
     note: '15min/day',
     category: 'Kitchen',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'electric_oven',
@@ -480,7 +523,8 @@ export const APPLIANCES = [
     kwhPerDay: 2.0,
     note: '1hr/day',
     category: 'Kitchen',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 
   // ── LAUNDRY ───────────────────────────────────────────────────────────
@@ -493,7 +537,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.5,
     note: '3×/week avg',
     category: 'Laundry',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'iron',
@@ -504,7 +549,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.6,
     note: '30min/day',
     category: 'Laundry',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 
   // ── SECURITY ──────────────────────────────────────────────────────────
@@ -517,7 +563,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.96,
     note: 'Always on',
     category: 'Security',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'cctv_8cam',
@@ -528,7 +575,8 @@ export const APPLIANCES = [
     kwhPerDay: 1.56,
     note: 'Always on',
     category: 'Security',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'electric_gate',
@@ -539,7 +587,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.1,
     note: 'Daily use',
     category: 'Security',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'alarm',
@@ -550,7 +599,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.36,
     note: 'Always on',
     category: 'Security',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 
   // ── BUSINESS / COMMERCIAL ─────────────────────────────────────────────
@@ -563,7 +613,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.24,
     note: 'Business hrs',
     category: 'Business',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'projector',
@@ -574,7 +625,8 @@ export const APPLIANCES = [
     kwhPerDay: 1.2,
     note: '4hrs/day',
     category: 'Business',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'barbing_clippers',
@@ -585,7 +637,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.48,
     note: 'Business hrs',
     category: 'Business',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'sewing_machine',
@@ -596,7 +649,8 @@ export const APPLIANCES = [
     kwhPerDay: 1.2,
     note: 'Business hrs',
     category: 'Business',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'cold_room',
@@ -607,7 +661,8 @@ export const APPLIANCES = [
     kwhPerDay: 24.0,
     note: 'Always on',
     category: 'Business',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 
   // ── MEDICAL / SPECIAL ─────────────────────────────────────────────────
@@ -620,7 +675,8 @@ export const APPLIANCES = [
     kwhPerDay: 2.4,
     note: '8hrs/day',
     category: 'Medical',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'cpap',
@@ -631,7 +687,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.24,
     note: '8hrs/night',
     category: 'Medical',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
   {
     id: 'nebulizer',
@@ -642,7 +699,8 @@ export const APPLIANCES = [
     kwhPerDay: 0.08,
     note: 'As needed',
     category: 'Medical',
-    quantity: 1,
+    maxQuantity: 10,
+    quantity: 0,
   },
 ];
 
@@ -755,11 +813,21 @@ const LITHIUM_REPLACEMENT_YEARS    = 8;
 export const PETROL_PRICE_PER_LITRE = 1000;  // ₦/L — update monthly
 const GEN_MONTHLY_MAINTENANCE       = 15000; // ₦/month avg
 
-// ── MAIN CALCULATION FUNCTION ─────────────────────────────
+
+export const ROOF_TYPE_FACTORS: Record<RoofType, { mountingCost: number, efficiencyBonus: number }> = {
+  'flat_concrete':  { mountingCost: 0,      efficiencyBonus: 0.05 },
+  'corrugated_iron': { mountingCost: 15000,  efficiencyBonus: 0 },
+  'aluminum_deck':   { mountingCost: 20000,  efficiencyBonus: 0 },
+  'clay_tiles':      { mountingCost: 35000,  efficiencyBonus: 0 },
+  'not_sure':        { mountingCost: 20000,  efficiencyBonus: 0 },
+};
+
 export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResults {
   const {
     state, monthlyBill, generatorSpend,
     appliances, coveragePct, autonomyDays, batteryType,
+    roofType, shadeObstruction,
+    fuelInflation, nepaInflation
   } = inputs;
 
   const peakSunHours = PEAK_SUN_HOURS[state] ?? DEFAULT_PEAK_SUN;
@@ -769,9 +837,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const dailyKwhFromBill = monthlyBill / (tariff * 30);
 
   // 2. Daily kWh from appliances (if selected)
-  const dailyKwhFromAppliances = appliances.reduce(
-    (sum, id) => sum + (APPLIANCES.find(a => a.id === id)?.kwhPerDay ?? 0), 0
-  );
+  const dailyKwhFromAppliances = appliances.reduce((sum, appSelection) => {
+    const appDef = APPLIANCES.find(a => a.id === appSelection.id);
+    return sum + (appDef ? appDef.kwhPerDay * appSelection.qty : 0);
+  }, 0);
 
   // Use appliance total if entered, fallback to bill-derived
   const baseDailyKwh = dailyKwhFromAppliances > 0
@@ -782,9 +851,13 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const targetDailyKwh = baseDailyKwh * (coveragePct / 100);
 
   // 4. PV array size (kWp)
-  const systemEfficiency = 0.80;
+  const roofFactor = ROOF_TYPE_FACTORS[roofType] ?? ROOF_TYPE_FACTORS['not_sure'];
+  const shadeFactor = 1 - (shadeObstruction / 100);
+  const systemEfficiency = 0.80 * (1 + roofFactor.efficiencyBonus) * shadeFactor;
+  
   const pvKwp = targetDailyKwh / (peakSunHours * systemEfficiency);
   const pvKwpRounded = Math.ceil(pvKwp * 2) / 2;  // round to nearest 0.5
+  const panelsNeeded = Math.ceil((pvKwpRounded * 1000) / 400);
 
   // 5. Battery capacity (kWh)
   const dod = batteryType === 'lithium' ? 0.80 : 0.50;
@@ -817,38 +890,68 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     high: batteryKwhRounded * batCostPerKwh.high,
   };
 
-  // 8. Total system cost (panels + inverter + batteries + BOS + install)
+  // 8. Total system cost (panels + inverter + batteries + BOS + install + mounting)
   const equipmentLow  = panelCost.low  + invCost.low  + batteryCost.low;
   const equipmentMid  = panelCost.mid  + invCost.mid  + batteryCost.mid;
   const equipmentHigh = panelCost.high + invCost.high + batteryCost.high;
 
+  const mountingCostAmt = roofFactor.mountingCost * panelsNeeded;
+  const mountingCost: CostBand = { low: mountingCostAmt, mid: mountingCostAmt, high: mountingCostAmt };
+
   const totalCost: CostBand = {
-    low:  Math.round((equipmentLow  * (1 + BOS_FACTOR) + INSTALL_COST.low)  / 1000) * 1000,
-    mid:  Math.round((equipmentMid  * (1 + BOS_FACTOR) + INSTALL_COST.mid)  / 1000) * 1000,
-    high: Math.round((equipmentHigh * (1 + BOS_FACTOR) + INSTALL_COST.high) / 1000) * 1000,
+    low:  Math.round((equipmentLow  * (1 + BOS_FACTOR) + INSTALL_COST.low + mountingCost.low)  / 1000) * 1000,
+    mid:  Math.round((equipmentMid  * (1 + BOS_FACTOR) + INSTALL_COST.mid + mountingCost.mid)  / 1000) * 1000,
+    high: Math.round((equipmentHigh * (1 + BOS_FACTOR) + INSTALL_COST.high + mountingCost.high) / 1000) * 1000,
   };
 
-  // 9. Generator savings calculation
+  // 9. Generator & NEPA savings calculation
   const totalMonthlyGenCost = generatorSpend + GEN_MONTHLY_MAINTENANCE;
   const monthlySolarOM      = (totalCost.mid * ANNUAL_OM_PERCENT) / 12;
-  const monthlySavings      = Math.max(0, totalMonthlyGenCost - monthlySolarOM);
+  const monthlySavings      = Math.max(0, totalMonthlyGenCost + monthlyBill - monthlySolarOM); // Saving both gen & nepa depending on coverage
 
   // 10. Payback period (months)
   const paybackMonths = monthlySavings > 0
     ? Math.round(totalCost.mid / monthlySavings)
     : 0;
 
-  // 11. 5-year savings
+  // 11. 5-year and 10-year savings with inflation
   const batteryReplacement = batteryType === 'lithium'
     ? (5 >= LITHIUM_REPLACEMENT_YEARS ? batteryCost.mid : 0)
     : (5 >= LEAD_ACID_REPLACEMENT_YEARS ? batteryCost.mid : 0);
 
-  const fiveYearSavings = Math.max(0,
-    (monthlySavings * 60) - (monthlySolarOM * 60) - batteryReplacement
-  );
+  const batteryReplacement10Yr = batteryType === 'lithium'
+    ? (10 >= LITHIUM_REPLACEMENT_YEARS ? batteryCost.mid : 0)
+    : (batteryCost.mid * 3); // 3 replacements for lead-acid in 10 yrs
+
+  let fiveYearSavings = 0;
+  let tenYearSavings = 0;
+  
+  for (let year = 1; year <= 10; year++) {
+    // Apply inflation to savings
+    const inflatedGenSavings = totalMonthlyGenCost * 12 * Math.pow(1 + fuelInflation / 100, year);
+    const inflatedNepaSavings = (monthlyBill * (coveragePct/100)) * 12 * Math.pow(1 + nepaInflation / 100, year);
+    
+    const yearNet = inflatedGenSavings + inflatedNepaSavings - (monthlySolarOM * 12);
+    
+    if (year <= 5) fiveYearSavings += yearNet;
+    tenYearSavings += yearNet;
+  }
+  
+  fiveYearSavings = Math.max(0, fiveYearSavings - batteryReplacement);
+  tenYearSavings = Math.max(0, tenYearSavings - batteryReplacement10Yr);
 
   // 12. CO2 saved (kg) — 0.43 kg CO2 per kWh generator equivalent
   const co2SavedKgPerYear = Math.round(targetDailyKwh * 365 * 0.43);
+
+  // 13. Monthly Arrays
+  const pshArray = MONTHLY_PSH[state] ?? DEFAULT_MONTHLY_PSH;
+  const monthlyProductionArray = pshArray.map(h => pvKwpRounded * h * 30 * systemEfficiency);
+  const monthlyUsageArray = Array(12).fill(baseDailyKwh * 30);
+  const annualKwhProduced = monthlyProductionArray.reduce((a,b)=>a+b, 0);
+
+  // 14. LCOE
+  const genLcoe = Math.round((totalMonthlyGenCost) / (baseDailyKwh * 30));
+  const solarLcoe = Math.round(totalCost.mid / (annualKwhProduced * 25)); // over 25 yrs
 
   return {
     systemSize: {
@@ -857,6 +960,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       inverterSize,
       batteryKwh:  batteryKwhRounded,
       batteryType,
+      panelsNeeded
     },
     costs: totalCost,
     costBreakdown: {
@@ -869,6 +973,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
         high: equipmentHigh * BOS_FACTOR,
       },
       install: INSTALL_COST,
+      mounting: mountingCost
     },
     savings: {
       monthlySavings,
@@ -876,7 +981,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       monthlySolarCost:  monthlySolarOM,
       paybackMonths,
       paybackYears: (paybackMonths / 12).toFixed(1),
-      fiveYearSavings,
+      fiveYearSavings: Math.round(fiveYearSavings),
+      tenYearSavings: Math.round(tenYearSavings),
+      nepaTariffAvoided: Math.round((monthlyBill * (coveragePct/100)))
     },
     usage: {
       dailyKwh:       baseDailyKwh.toFixed(1),
@@ -884,11 +991,20 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       coveragePct,
       autonomyDays,
       peakSunHours,
+      monthlyUsageArray,
+      monthlyProductionArray
     },
     environmental: {
       co2SavedKgPerYear,
       co2SavedTonnesPerYear: (co2SavedKgPerYear / 1000).toFixed(2),
     },
+    advanced: {
+      annualKwhProduced: Math.round(annualKwhProduced),
+      genEquivalentReplaced: Math.round(targetDailyKwh * 365),
+      systemEfficiency: Math.round(systemEfficiency * 100),
+      lcoeSolar: solarLcoe,
+      lcoeGen: genLcoe
+    }
   };
 }
 

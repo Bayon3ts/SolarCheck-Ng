@@ -8,17 +8,19 @@ import { z } from "zod";
 /* ═══════════════════════════════════════════════ */
 
 const submitSchema = z.object({
-  // Screen 1
+  // Screen 1 equivalents
+  ownershipStatus: z.string().optional(),
   state:           z.string().min(1),
-  monthly_bill:    z.number().min(0),
-  generator_spend: z.number().min(0).default(0),
+  monthlyBill:     z.number().min(0),
+  generatorSpend:  z.number().min(0).default(0),
 
-  // Screen 2
-  property_type: z.string().optional(),
-  appliances:    z.array(z.string()).optional(),
-  coverage_pct:  z.number().optional(),
-  autonomy_days: z.number().optional(),
-  battery_type:  z.string().optional(),
+  // Screen 2 equivalents
+  propertyType:    z.string().optional(),
+  roofType:        z.string().optional(),
+  appliances_with_qty: z.array(z.any()).optional(),
+  coveragePct:     z.number().optional(),
+  autonomyDays:    z.number().optional(),
+  batteryType:     z.string().optional(),
 
   // Results
   system_pv_kwp:       z.number().optional(),
@@ -35,6 +37,7 @@ const submitSchema = z.object({
   full_name: z.string().optional(),
   whatsapp:  z.string().optional(),
   timeline:  z.string().optional(),
+  landlord_consent: z.boolean().optional(),
 });
 
 function billRange(bill: number): string {
@@ -65,8 +68,7 @@ export async function POST(request: NextRequest) {
     // ── 1. Save to calculator_submissions ──
     const { error: calcError } = await supabase.from("calculator_submissions").insert({
       // existing columns
-      monthly_bill:           data.monthly_bill,
-      appliances:             data.appliances ?? [],
+      monthly_bill:           data.monthlyBill,
       estimated_system_size:  data.system_inverter_kva ? `${data.system_inverter_kva}KVA` : null,
       estimated_cost_min:     data.cost_low ?? null,
       estimated_cost_max:     data.cost_high ?? null,
@@ -75,11 +77,11 @@ export async function POST(request: NextRequest) {
       converted_to_lead:      false,
 
       // new columns (added via ALTER TABLE)
-      property_type:       data.property_type ?? null,
-      coverage_pct:        data.coverage_pct  ?? null,
-      autonomy_days:       data.autonomy_days ?? null,
-      battery_type:        data.battery_type  ?? null,
-      generator_spend:     data.generator_spend,
+      property_type:       data.propertyType ?? null,
+      coverage_pct:        data.coveragePct  ?? null,
+      autonomy_days:       data.autonomyDays ?? null,
+      battery_type:        data.batteryType  ?? null,
+      generator_spend:     data.generatorSpend,
       system_pv_kwp:       data.system_pv_kwp      ?? null,
       system_inverter_kva: data.system_inverter_kva ?? null,
       system_battery_kwh:  data.system_battery_kwh  ?? null,
@@ -92,6 +94,11 @@ export async function POST(request: NextRequest) {
       full_name:           data.full_name ?? null,
       whatsapp:            data.whatsapp  ?? null,
       timeline:            data.timeline  ?? null,
+      
+      // Critical Additions
+      ownership_status:    data.ownershipStatus ?? null,
+      roof_type:           data.roofType ?? null,
+      appliances_with_qty: data.appliances_with_qty ?? [],
     });
 
     if (calcError) {
@@ -116,10 +123,12 @@ export async function POST(request: NextRequest) {
           whatsapp:             data.whatsapp,
           state:                data.state,
           city:                 "",
-          monthly_bill_range:   billRange(data.monthly_bill),
+          monthly_bill_range:   billRange(data.monthlyBill),
           system_size_interest: data.system_inverter_kva ? `${data.system_inverter_kva}KVA` : undefined,
           timeline:             mappedTimeline,
           lead_type:            "shared",
+          ownership_status:     data.ownershipStatus ?? null,
+          roof_type:            data.roofType ?? null,
         };
 
         const leadRes = await fetch(
