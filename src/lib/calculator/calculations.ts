@@ -650,6 +650,24 @@ export const IKEDC_BANDS = [
   { id: 'none',   label: 'Almost no supply',         tariff: 31.24  },
 ] as const;
 
+/**
+ * Returns the effective tariff (₦/kWh) for a given DISCO string and optional Lagos band.
+ * Single source of truth — used by both the engine and the UI.
+ */
+export function getEffectiveTariff(discoStr: string, lagosElectricityBand?: string): number {
+  if (discoStr.includes('IKEDC / EKEDC')) {
+    if (lagosElectricityBand) {
+      const band = IKEDC_BANDS.find(b => b.id === lagosElectricityBand);
+      if (band) return band.tariff;
+    }
+    // No band selected: use Band B (₦62.48) as the most common Lagos scenario
+    // ₦70 from DISCO_TARIFF is a generic estimate — never use it for Lagos
+    return 62.48;
+  }
+  const acronym = discoStr.split(' ')[0];
+  return DISCO_TARIFF[acronym] ?? 65;
+}
+
 export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResults {
   const {
     state, monthlyBill, generatorSpend,
@@ -659,21 +677,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   } = inputs;
 
   const discoStr = DISCO_BY_STATE[state] || 'Unknown';
-  let discoTariff = 200; // default
-  
-  if (discoStr.includes('IKEDC / EKEDC')) {
-    discoTariff = DISCO_TARIFF['IKEDC / EKEDC'];
-  } else {
-    // extract acronym
-    const acronym = discoStr.split(' ')[0];
-    if (DISCO_TARIFF[acronym]) discoTariff = DISCO_TARIFF[acronym];
-  }
-
-  // Override with NERC-approved band rate if Lagos band was selected
-  if (discoStr.includes('IKEDC / EKEDC') && inputs.lagosElectricityBand) {
-    const selectedBand = IKEDC_BANDS.find(b => b.id === inputs.lagosElectricityBand);
-    if (selectedBand) discoTariff = selectedBand.tariff;
-  }
+  const discoTariff = getEffectiveTariff(discoStr, inputs.lagosElectricityBand);
 
   // STEP 1 — CONVERT NEPA BILL TO kWh
   const monthlyKwhFromNepa = monthlyBill / discoTariff;

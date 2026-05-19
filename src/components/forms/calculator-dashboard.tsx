@@ -54,6 +54,7 @@ export default function CalculatorDashboard() {
 
   const results = useMemo(() => {
     if (!debouncedInputs.state || debouncedInputs.monthlyBill === 0) return null;
+    if (debouncedInputs.state === 'Lagos' && !debouncedInputs.lagosElectricityBand) return null;
     return calculateSolarSystem(debouncedInputs);
   }, [debouncedInputs]);
 
@@ -64,6 +65,10 @@ export default function CalculatorDashboard() {
   function handleCalculate() {
     if (!inputs.state) {
       alert("Please select your state first.");
+      return;
+    }
+    if (inputs.state === 'Lagos' && !inputs.lagosElectricityBand) {
+      alert("Please select your electricity supply level first.");
       return;
     }
     setHasCalculated(true);

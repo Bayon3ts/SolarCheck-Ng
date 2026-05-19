@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Minus, Plus } from "lucide-react";
 import { CalculatorInputs, OwnershipStatus, RoofType, RoofDirection, RoofPitch, PropertyType } from "@/lib/calculator/types";
 import { NIGERIAN_STATES } from "@/lib/validations";
-import { DISCO_BY_STATE, DISCO_TARIFF, APPLIANCES, PETROL_PRICE_PER_LITRE, IKEDC_BANDS } from "@/lib/calculator/calculations";
+import { DISCO_BY_STATE, APPLIANCES, PETROL_PRICE_PER_LITRE, IKEDC_BANDS, getEffectiveTariff } from "@/lib/calculator/calculations";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
@@ -98,7 +98,13 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
           <label className="block text-sm font-semibold text-text-primary">State *</label>
           <select
             value={inputs.state}
-            onChange={e => onChange({ state: e.target.value })}
+            onChange={e => {
+              const selectedState = e.target.value;
+              onChange({
+                state: selectedState,
+                lagosElectricityBand: selectedState === 'Lagos' ? 'band_b' : undefined
+              });
+            }}
             className="w-full px-4 py-3 rounded-xl border border-border bg-white text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
           >
             <option value="">Select your state</option>
@@ -106,19 +112,11 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
-          {disco && (() => {
-            let rate = 200;
-            if (disco.includes('IKEDC / EKEDC')) rate = DISCO_TARIFF['IKEDC / EKEDC'];
-            else {
-              const acr = disco.split(' ')[0];
-              if (DISCO_TARIFF[acr]) rate = DISCO_TARIFF[acr];
-            }
-            return (
-              <p className="text-xs text-primary font-medium mt-1 flex items-center gap-1">
-                Using {disco.split(' ')[0]} rate: ₦{rate}/kWh
-              </p>
-            );
-          })()}
+          {disco && !disco.includes('IKEDC / EKEDC') && (
+            <p className="text-xs text-primary font-medium mt-1 flex items-center gap-1">
+              Using {disco.split(' ')[0]} rate: ₦{getEffectiveTariff(disco).toFixed(2)}/kWh
+            </p>
+          )}
         </div>
 
         {/* 2b. Lagos Band Selector — shown only for Lagos */}
@@ -275,14 +273,18 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
           />
         </div>
 
-        {!hasCalculated && (
-          <button
-            onClick={onCalculate}
-            className="btn-primary w-full py-4 text-base font-bold shadow-lg"
-          >
-            Calculate My Solar Savings →
-          </button>
-        )}
+        {!hasCalculated && (() => {
+          const isLagosWithoutBand = inputs.state === 'Lagos' && !inputs.lagosElectricityBand;
+          return (
+            <button
+              onClick={onCalculate}
+              disabled={isLagosWithoutBand}
+              className="btn-primary w-full py-4 text-base font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLagosWithoutBand ? "Please select your electricity band" : "Calculate My Solar Savings →"}
+            </button>
+          );
+        })()}
       </div>
 
       {/* Appliances Collapsible */}

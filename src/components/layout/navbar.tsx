@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
   { href: "/solar-installers", label: "Find Installers" },
-  { href: "/solar-calculator", label: "Cost Calculator" },
   { href: "/blog", label: "Solar Guide" },
   { href: "/for-installers", label: "For Installers" },
 ];
@@ -94,7 +93,7 @@ export default function Navbar() {
               href="/solar-calculator"
               className="text-sm font-semibold text-accent hover:underline transition-colors"
             >
-              Calculate Savings →
+              Solar Calculator →
             </Link>
           </div>
 
