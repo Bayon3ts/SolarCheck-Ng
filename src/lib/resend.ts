@@ -83,7 +83,7 @@ export async function sendInstallerLeadEmail(
         <a href="https://solarcheckng.com/dashboard" style="display: inline-block; background: #0A5C36; color: white; padding: 12px 32px; border-radius: 999px; text-decoration: none; font-weight: 600; margin-top: 16px;">View in Dashboard →</a>
         <p style="color: #6B7280; font-size: 13px; margin-top: 24px;">Please respond to this lead within 2 hours for the best results.</p>
       </div>
-    </div>
+    </div> 
   `;
 
   return sendEmail({

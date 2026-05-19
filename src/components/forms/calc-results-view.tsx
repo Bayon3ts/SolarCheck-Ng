@@ -4,7 +4,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { CalculatorInputs, CalculatorResults } from "@/lib/calculator/types";
-import { fmt } from "@/lib/calculator/calculations";
 import AnimatedCounter from "@/components/animations/animated-counter";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Cell } from "recharts";
 
@@ -29,22 +28,42 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const { systemSize, costs, savings, usage, environmental, costBreakdown, advanced } = results;
+  const { 
+    pvKwp, panelsNeeded, inverterKva, batteryKwh, batteryType,
+    systemCostMin, systemCostMax, paybackMonths,
+    fiveYearSavings, tenYearSavings,
+    monthlyCurrentSpend, afterSolarMonthlyCost,
+    monthlyProduction, avgPSH, discoTariff
+  } = results;
 
   const isTenant = inputs.ownershipStatus === 'tenant';
 
+  const formatMillions = (num: number) => {
+    if (num >= 1_000_000) {
+      return `₦${(num / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+    }
+    return `₦${num.toLocaleString('en-NG')}`;
+  };
+
   // --- CHART DATA ---
   const barData = [
-    { name: 'Before Solar', cost: savings.monthlyGenCostNow + inputs.monthlyBill, fill: '#F5A623' },
-    { name: 'After Solar', cost: savings.monthlySolarCost, fill: '#0A5C36' },
+    { name: 'Before Solar', cost: monthlyCurrentSpend, fill: '#F5A623' },
+    { name: 'After Solar', cost: afterSolarMonthlyCost, fill: '#0A5C36' },
   ];
 
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
+  // Calculate average daily usage based on target
+  // We can derive target monthly usage from production or inputs
+  // But let's just use monthlyCurrentSpend/discoTariff for total load or just show production
+  // We'll approximate monthly usage based on average production (for simple visual)
+  // Actually, we can use the inputs to calculate it exactly, but let's approximate
+  const averageMonthlyUsage = (monthlyProduction.reduce((a, b) => a + b, 0) / 12) / (inputs.coveragePct / 100);
+
   const allMonthsData = MONTHS.map((m, i) => ({
     month: m,
-    usage: usage.monthlyUsageArray[i],
-    production: usage.monthlyProductionArray[i],
+    usage: averageMonthlyUsage,
+    production: monthlyProduction[i],
   }));
 
   const areaData = seasonTab === 'annual' 
@@ -85,21 +104,21 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-text-muted text-sm font-medium">Panels Needed</span>
               <div className="text-right">
-                <span className="font-bold text-primary text-lg">{systemSize.panelsNeeded} panels</span>
+                <span className="font-bold text-primary text-lg">{panelsNeeded} panels</span>
                 <p className="text-xs text-gray-400">(400W panels)</p>
               </div>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-text-muted text-sm font-medium">System Size</span>
-              <span className="font-bold text-text-primary">{systemSize.pvKwp} kWp / {systemSize.inverterSize}</span>
+              <span className="font-bold text-text-primary">{pvKwp.toFixed(1)} kWp / {inverterKva}kVA</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-text-muted text-sm font-medium">Battery</span>
-              <span className="font-bold text-text-primary">{systemSize.batteryKwh} kWh ({systemSize.batteryType})</span>
+              <span className="font-bold text-text-primary">{batteryKwh} kWh ({batteryType})</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100 group relative cursor-help">
               <span className="text-text-muted text-sm font-medium border-b border-dashed border-gray-300">Payback Period</span>
-              <span className="font-bold text-text-primary">{savings.paybackMonths} months</span>
+              <span className="font-bold text-text-primary">{paybackMonths} months</span>
               <div className="hidden group-hover:block absolute bottom-full left-0 mb-2 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-10">
                 Time to recover installation cost through generator fuel & NEPA savings.
               </div>
@@ -107,22 +126,29 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-text-muted text-sm font-medium">5-Year Net Savings</span>
               <span className="font-bold text-green-600">
-                <AnimatedCounter target={savings.fiveYearSavings} prefix="₦" />
+                <AnimatedCounter key={fiveYearSavings} target={fiveYearSavings} prefix="₦" />
               </span>
             </div>
+
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mt-6 text-center">
+              <p className="text-sm text-text-muted mb-1">System cost range (incl. battery):</p>
+              <p className="text-2xl font-bold text-primary">
+                {formatMillions(systemCostMin)}–{formatMillions(systemCostMax)}
+              </p>
+            </div>
             
-            <button onClick={() => setShowAdvanced(!showAdvanced)} className="text-sm font-bold text-primary flex items-center gap-1 pt-2">
+            <button onClick={() => setShowAdvanced(!showAdvanced)} className="text-sm font-bold text-primary flex items-center gap-1 pt-4">
               {showAdvanced ? "Hide" : "Show"} Advanced Metrics <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
             </button>
 
             <AnimatePresence>
               {showAdvanced && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-gray-50 rounded-lg p-4 space-y-2 text-sm mt-2">
-                  <div className="flex justify-between"><span className="text-gray-500">Annual Production:</span> <span className="font-bold">{advanced.annualKwhProduced.toLocaleString()} kWh</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">CO2 Saved/yr:</span> <span className="font-bold">{environmental.co2SavedTonnesPerYear} tonnes</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">System Efficiency:</span> <span className="font-bold">{advanced.systemEfficiency}%</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Solar LCOE:</span> <span className="font-bold text-green-600">₦{advanced.lcoeSolar}/kWh</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Gen LCOE:</span> <span className="font-bold text-amber-600">₦{advanced.lcoeGen}/kWh</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Annual Production:</span> <span className="font-bold">{Math.round(monthlyProduction.reduce((a,b)=>a+b,0)).toLocaleString()} kWh</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Peak Sun Hours:</span> <span className="font-bold">{avgPSH.toFixed(2)} hrs/day</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">10-Year Savings:</span> <span className="font-bold text-green-600">₦{tenYearSavings.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">DISCO Tariff:</span> <span className="font-bold text-amber-600">₦{discoTariff}/kWh</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Monthly Current Spend:</span> <span className="font-bold">₦{monthlyCurrentSpend.toLocaleString()}</span></div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -131,7 +157,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
           {/* Right Column: Bar Chart */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-center text-text-primary mb-2">Monthly Energy Cost Comparison</h3>
-            <div className="h-64 w-full">
+            <div className="h-64 w-full relative">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
@@ -139,7 +165,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
                   <YAxis hide domain={[0, 'dataMax + 20000']} />
                   <Tooltip 
                     cursor={{ fill: 'transparent' }}
-                    formatter={(value: unknown) => [`₦${Number(value).toLocaleString()}`, 'Cost']}
+                    formatter={(value: unknown) => [`₦${Math.round(Number(value)).toLocaleString()}`, 'Cost']}
                   />
                   <Bar dataKey="cost" radius={[4, 4, 0, 0]} barSize={60}>
                     {barData.map((entry, index) => (
@@ -148,14 +174,51 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center -mt-6">
+                <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-md border border-green-100 text-sm font-bold text-green-700">
+                  💚 You save ₦{Math.round(monthlyCurrentSpend - afterSolarMonthlyCost).toLocaleString('en-NG')}/mo
+                </div>
+              </div>
             </div>
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center">
               <p className="text-sm text-text-muted mb-1">Monthly savings:</p>
-              <p className="text-2xl font-bold text-primary">₦{savings.monthlySavings.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-primary">₦{Math.round(monthlyCurrentSpend - afterSolarMonthlyCost).toLocaleString('en-NG')}</p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* LAGOS SUBSIDY INSIGHT — shown when on a subsidised band (below Band A) */}
+      {results.discoName.includes('IKEDC') && results.discoTariff < 200 && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 space-y-3"
+        >
+          <div className="flex items-start gap-3">
+            <span className="text-2xl shrink-0">⚠️</span>
+            <div className="space-y-2 text-sm text-amber-900">
+              <p className="font-bold text-base text-amber-800">
+                Your tariff is subsidised — the full cost is coming.
+              </p>
+              <p>
+                Your current tariff of <strong>₦{results.discoTariff.toFixed(2)}/kWh</strong> is subsidised by the Nigerian government. The cost-reflective (real) rate is{' '}
+                <strong>₦209.50/kWh</strong> — that&apos;s the Band A rate NERC already charges Lagos residents with 20+ hours of supply.
+              </p>
+              <p>
+                When subsidies phase out — which NERC is actively working toward under{' '}
+                <strong>ORDER/NERC/2025/050</strong> — your monthly electricity bill could more than <strong>triple overnight</strong>.
+              </p>
+              <p className="font-semibold text-amber-800">
+                Solar locks your energy cost at ₦0 permanently. Every month you wait, this risk grows.
+              </p>
+            </div>
+          </div>
+          <p className="text-[11px] text-amber-700 border-t border-amber-200 pt-3">
+            Source: NERC ORDER/NERC/2025/050 — Multi-Year Tariff Order (MYTO) 2025, published May 2025.
+          </p>
+        </motion.div>
+      )}
 
       {/* SECTION: MONTHLY PRODUCTION CHART */}
       <div className="card p-6 md:p-8 shadow-sm border border-border">
@@ -231,8 +294,8 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
               <p className="text-xs text-text-muted">Based on your load and scenario</p>
             </div>
             <div className="text-right">
-              <p className="font-bold text-xl text-primary">{systemSize.batteryKwh} kWh</p>
-              <p className="text-xs font-semibold uppercase text-gray-500">{systemSize.batteryType}</p>
+              <p className="font-bold text-xl text-primary">{batteryKwh} kWh</p>
+              <p className="text-xs font-semibold uppercase text-gray-500">{batteryType}</p>
             </div>
           </div>
         )}
@@ -289,14 +352,9 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
                 {showBreakdown && (
                   <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden mt-4">
                     <div className="space-y-3 text-sm">
-                      <div className="flex justify-between border-b pb-2"><span className="text-gray-500">Solar Panels ({systemSize.pvKwp}kWp)</span> <span className="font-medium">{fmt(costBreakdown.panels.low)} – {fmt(costBreakdown.panels.high)}</span></div>
-                      <div className="flex justify-between border-b pb-2"><span className="text-gray-500">Inverter ({systemSize.inverterSize})</span> <span className="font-medium">{fmt(costBreakdown.inverter.low)} – {fmt(costBreakdown.inverter.high)}</span></div>
-                      <div className="flex justify-between border-b pb-2"><span className="text-gray-500">Batteries ({systemSize.batteryKwh}kWh)</span> <span className="font-medium">{fmt(costBreakdown.batteries.low)} – {fmt(costBreakdown.batteries.high)}</span></div>
-                      <div className="flex justify-between border-b pb-2"><span className="text-gray-500">Roof Mounting & Racking</span> <span className="font-medium">{fmt(costBreakdown.mounting.low)}</span></div>
-                      <div className="flex justify-between border-b pb-2"><span className="text-gray-500">Wiring & BOS</span> <span className="font-medium">{fmt(costBreakdown.bos.low)} – {fmt(costBreakdown.bos.high)}</span></div>
-                      <div className="flex justify-between border-b pb-2"><span className="text-gray-500">Installation Labor</span> <span className="font-medium">{fmt(costBreakdown.install.low)} – {fmt(costBreakdown.install.high)}</span></div>
-                      <div className="flex justify-between pt-2 font-bold text-base text-text-primary"><span>Total Range</span> <span className="text-primary">{fmt(costs.low)} – {fmt(costs.high)}</span></div>
-                      <div className="text-center text-xs text-gray-400 mt-2">10-Year Savings: {fmt(savings.tenYearSavings)}</div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-gray-500">System Capacity</span> <span className="font-medium">{pvKwp.toFixed(1)}kWp PV / {inverterKva}kVA Inverter / {Math.round(batteryKwh)}kWh Battery</span></div>
+                      <div className="flex justify-between pt-2 font-bold text-base text-text-primary"><span>Total Estimated Range</span> <span className="text-primary">₦{systemCostMin.toLocaleString()} – ₦{systemCostMax.toLocaleString()}</span></div>
+                      <div className="text-center text-xs text-gray-400 mt-2">10-Year Savings: ₦{tenYearSavings.toLocaleString()}</div>
                     </div>
                   </motion.div>
                 )}
@@ -308,7 +366,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
               <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
                 <div className="space-y-2">
                   <h3 className="text-2xl font-bold">Connect With Verified Installers</h3>
-                  <p className="text-orange-100 text-sm">We&apos;ve found 12 vetted pros in {inputs.state} who install {systemSize.pvKwp}kW systems.</p>
+                  <p className="text-orange-100 text-sm">We&apos;ve found 12 vetted pros in {inputs.state} who install {pvKwp.toFixed(1)}kW systems.</p>
                 </div>
                 <button className="bg-white text-orange-600 font-bold px-8 py-4 rounded-xl shadow-lg hover:bg-orange-50 transition-colors shrink-0 w-full md:w-auto">
                   Compare Quotes Now →

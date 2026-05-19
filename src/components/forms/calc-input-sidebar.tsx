@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Minus, Plus } from "lucide-react";
 import { CalculatorInputs, OwnershipStatus, RoofType, RoofDirection, RoofPitch, PropertyType } from "@/lib/calculator/types";
 import { NIGERIAN_STATES } from "@/lib/validations";
-import { DISCO_BY_STATE, APPLIANCES, PETROL_PRICE_PER_LITRE } from "@/lib/calculator/calculations";
+import { DISCO_BY_STATE, DISCO_TARIFF, APPLIANCES, PETROL_PRICE_PER_LITRE, IKEDC_BANDS } from "@/lib/calculator/calculations";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
@@ -19,6 +19,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
 
   const [showAppliances, setShowAppliances] = useState(false);
   const [openAssumptions, setOpenAssumptions] = useState<string | null>(null);
+  const [applianceSearch, setApplianceSearch] = useState("");
 
   const toggleAssumptions = (section: string) => {
     setOpenAssumptions(openAssumptions === section ? null : section);
@@ -33,7 +34,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
     const current = getQty(id);
     let next = current + delta;
     if (next < 0) next = 0;
-    if (next > (appDef.maxQuantity || 10)) next = appDef.maxQuantity || 10;
+    if (next > 20) next = 20;
 
     let newApps = [...inputs.appliances];
     if (next === 0) {
@@ -105,12 +106,52 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
-          {disco && (
-            <p className="text-xs text-primary font-medium mt-1 flex items-center gap-1">
-              Your DISCO: {disco}
-            </p>
-          )}
+          {disco && (() => {
+            let rate = 200;
+            if (disco.includes('IKEDC / EKEDC')) rate = DISCO_TARIFF['IKEDC / EKEDC'];
+            else {
+              const acr = disco.split(' ')[0];
+              if (DISCO_TARIFF[acr]) rate = DISCO_TARIFF[acr];
+            }
+            return (
+              <p className="text-xs text-primary font-medium mt-1 flex items-center gap-1">
+                Using {disco.split(' ')[0]} rate: ₦{rate}/kWh
+              </p>
+            );
+          })()}
         </div>
+
+        {/* 2b. Lagos Band Selector — shown only for Lagos */}
+        {disco?.includes('IKEDC / EKEDC') && (
+          <div className="space-y-2 mb-6">
+            <label className="block text-sm font-semibold text-text-primary">
+              How many hours of electricity do you get daily?
+            </label>
+            <select
+              value={inputs.lagosElectricityBand || ''}
+              onChange={e => onChange({ lagosElectricityBand: e.target.value || undefined })}
+              className="w-full px-4 py-3 rounded-xl border border-border bg-white text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+            >
+              <option value="">Select your electricity supply level</option>
+              {IKEDC_BANDS.map(band => (
+                <option key={band.id} value={band.id}>{band.label}</option>
+              ))}
+            </select>
+            {inputs.lagosElectricityBand && (() => {
+              const band = IKEDC_BANDS.find(b => b.id === inputs.lagosElectricityBand);
+              return band ? (
+                <div className="text-xs bg-green-50 border border-green-200 rounded-lg p-3 space-y-1">
+                  <p className="font-bold text-green-800">
+                    Your tariff: ₦{band.tariff.toFixed(2)}/kWh
+                  </p>
+                  <p className="text-green-700">
+                    NERC approved, May 2025 — ORDER/NERC/2025/050
+                  </p>
+                </div>
+              ) : null;
+            })()}
+          </div>
+        )}
 
         {/* 3. NEPA Bill */}
         <div className="space-y-3 mb-6">
@@ -273,36 +314,50 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               className="overflow-hidden border-t border-border"
             >
               <div className="p-4 space-y-6 max-h-[400px] overflow-y-auto custom-scrollbar">
-                {CATEGORIES.map(cat => (
-                  <div key={cat} className="space-y-3">
-                    <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">{cat}</h4>
-                    <div className="space-y-2">
-                      {APPLIANCES.filter(a => a.category === cat).map(app => {
-                        const qty = getQty(app.id);
-                        return (
-                          <div key={app.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
-                            <div className="flex items-center gap-3">
-                              <span className="text-xl">{app.icon}</span>
-                              <div>
-                                <p className="text-sm font-semibold text-text-primary leading-tight">{app.label}</p>
-                                <p className="text-xs text-text-muted">{app.kwhPerDay} kWh/day</p>
+                <input 
+                  type="text" 
+                  placeholder="Search appliances..." 
+                  value={applianceSearch}
+                  onChange={e => setApplianceSearch(e.target.value)}
+                  className="w-full px-4 py-2 rounded-xl border border-border text-sm outline-none focus:border-primary transition-all"
+                />
+                {CATEGORIES.map(cat => {
+                  const filteredApps = APPLIANCES.filter(a => a.category === cat && a.name.toLowerCase().includes(applianceSearch.toLowerCase()));
+                  if (filteredApps.length === 0) return null;
+                  return (
+                    <div key={cat} className="space-y-3">
+                      <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">{cat}</h4>
+                      <div className="space-y-2">
+                        {filteredApps.map(app => {
+                          const qty = getQty(app.id);
+                          return (
+                            <div key={app.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xl">{app.icon}</span>
+                                <div>
+                                  <p className="text-sm font-semibold text-text-primary leading-tight">
+                                    {app.name} 
+                                    {app.isInverter && <span className="ml-2 text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase">Inverter</span>}
+                                  </p>
+                                  <p className="text-xs text-text-muted">{app.kwhPerDay} kWh/day • {app.watts}W</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 bg-white border border-border rounded-lg p-1">
+                                <button onClick={() => updateApplianceQty(app.id, -1)} className="p-1 hover:bg-gray-100 rounded-md text-text-muted">
+                                  <Minus className="w-4 h-4" />
+                                </button>
+                                <span className="w-4 text-center text-sm font-bold">{qty}</span>
+                                <button onClick={() => updateApplianceQty(app.id, 1)} className="p-1 hover:bg-gray-100 rounded-md text-text-muted">
+                                  <Plus className="w-4 h-4" />
+                                </button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3 bg-white border border-border rounded-lg p-1">
-                              <button onClick={() => updateApplianceQty(app.id, -1)} className="p-1 hover:bg-gray-100 rounded-md text-text-muted">
-                                <Minus className="w-4 h-4" />
-                              </button>
-                              <span className="w-4 text-center text-sm font-bold">{qty}</span>
-                              <button onClick={() => updateApplianceQty(app.id, 1)} className="p-1 hover:bg-gray-100 rounded-md text-text-muted">
-                                <Plus className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </motion.div>
           )}
@@ -322,6 +377,13 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
           {openAssumptions === 'production' && (
             <div className="p-4 pt-0 space-y-4 border-t border-border mt-2">
               <div className="space-y-2 pt-2">
+                <div className="flex justify-between">
+                  <label className="text-xs font-semibold text-text-muted">Generator fuel efficiency</label>
+                  <span className="text-xs font-bold">{inputs.fuelEfficiency || 2.0} kWh/L</span>
+                </div>
+                <input type="range" min={0.5} max={5.0} step={0.1} value={inputs.fuelEfficiency || 2.0} onChange={e => onChange({ fuelEfficiency: Number(e.target.value) })} className="w-full accent-primary" />
+              </div>
+              <div className="space-y-2">
                 <div className="flex justify-between">
                   <label className="text-xs font-semibold text-text-muted">Shade/Obstruction</label>
                   <span className="text-xs font-bold">{inputs.shadeObstruction}%</span>

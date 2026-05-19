@@ -46,7 +46,7 @@ export default function CalcStickyBar({ inputs, results, onRecalculate }: Props)
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-text-primary">System:</span>
-                <span className="text-primary font-bold">{results.systemSize.pvKwp}kWp</span>
+                <span className="text-primary font-bold">{results.pvKwp.toFixed(1)}kWp</span>
               </div>
             </div>
 

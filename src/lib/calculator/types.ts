@@ -36,11 +36,15 @@ export interface CalculatorInputs {
   fuelInflation: number;
   nepaInflation: number;
   discountRate: number;
+  fuelEfficiency: number; // kWh per liter
   
   // Advanced Battery Scenarios
   batteryScenario: 'surplus' | 'overnight' | 'specific' | 'none';
   batteryType: BatteryType;
   autonomyDays: number; // For generic calculation
+
+  // Lagos-specific band selection
+  lagosElectricityBand?: string; // e.g. 'band_a', 'band_b', etc.
 }
 
 export interface CostBand {
@@ -50,53 +54,24 @@ export interface CostBand {
 }
 
 export interface CalculatorResults {
-  systemSize: {
-    pvKwp: number;
-    inverterKva: number;
-    inverterSize: string;
-    batteryKwh: number;
-    batteryType: BatteryType;
-    panelsNeeded: number;
-  };
-  costs: CostBand;
-  costBreakdown: {
-    panels:    CostBand;
-    inverter:  CostBand;
-    batteries: CostBand;
-    bos:       CostBand;
-    install:   CostBand;
-    mounting:  CostBand;
-  };
-  savings: {
-    monthlySavings: number;
-    monthlyGenCostNow: number;
-    monthlySolarCost: number;
-    paybackMonths: number;
-    paybackYears: string;
-    fiveYearSavings: number;
-    tenYearSavings: number;
-    nepaTariffAvoided: number;
-  };
-  usage: {
-    dailyKwh: string;
-    targetDailyKwh: string;
-    coveragePct: number;
-    autonomyDays: number;
-    peakSunHours: number;
-    monthlyUsageArray: number[];
-    monthlyProductionArray: number[];
-  };
-  environmental: {
-    co2SavedKgPerYear: number;
-    co2SavedTonnesPerYear: string;
-  };
-  advanced: {
-    annualKwhProduced: number;
-    genEquivalentReplaced: number;
-    systemEfficiency: number;
-    lcoeSolar: number;
-    lcoeGen: number;
-  };
+  pvKwp: number;
+  panelsNeeded: number;
+  inverterKva: number;
+  batteryKwh: number;
+  batteryType: BatteryType | 'none';
+  systemCostMin: number;
+  systemCostMax: number;
+  paybackMonths: number;
+  fiveYearSavings: number;
+  tenYearSavings: number;
+  monthlyCurrentSpend: number;
+  afterSolarMonthlyCost: number;
+  monthlyProduction: number[];
+  discoName: string;
+  discoTariff: number;
+  avgPSH: number;
+  co2SavedKgPerYear: number;
+  treesEquivalent: number;
 }
 
 export interface LeadCaptureData {
