@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import CalculatorDashboard from "@/components/forms/calculator-dashboard";
@@ -50,9 +51,15 @@ export default function SolarCalculatorPage() {
         </div>
 
         {/* Dashboard */}
-        <CalculatorLoadingWrapper>
-          <CalculatorDashboard />
-        </CalculatorLoadingWrapper>
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-text-muted">Loading calculator...</div>
+          </div>
+        }>
+          <CalculatorLoadingWrapper>
+            <CalculatorDashboard />
+          </CalculatorLoadingWrapper>
+        </Suspense>
       </main>
       <Footer />
     </>

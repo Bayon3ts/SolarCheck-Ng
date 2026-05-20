@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronDown, Minus, Plus } from "lucide-react";
 import { CalculatorInputs, OwnershipStatus, RoofType, RoofDirection, RoofPitch, PropertyType } from "@/lib/calculator/types";
 import { NIGERIAN_STATES } from "@/lib/validations";
@@ -135,6 +136,21 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                 <option key={band.id} value={band.id}>{band.label}</option>
               ))}
             </select>
+
+            <Link 
+              href="/lagos-power-bands"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-xs text-primary font-medium mt-2 hover:underline group w-fit"
+            >
+              <span className="text-sm">⚡</span>
+              <span>
+                Not sure which band you&apos;re on?
+                <span className="underline ml-1 group-hover:no-underline">
+                  Check your IKEDC feeder →
+                </span>
+              </span>
+            </Link>
             {inputs.lagosElectricityBand && (() => {
               const band = IKEDC_BANDS.find(b => b.id === inputs.lagosElectricityBand);
               return band ? (

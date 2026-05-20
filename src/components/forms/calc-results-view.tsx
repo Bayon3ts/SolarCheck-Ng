@@ -92,6 +92,24 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
 
   return (
     <div className="space-y-8">
+      {/* NEW SUBSIDY WARNING BLOCK */}
+      {inputs.state === 'Lagos' && inputs.lagosElectricityBand && inputs.lagosElectricityBand !== 'band_a' && inputs.lagosElectricityBand !== 'none' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3 items-start mb-6">
+          <span className="text-xl flex-shrink-0 mt-0.5">⚠️</span>
+          <div>
+            <p className="font-bold text-amber-900 text-sm">
+              Your electricity bill is heavily subsidised
+            </p>
+            <p className="text-amber-800 text-xs mt-1 leading-relaxed">
+              The true cost of your electricity is ₦189.90/kWh. You currently pay ₦{results.discoTariff.toFixed(2)}/kWh — the government covers the ₦{(189.90 - results.discoTariff).toFixed(2)}/kWh gap (₦27.85bn/month nationally). NERC is actively transitioning to cost-reflective tariffs. When subsidies phase out, your monthly bill could increase by up to {Math.round((189.90 / results.discoTariff - 1) * 100)}%. Solar locks your energy cost at ₦0 permanently.
+            </p>
+            <p className="text-amber-600 text-xs mt-1">
+              Source: ORDER/NERC/2025/050 — May 2025
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* SECTION: SYSTEM & SAVINGS METRICS */}
       <div className="card p-6 md:p-8 space-y-6 shadow-sm border border-border">
         <h2 className="text-2xl font-bold text-text-primary mb-6 flex items-center gap-2">
@@ -188,37 +206,6 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
         </div>
       </div>
 
-      {/* LAGOS SUBSIDY INSIGHT — shown when on a subsidised band (below Band A) */}
-      {results.discoName.includes('IKEDC') && results.discoTariff < 200 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 space-y-3"
-        >
-          <div className="flex items-start gap-3">
-            <span className="text-2xl shrink-0">⚠️</span>
-            <div className="space-y-2 text-sm text-amber-900">
-              <p className="font-bold text-base text-amber-800">
-                Your tariff is subsidised — the full cost is coming.
-              </p>
-              <p>
-                Your current tariff of <strong>₦{results.discoTariff.toFixed(2)}/kWh</strong> is subsidised by the Nigerian government. The cost-reflective (real) rate is{' '}
-                <strong>₦209.50/kWh</strong> — that&apos;s the Band A rate NERC already charges Lagos residents with 20+ hours of supply.
-              </p>
-              <p>
-                When subsidies phase out — which NERC is actively working toward under{' '}
-                <strong>ORDER/NERC/2025/050</strong> — your monthly electricity bill could more than <strong>triple overnight</strong>.
-              </p>
-              <p className="font-semibold text-amber-800">
-                Solar locks your energy cost at ₦0 permanently. Every month you wait, this risk grows.
-              </p>
-            </div>
-          </div>
-          <p className="text-[11px] text-amber-700 border-t border-amber-200 pt-3">
-            Source: NERC ORDER/NERC/2025/050 — Multi-Year Tariff Order (MYTO) 2025, published May 2025.
-          </p>
-        </motion.div>
-      )}
 
       {/* SECTION: MONTHLY PRODUCTION CHART */}
       <div className="card p-6 md:p-8 shadow-sm border border-border">

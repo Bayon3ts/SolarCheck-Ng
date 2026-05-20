@@ -69,6 +69,7 @@ export interface CalculatorResults {
   monthlyProduction: number[];
   discoName: string;
   discoTariff: number;
+  selectedBand: 'A' | 'B' | 'C' | 'D' | 'E' | null;
   avgPSH: number;
   co2SavedKgPerYear: number;
   treesEquivalent: number;

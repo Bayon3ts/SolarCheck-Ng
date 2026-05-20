@@ -618,23 +618,16 @@ export const DISCO_BY_STATE: Record<string, string> = {
 };
 
 export const DISCO_TARIFF: Record<string, number> = {
-  // Lagos
-  'IKEDC / EKEDC': 70, // Average for Lagos
-  'IKEDC': 68,
-  'EKEDC': 72,
-  // SW
   'IBEDC': 58,
-  'EEDC': 52,
-  // SE/SS
+  'EEDC':  52,
   'PHEDC': 55,
-  'BEDC': 50,
-  'AEDC': 62,
-  // North
-  'JEDC': 48,
-  'KEDC': 45,
-  'YEDC': 48,
+  'BEDC':  50,
+  'AEDC':  62,
+  'JEDC':  48,
+  'KEDC':  45,
+  'YEDC':  48,
   'KAEDCO': 43,
-  'GEDC': 42,
+  'GEDC':  42,
   'KEDCO': 40,
 };
 
@@ -654,17 +647,21 @@ export const IKEDC_BANDS = [
  * Returns the effective tariff (₦/kWh) for a given DISCO string and optional Lagos band.
  * Single source of truth — used by both the engine and the UI.
  */
-export function getEffectiveTariff(discoStr: string, lagosElectricityBand?: string): number {
-  if (discoStr.includes('IKEDC / EKEDC')) {
-    if (lagosElectricityBand) {
-      const band = IKEDC_BANDS.find(b => b.id === lagosElectricityBand);
-      if (band) return band.tariff;
-    }
-    // No band selected: use Band B (₦62.48) as the most common Lagos scenario
-    // ₦70 from DISCO_TARIFF is a generic estimate — never use it for Lagos
-    return 62.48;
+export function getEffectiveTariff(disco: string, band?: string): number {
+  // Band-specific tariffs for IKEDC/EKEDC
+  // Source: ORDER/NERC/2025/050, May 2025
+  if (disco.includes('IKEDC') || disco.includes('EKEDC')) {
+    const bandRates: Record<string, number> = {
+      'band_a': 209.50,  // 20+ hrs/day
+      'band_b': 62.48,   // 16-20 hrs/day
+      'band_c': 45.80,   // 12-16 hrs/day
+      'band_d': 31.24,   // 8-12 hrs/day
+      'band_e': 31.24,   // under 8 hrs/day
+    };
+    return (band ? bandRates[band] : undefined) ?? 62.48;
   }
-  const acronym = discoStr.split(' ')[0];
+
+  const acronym = disco.split(' ')[0];
   return DISCO_TARIFF[acronym] ?? 65;
 }
 
@@ -836,6 +833,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     monthlyProduction,
     discoName: discoStr,
     discoTariff,
+    selectedBand: inputs.lagosElectricityBand ? (inputs.lagosElectricityBand.replace('band_', '').toUpperCase() as 'A' | 'B' | 'C' | 'D' | 'E') : null,
     avgPSH,
     co2SavedKgPerYear,
     treesEquivalent

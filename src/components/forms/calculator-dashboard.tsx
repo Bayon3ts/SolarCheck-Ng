@@ -7,6 +7,8 @@ import CalcInputSidebar from "./calc-input-sidebar";
 import CalcResultsView from "./calc-results-view";
 import CalcStickyBar from "./calc-sticky-bar";
 
+import { useSearchParams } from "next/navigation";
+
 const DEFAULT_INPUTS: CalculatorInputs = {
   ownershipStatus: "owner",
   state: "",
@@ -35,6 +37,27 @@ export default function CalculatorDashboard() {
   const [hasCalculated, setHasCalculated] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  
+  const searchParams = useSearchParams();
+
+  // Read URL params on mount
+  useEffect(() => {
+    const urlState = searchParams.get("state");
+    const urlBand = searchParams.get("band");
+
+    if (urlState || urlBand) {
+      const updates: Partial<CalculatorInputs> = {};
+      if (urlState) updates.state = urlState;
+      if (urlBand) updates.lagosElectricityBand = urlBand;
+      
+      setInputs(prev => ({ ...prev, ...updates }));
+      
+      // If state is provided, we can trigger calculation immediately
+      if (urlState) {
+        setHasCalculated(true);
+      }
+    }
+  }, [searchParams]);
 
   // Debounce input changes for recalculation
   useEffect(() => {
