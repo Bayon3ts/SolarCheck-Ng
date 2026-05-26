@@ -10,6 +10,11 @@ export default async function AdminLayout({
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  const { count: pendingCount } = await supabase
+    .from("installer_applications")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending");
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -34,6 +39,15 @@ export default async function AdminLayout({
           <Link href="/admin/installers" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">
             <Users className="h-5 w-5 text-white/70" />
             <span>Installers</span>
+          </Link>
+          <Link href="/admin/applications" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">
+            <Users className="h-5 w-5 text-white/70" /> {/* Reused icon or FileText etc. Users is fine */}
+            <span>Applications</span>
+            {pendingCount !== null && pendingCount > 0 && (
+              <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5 font-semibold">
+                {pendingCount}
+              </span>
+            )}
           </Link>
           <Link href="/admin/leads" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">
             <Activity className="h-5 w-5 text-white/70" />

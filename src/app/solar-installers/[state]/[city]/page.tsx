@@ -7,6 +7,7 @@ import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import StarRating from "@/components/ui/star-rating";
+import EmptyInstallerState from "@/components/ui/empty-installer-state";
 
 // The LGA column is for matching only. One URL per unique state+city.
 export async function generateStaticParams() {
@@ -127,47 +128,51 @@ export default async function LocationPage({
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {installers?.map((installer) => (
-              <div
-                key={installer.id}
-                className="card flex flex-col justify-between overflow-hidden p-6 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1"
-              >
-                <div>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-xl font-bold text-text-primary group-hover:text-primary transition-colors">
-                        {installer.company_name}
-                      </h3>
-                      <div className="mt-2 flex items-center gap-1.5 text-sm text-text-muted">
-                        <MapPin className="h-4 w-4 shrink-0" />
-                        <span>{installer.city}, {installer.state}</span>
+          {!installers || installers.length === 0 ? (
+            <EmptyInstallerState city={city} state={state} />
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {installers.map((installer) => (
+                <div
+                  key={installer.id}
+                  className="card flex flex-col justify-between overflow-hidden p-6 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1"
+                >
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-text-primary group-hover:text-primary transition-colors">
+                          {installer.company_name}
+                        </h3>
+                        <div className="mt-2 flex items-center gap-1.5 text-sm text-text-muted">
+                          <MapPin className="h-4 w-4 shrink-0" />
+                          <span>{installer.city}, {installer.state}</span>
+                        </div>
                       </div>
+                      {installer.is_verified && (
+                        <span className="badge-verified shrink-0">Verified</span>
+                      )}
                     </div>
-                    {installer.is_verified && (
-                      <span className="badge-verified shrink-0">Verified</span>
-                    )}
+
+                    <div className="mt-4">
+                      <StarRating
+                        rating={installer.average_rating}
+                        reviewCount={installer.total_reviews}
+                        showValue
+                      />
+                    </div>
                   </div>
 
-                  <div className="mt-4">
-                    <StarRating
-                      rating={installer.average_rating}
-                      reviewCount={installer.total_reviews}
-                      showValue
-                    />
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href={`/installers/${installer.slug}`}>
+                        View Profile
+                      </Link>
+                    </Button>
                   </div>
                 </div>
-
-                <div className="mt-6 pt-6 border-t border-border">
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href={`/installers/${installer.slug}`}>
-                      View Profile
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Location SEO Content */}
           <div className="mt-20 card p-8 md:p-12">

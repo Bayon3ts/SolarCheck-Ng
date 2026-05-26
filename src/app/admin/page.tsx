@@ -9,7 +9,7 @@ export default async function AdminDashboardPage() {
     { count: leadsCount },
     { count: reviewsCount },
   ] = await Promise.all([
-    supabase.from("installers").select("*", { count: "exact", head: true }),
+    supabase.from("installer_applications").select("*", { count: "exact", head: true }),
     supabase.from("leads").select("*", { count: "exact", head: true }),
     supabase.from("reviews").select("*", { count: "exact", head: true }),
   ]);

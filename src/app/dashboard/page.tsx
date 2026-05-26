@@ -36,13 +36,17 @@ export default async function DashboardPage() {
 
   if (!installer) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="card p-8 text-center max-w-md">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">No Installers Found</h2>
-          <p className="text-text-muted mb-6">Run the database seed script to populate demo data.</p>
-          <Button asChild><Link href="/">Return Home</Link></Button>
-        </div>
+      <div className="text-center py-16">
+        <div className="text-5xl mb-4">📋</div>
+        <h3 className="text-lg font-bold text-text-primary mb-2">
+          No approved installers yet
+        </h3>
+        <p className="text-text-muted text-sm max-w-sm mx-auto mb-6">
+          Installer applications are reviewed before appearing here. Approve an application to add them to the directory.
+        </p>
+        <a href="/admin/applications" className="btn-primary px-6 py-3 inline-block">
+          Review Applications &rarr;
+        </a>
       </div>
     );
   }

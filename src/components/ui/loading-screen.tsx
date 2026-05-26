@@ -11,12 +11,12 @@ const MESSAGES = [
   'Finding verified installers nearby...',
 ]
 
-export function LoadingScreen({ 
-  isVisible, 
-  state 
-}: { 
+export function LoadingScreen({
+  isVisible,
+  state
+}: {
   isVisible: boolean
-  state?: string 
+  state?: string
 }) {
   const [messageIndex, setMessageIndex] = useState(0)
   const [progress, setProgress] = useState(0)
@@ -44,8 +44,8 @@ export function LoadingScreen({
 
   const currentMessage = state
     ? MESSAGES[messageIndex].replace(
-        'your state', state
-      )
+      'your state', state
+    )
     : MESSAGES[messageIndex]
 
   return (
@@ -63,11 +63,11 @@ export function LoadingScreen({
           <div className="flex flex-col 
             items-center gap-6 px-8 max-w-sm 
             w-full text-center">
-            
+
             <div className="relative w-24 h-24">
               <motion.div
                 animate={{ rotate: 360 }}
-                transition={{ 
+                transition={{
                   duration: 3,
                   repeat: Infinity,
                   ease: 'linear'
@@ -134,30 +134,30 @@ export function CalculatorLoadingWrapper({ children }: { children: ReactNode }) 
       e.preventDefault();
       return;
     }
-    
+
     const target = e.target as HTMLElement;
     const btn = target.closest('button');
-    
+
     if (btn && btn.textContent?.includes('Calculate My Solar Savings')) {
       if ((e.nativeEvent as MouseEvent & { _isSimulated?: boolean })._isSimulated) return;
 
       const stateSelect = document.querySelector('select') as HTMLSelectElement;
       if (!stateSelect || !stateSelect.value) {
-        return; 
+        return;
       }
-      
+
       e.preventDefault();
       e.stopPropagation();
-      
+
       setUserState(stateSelect.value);
       setIsLoading(true);
-      
+
       setTimeout(() => {
         setIsLoading(false);
         setTimeout(() => {
-            const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-            (event as MouseEvent & { _isSimulated?: boolean })._isSimulated = true;
-            btn.dispatchEvent(event);
+          const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+          (event as MouseEvent & { _isSimulated?: boolean })._isSimulated = true;
+          btn.dispatchEvent(event);
         }, 300);
       }, 3000);
     }

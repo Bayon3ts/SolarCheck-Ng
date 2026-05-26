@@ -14,7 +14,7 @@ export default async function BlogPage() {
   const supabase = createServerClient();
   const { data: posts } = await supabase
     .from("blog_posts")
-    .select("title, slug, category, created_at, excerpt")
+    .select("title, slug, category, created_at, excerpt, cover_image, cover_image_alt")
     .eq("is_published", true)
     .order("created_at", { ascending: false });
 
@@ -45,8 +45,18 @@ export default async function BlogPage() {
             {posts?.map((post) => (
               <Link key={post.slug} href={`/blog/${post.slug}`} className="group block">
                 <article className="card h-full flex flex-col overflow-hidden transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1">
-                  {/* Placeholder image */}
-                  <div className="h-48 w-full bg-gradient-to-br from-primary/10 to-primary/5 group-hover:scale-105 transition-transform duration-500"></div>
+                  {/* Cover image or fallback */}
+                  {post.cover_image ? (
+                    <img
+                      src={post.cover_image}
+                      alt={post.cover_image_alt || post.title}
+                      className="w-full h-40 object-cover rounded-t-2xl group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-40 bg-primary/10 rounded-t-2xl flex items-center justify-center text-4xl group-hover:scale-105 transition-transform duration-500">
+                      ☀️
+                    </div>
+                  )}
                   <div className="p-6 flex flex-col flex-1">
                     <div className="flex items-center justify-between mb-3">
                       <span className="tag">{post.category}</span>

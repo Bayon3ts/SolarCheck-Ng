@@ -59,6 +59,27 @@ export default function ForInstallersPage() {
           </div>
         </section>
 
+        {/* Apply CTA */}
+        <section className="container-custom pt-16 pb-4">
+          <div className="bg-accent rounded-3xl p-8 text-center mb-12">
+            <p className="text-primary-dark font-bold text-2xl mb-2">
+              Ready to get listed?
+            </p>
+            <p className="text-primary-dark/70 mb-6">
+              Applications take 5 minutes. Listings go live within 48 hours.
+            </p>
+            <Link
+              href="/for-installers/apply"
+              className="bg-primary text-white font-bold px-8 py-4 rounded-full text-lg inline-block hover:bg-primary-dark transition-colors"
+            >
+              Apply for Free Listing →
+            </Link>
+            <p className="text-primary-dark/50 text-xs mt-4">
+              Free for the first 6 months · No credit card required
+            </p>
+          </div>
+        </section>
+
         {/* Benefits Section */}
         <section className="container-custom py-20">
           <div className="text-center mb-16">
