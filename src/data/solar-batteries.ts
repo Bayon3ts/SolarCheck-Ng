@@ -170,4 +170,32 @@ export const SOLAR_BATTERIES: SolarBattery[] = [
       'Fewer dealers than Felicity/Luminous',
     ],
   },
+  {
+    slug: 'itel-energy-100ah-48v',
+    brand: 'Itel Energy',
+    model: 'IPW-51100 100Ah 48V',
+    category: 'battery',
+    type: 'Lithium Iron Phosphate',
+    chemistry: 'LFP',
+    capacityKwh: 5.12,
+    usableKwh: 5.12,
+    voltage: 48, // Operating range 40-56.8V
+    warranty: 5,
+    cycleLife: 4000,
+    dod: 100, // typically 80-100% depending on setup
+    priceMin: 900000,
+    priceMax: 1250000,
+    origin: 'CN',
+    isFeatured: false,
+    description: 'Itel Energy offers industrial-grade LiFePO4 batteries known for reliability. The IPW-51100 is a 5.12kWh system with an integrated smart BMS, supporting parallel connections for scalable residential and commercial solar installations in Nigeria.',
+    pros: [
+      'Built-in intelligent Battery Management System (BMS)',
+      'Highly scalable (supports parallel connections)',
+      'Safe and durable LFP chemistry',
+    ],
+    cons: [
+      'Premium pricing compared to budget brands',
+      'Requires compatible inverter for full comms integration',
+    ],
+  },
 ]
