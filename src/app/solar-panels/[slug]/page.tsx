@@ -6,7 +6,7 @@ import Footer from '@/components/layout/footer'
 import StarRating from '@/components/ui/star-rating'
 import ReviewForm from '@/components/equipment/ReviewForm'
 import EquipmentCard from '@/components/equipment/EquipmentCard'
-import { SOLAR_PANELS, SolarPanel } from '@/data/solar-panels'
+import { SOLAR_PANELS } from '@/data/solar-panels'
 
 interface Props {
   params: { slug: string }

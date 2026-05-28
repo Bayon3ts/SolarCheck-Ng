@@ -90,7 +90,7 @@ export default function SolarPanelsPage() {
                   🌡️ Monocrystalline vs Polycrystalline in Nigerian Heat
                 </h3>
                 <p className="text-text-muted leading-relaxed">
-                  Nigeria's average ambient temperature of 28–35°C is a real challenge for solar panels. All solar
+                  Nigeria&apos;s average ambient temperature of 28–35°C is a real challenge for solar panels. All solar
                   panels lose efficiency as temperature rises — this is called the temperature coefficient. Modern
                   monocrystalline panels (especially N-type TOPCon cells) have the best temperature coefficients,
                   meaning they lose less power in Lagos or Kano heat compared to older polycrystalline or PERC panels.
@@ -104,7 +104,7 @@ export default function SolarPanelsPage() {
                   📋 What Warranty Actually Means in Nigeria
                 </h3>
                 <p className="text-text-muted leading-relaxed">
-                  A 25-year warranty sounds great, but what matters is whether it's enforceable in Nigeria. Chinese brands
+                  A 25-year warranty sounds great, but what matters is whether it&apos;s enforceable in Nigeria. Chinese brands
                   like Jinko and Longi have established Nigerian distributors who can process warranty claims. Always purchase
                   from an authorized distributor — not from roadside markets or unverified online sellers. Ask for a
                   warranty registration certificate at purchase. Without a local distributor network, a manufacturer warranty
@@ -118,9 +118,9 @@ export default function SolarPanelsPage() {
                 </h3>
                 <p className="text-text-muted leading-relaxed">
                   Counterfeit solar panels are a serious problem in Nigeria. Common signs of a fake panel: the wattage rating
-                  is inflated (a real 550W panel weighs ~28kg — if it's lighter, be suspicious), the serial number doesn't
-                  verify on the manufacturer's website, the price is more than 30% below market rate, and the frame build feels
-                  thin or flimsy. Always check serial numbers on Jinko's website (jinkosolar.com) or Longi's verification
+                  is inflated (a real 550W panel weighs ~28kg — if it&apos;s lighter, be suspicious), the serial number doesn&apos;t
+                  verify on the manufacturer&apos;s website, the price is more than 30% below market rate, and the frame build feels
+                  thin or flimsy. Always check serial numbers on Jinko&apos;s website (jinkosolar.com) or Longi&apos;s verification
                   portal before payment. Reputable installers on SolarCheck source only from verified distributors.
                 </p>
               </div>

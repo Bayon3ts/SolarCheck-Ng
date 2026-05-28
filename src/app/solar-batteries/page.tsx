@@ -89,11 +89,11 @@ export default function SolarBatteriesPage() {
                   ⚡ Lead Acid vs Lithium in Nigeria
                 </h3>
                 <p className="text-text-muted leading-relaxed">
-                  Until 2022, most Nigerian solar systems used lead acid (tubular) batteries. They're cheaper upfront but
+                  Until 2022, most Nigerian solar systems used lead acid (tubular) batteries. They&apos;re cheaper upfront but
                   have significant drawbacks: 50% depth of discharge (you can only use half the capacity), 500–800 cycle
                   life (2–3 years of daily use), heavy water maintenance, and high replacement frequency. LFP lithium
                   batteries cost 3–4x more upfront but offer 100% depth of discharge, 3,500–6,000 cycles (8–15 years),
-                  zero maintenance, and much better performance in Nigeria's heat. For any new solar installation in 2026,
+                  zero maintenance, and much better performance in Nigeria&apos;s heat. For any new solar installation in 2026,
                   lithium is the clear choice — the lifecycle economics heavily favour LFP over tubular batteries.
                 </p>
               </div>
@@ -106,7 +106,7 @@ export default function SolarBatteriesPage() {
                   LFP (Lithium Iron Phosphate) has become the dominant battery chemistry in Nigerian residential solar for
                   three reasons: safety (no thermal runaway risk unlike NMC lithium), longevity (4,000+ cycles vs 500 for
                   lead acid), and Nigerian climate compatibility. LFP cells perform well at the high temperatures inside
-                  Nigerian equipment rooms and don't require air conditioning. The 51.2V/48V format is now the universal
+                  Nigerian equipment rooms and don&apos;t require air conditioning. The 51.2V/48V format is now the universal
                   standard — compatible with Growatt, Luminous, Deye, and virtually all inverters sold in Nigeria.
                 </p>
               </div>
@@ -127,7 +127,7 @@ export default function SolarBatteriesPage() {
 
               <div>
                 <h3 className="text-xl font-bold text-text-primary mb-3">
-                  💰 Price Guide: ₦600k vs ₦1.8M Battery — What's the Difference?
+                  💰 Price Guide: ₦600k vs ₦1.8M Battery — What&apos;s the Difference?
                 </h3>
                 <p className="text-text-muted leading-relaxed">
                   The ₦580,000–₦720,000 tier (BSL, Shoto Tier) gives you solid LFP chemistry with 4,000 cycles and

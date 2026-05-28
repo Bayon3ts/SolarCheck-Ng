@@ -89,7 +89,7 @@ export default function SolarInvertersPage() {
                   🔌 Hybrid vs Off-grid Inverters for Nigerian Grid Conditions
                 </h3>
                 <p className="text-text-muted leading-relaxed">
-                  Nigeria's grid is unreliable but not absent — most areas get 4–12 hours of NEPA daily. This makes hybrid
+                  Nigeria&apos;s grid is unreliable but not absent — most areas get 4–12 hours of NEPA daily. This makes hybrid
                   inverters the right choice for 95% of Nigerian homes. A hybrid inverter can charge batteries from both
                   solar panels AND NEPA (when available), maximising your charging time. Off-grid inverters are cut off
                   from the grid entirely — only suitable for rural areas with no NEPA access at all. Pure grid-tie inverters
@@ -104,7 +104,7 @@ export default function SolarInvertersPage() {
                 <p className="text-text-muted leading-relaxed">
                   The 5KVA inverter has become the de facto standard for middle-class Nigerian homes. It handles:
                   1–2 split AC units (1.5HP each), LED lighting throughout the house, refrigerator, TV, and phone charging
-                  simultaneously. A 3KVA inverter can't run an AC. An 8KVA costs significantly more and is overkill for
+                  simultaneously. A 3KVA inverter can&apos;t run an AC. An 8KVA costs significantly more and is overkill for
                   most homes. Most quality 5KVA hybrids (Growatt, Deye) support 4,500W of solar panels and up to 200Ah
                   of battery at 48V — which typically means 2 x 5kWh LFP batteries for overnight coverage with one AC.
                 </p>
@@ -116,10 +116,10 @@ export default function SolarInvertersPage() {
                 </h3>
                 <p className="text-text-muted leading-relaxed">
                   Growatt SPH wins on value — best app monitoring, widest battery compatibility, strong nationwide service,
-                  competitive pricing. It's the #1 choice for Nigerian installers for a reason. Luminous PCU wins on
+                  competitive pricing. It&apos;s the #1 choice for Nigerian installers for a reason. Luminous PCU wins on
                   familiarity and service network — ideal if you already have a Luminous setup or want the most accessible
-                  repair service across Nigeria. Victron MultiPlus-II wins on engineering — it's the most configurable,
-                  most reliable inverter money can buy, but at 2–3x the cost. If you're investing ₦3M+ in a solar system,
+                  repair service across Nigeria. Victron MultiPlus-II wins on engineering — it&apos;s the most configurable,
+                  most reliable inverter money can buy, but at 2–3x the cost. If you&apos;re investing ₦3M+ in a solar system,
                   the extra ₦1.5M for Victron is worth it. For most residential installations under ₦2.5M, Growatt delivers
                   the best outcome.
                 </p>
@@ -133,7 +133,7 @@ export default function SolarInvertersPage() {
                   Before signing any inverter purchase: confirm the inverter is compatible with your chosen battery voltage
                   (48V for most LFP batteries), verify the max solar input (PV input) can handle your panel array wattage,
                   check the warranty terms are backed by a Nigerian distributor (not just a manufacturer in China), ask for
-                  the installer's experience with that specific brand, and confirm the monitoring app works without constant
+                  the installer&apos;s experience with that specific brand, and confirm the monitoring app works without constant
                   internet connectivity. Avoid buying inverters from roadside electronics markets — counterfeit Growatt and
                   Luminous units are common. Only purchase from verifiable distributors.
                 </p>

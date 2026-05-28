@@ -1,8 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import StarRating from '@/components/ui/star-rating'
-
 interface ReviewFormProps {
   equipmentId: string
   equipmentName: string
