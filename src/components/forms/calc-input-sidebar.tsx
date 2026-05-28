@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronDown, Minus, Plus } from "lucide-react";
 import { CalculatorInputs, OwnershipStatus, RoofType, RoofDirection, RoofPitch, PropertyType } from "@/lib/calculator/types";
 import { NIGERIAN_STATES } from "@/lib/validations";
-import { DISCO_BY_STATE, APPLIANCES, PETROL_PRICE_PER_LITRE, IKEDC_BANDS, getEffectiveTariff } from "@/lib/calculator/calculations";
+import { DISCO_BY_STATE, APPLIANCES, IKEDC_BANDS, getEffectiveTariff, getFuelPrice, updateFuelPriceCache } from "@/lib/calculator/calculations";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
@@ -21,6 +21,22 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   const [showAppliances, setShowAppliances] = useState(false);
   const [openAssumptions, setOpenAssumptions] = useState<string | null>(null);
   const [applianceSearch, setApplianceSearch] = useState("");
+  const [fuelData, setFuelData] = useState<{
+    price: number;
+    updatedAt: string;
+    source: string;
+  }>({
+    price: 1000,
+    updatedAt: '',
+    source: '',
+  });
+
+  useEffect(() => {
+    getFuelPrice().then((data) => {
+      setFuelData(data);
+      updateFuelPriceCache(data.price);
+    });
+  }, []);
 
   const toggleAssumptions = (section: string) => {
     setOpenAssumptions(openAssumptions === section ? null : section);
@@ -447,10 +463,42 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
         </div>
       </div>
 
-      <p className="text-xs text-text-muted text-center pt-4">
-        Fuel price assumption: ₦{PETROL_PRICE_PER_LITRE.toLocaleString()}/L (petrol)<br />
-        Last updated: May 2026
-      </p>
+      {/* Live Fuel Price Badge */}
+      <div className="flex items-center justify-between text-xs text-text-muted pt-4 border-t border-border mt-4 px-2">
+        <div>
+          <span className="font-medium text-text-primary">⛽ Fuel price:</span>
+          <span className="text-primary font-bold ml-1">
+            ₦{fuelData.price.toLocaleString()}/L
+          </span>
+        </div>
+        <div className="text-right">
+          <div className="flex items-center gap-1 justify-end">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+            <a
+              href="https://fueltracker.ng"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              FuelTracker.ng
+            </a>
+          </div>
+          <div className="text-text-muted text-xs mt-0.5">
+            {fuelData.updatedAt
+              ? `Updated ${formatRelativeTime(fuelData.updatedAt)}`
+              : 'Live crowdsourced'}
+          </div>
+        </div>
+      </div>
     </div>
   );
+}
+
+function formatRelativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sun, LayoutDashboard, Users, MessageSquare, BookOpen, Activity, LogOut } from "lucide-react";
+import { Sun, LayoutDashboard, Users, MessageSquare, BookOpen, Activity, LogOut, Settings } from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
 
 export default async function AdminLayout({
@@ -64,6 +64,10 @@ export default async function AdminLayout({
           <Link href="/admin/webhooks" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">
             <Activity className="h-5 w-5 text-white/70" />
             <span>Webhooks</span>
+          </Link>
+          <Link href="/admin/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">
+            <Settings className="h-5 w-5 text-white/70" />
+            <span>Settings</span>
           </Link>
         </nav>
 

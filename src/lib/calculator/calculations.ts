@@ -3,8 +3,66 @@
 /* Lagos market rates — Updated May 2026               */
 /* ═══════════════════════════════════════════════════ */
 
+import { createClient } from '@supabase/supabase-js';
 import { CalculatorInputs, CalculatorResults } from './types';
 import { MONTHLY_PSH, DEFAULT_MONTHLY_PSH } from './irradiance';
+
+// ── Live fuel price (fetched from Supabase, falls back to constant) ────────
+let _fuelPriceCache: number = 1000; // updated by getFuelPrice()
+
+/** Call this once on client mount to sync the live price into the module cache */
+export function updateFuelPriceCache(price: number): void {
+  if (price >= 500 && price <= 5000) _fuelPriceCache = price;
+}
+
+/**
+ * Fetch the current fuel price from Supabase site_settings.
+ * Returns price, source, and updatedAt. Falls back to ₦1,000 if unreachable.
+ */
+export async function getFuelPrice(): Promise<{
+  price: number;
+  updatedAt: string;
+  source: string;
+}> {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const { data } = await supabase
+      .from('site_settings')
+      .select('key, value')
+      .in('key', [
+        'fuel_price_per_litre',
+        'fuel_price_updated_at',
+        'fuel_price_source',
+      ]);
+
+    const settings = Object.fromEntries(
+      (data || []).map((r: { key: string; value: string }) => [r.key, r.value])
+    );
+
+    const price = parseInt(settings['fuel_price_per_litre'] || '1000');
+    const validPrice = price >= 500 && price <= 5000 ? price : 1000;
+
+    // Update module-level cache so subsequent calculateSolarSystem calls use it
+    _fuelPriceCache = validPrice;
+
+    return {
+      price: validPrice,
+      updatedAt: settings['fuel_price_updated_at'] || new Date().toISOString(),
+      source: settings['fuel_price_source'] || 'Default',
+    };
+  } catch {
+    // Fallback if Supabase unreachable
+    return {
+      price: _fuelPriceCache,
+      updatedAt: new Date().toISOString(),
+      source: 'Default (offline)',
+    };
+  }
+}
 
 
 // ── Appliance data (client + server share) ────────────────
@@ -681,7 +739,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
   // STEP 2 — CONVERT GENERATOR FUEL TO kWh
   const fuelEff = inputs.fuelEfficiency || 2.0;
-  const generatorFuelLiters = generatorSpend / PETROL_PRICE_PER_LITRE;
+  // Use live price from Supabase (updated on client mount via getFuelPrice)
+  const effectiveFuelPrice = _fuelPriceCache > 0 ? _fuelPriceCache : PETROL_PRICE_PER_LITRE;
+  const generatorFuelLiters = generatorSpend / effectiveFuelPrice;
   const monthlyKwhFromGenerator = generatorFuelLiters * fuelEff;
 
   // STEP 3 — TOTAL LOAD
