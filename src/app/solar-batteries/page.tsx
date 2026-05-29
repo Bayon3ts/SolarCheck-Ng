@@ -53,6 +53,20 @@ export default function SolarBatteriesPage() {
         {/* Grid */}
         <section className="section-padding bg-background">
           <div className="container-custom">
+            <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between mb-8 gap-4 text-center md:text-left">
+              <div>
+                <span className="font-semibold text-text-primary">
+                  LFP vs Lead-Acid? Felicity vs Pylontech?
+                </span>
+                <span className="text-text-muted md:ml-2 block md:inline mt-1 md:mt-0">
+                  Compare any two batteries side by side.
+                </span>
+              </div>
+              <Link href="/compare-batteries" className="btn-primary text-sm px-5 py-2 shrink-0">
+                Compare Batteries →
+              </Link>
+            </div>
+
             <div className="mb-8 flex flex-wrap items-center gap-3">
               <p className="text-sm font-semibold text-text-primary">{SOLAR_BATTERIES.length} batteries found</p>
               <div className="flex flex-wrap gap-2 ml-auto">

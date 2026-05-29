@@ -1,0 +1,25 @@
+﻿
+C:\Users\Bayonet\SolarCheck\solarcheck-ng\src\app\admin\blog\edit\[id]\page.tsx
+  216:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Bayonet\SolarCheck\solarcheck-ng\src\app\blog\[slug]\page.tsx
+  196:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Bayonet\SolarCheck\solarcheck-ng\src\app\blog\page.tsx
+  50:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Bayonet\SolarCheck\solarcheck-ng\src\app\solar-panels\page.tsx
+  61:22  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\Bayonet\SolarCheck\solarcheck-ng\src\components\compare\CompareSelector.tsx
+  37:6  warning  React Hook useEffect has a missing dependency: 'runComparison'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Bayonet\SolarCheck\solarcheck-ng\src\components\compare\CompareTable.tsx
+  55:9  error  'display' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\Bayonet\SolarCheck\solarcheck-ng\src\components\ui\image-upload.tsx
+  103:9  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+Γ£û 7 problems (2 errors, 5 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
