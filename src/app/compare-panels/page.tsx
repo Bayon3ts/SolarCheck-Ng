@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import Navbar from '@/components/layout/navbar'
 import Footer from '@/components/layout/footer'
 import CompareSelector from '@/components/compare/CompareSelector'
@@ -141,6 +142,15 @@ export default function ComparePanelsPage() {
                 />
               </div>
             )}
+
+            <div className="flex flex-wrap gap-4 mt-16 pt-8 border-t border-border">
+              <Link href="/compare-batteries" className="text-primary font-semibold hover:underline">
+                Compare Batteries →
+              </Link>
+              <Link href="/compare-inverters" className="text-primary font-semibold hover:underline">
+                Compare Inverters →
+              </Link>
+            </div>
           </div>
         </section>
       </main>

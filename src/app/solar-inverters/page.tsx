@@ -53,6 +53,20 @@ export default function SolarInvertersPage() {
         {/* Grid */}
         <section className="section-padding bg-background">
           <div className="container-custom">
+            <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 flex items-center justify-between mb-8">
+              <div>
+                <span className="font-semibold">
+                  Growatt vs Deye? Victron vs everything?
+                </span>
+                <span className="text-text-muted ml-2">
+                  Compare any two inverters side by side.
+                </span>
+              </div>
+              <Link href="/compare-inverters" className="btn-primary text-sm px-5 py-2">
+                Compare Inverters →
+              </Link>
+            </div>
+
             <div className="mb-8 flex flex-wrap items-center gap-3">
               <p className="text-sm font-semibold text-text-primary">{SOLAR_INVERTERS.length} inverters found</p>
               <div className="flex flex-wrap gap-2 ml-auto">
