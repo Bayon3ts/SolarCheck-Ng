@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 const NAV_LINKS = [
   { href: "/solar-installers", label: "Find Installers" },
   { href: "/blog", label: "Solar Guide" },
-  { href: "/compare-inverters", label: "Compare Inverters" },
   { href: "/for-installers", label: "For Installers" },
 ];
 
