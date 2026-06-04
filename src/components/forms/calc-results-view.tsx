@@ -4,12 +4,17 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { CalculatorInputs, CalculatorResults } from "@/lib/calculator/types";
+import { ChargeControllerSpec, DaytimeHeavyAnalysis } from "@/lib/calculator/calculations";
 import AnimatedCounter from "@/components/animations/animated-counter";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Cell } from "recharts";
+import { SYSTEM_PACKAGES } from "@/data/system-packages";
 
 interface Props {
   inputs: CalculatorInputs;
-  results: CalculatorResults;
+  results: CalculatorResults & {
+    chargeController?: ChargeControllerSpec;
+    daytimeAnalysis?: DaytimeHeavyAnalysis;
+  };
   onChange: (updates: Partial<CalculatorInputs>) => void;
   leadSubmitted: boolean;
   onLeadSubmit: (lead: { full_name: string; whatsapp: string; timeline: string; landlord_consent?: boolean }) => Promise<void>;
@@ -29,12 +34,18 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
   const [formError, setFormError] = useState<string | null>(null);
 
   const { 
-    pvKwp, panelsNeeded, inverterKva, batteryKwh, batteryType,
+    pvKwp, panelsNeeded, panelSizeWatts, inverterKva, batteryKwh, batteryType,
     systemCostMin, systemCostMax, paybackMonths,
     fiveYearSavings, tenYearSavings,
     monthlyCurrentSpend, afterSolarMonthlyCost,
     monthlyProduction, avgPSH, discoTariff
   } = results;
+
+  const chargeController = results.chargeController || { type: 'none', amps: 0, reason: '', estimatedCost: 0 } as ChargeControllerSpec;
+  const daytimeAnalysis = results.daytimeAnalysis || {
+    isDaytimeHeavy: false, daytimeLoadKw: 0, nighttimeLoadKw: 0, daytimeRatio: 0,
+    recommendedPanelKw: 0, recommendedNightBatteryKwh: 0, requiresMultipleMppt: false, mpptInputsNeeded: 1, recommendedInverterNote: ''
+  } as DaytimeHeavyAnalysis;
 
   const isTenant = inputs.ownershipStatus === 'tenant';
 
@@ -123,7 +134,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
               <span className="text-text-muted text-sm font-medium">Panels Needed</span>
               <div className="text-right">
                 <span className="font-bold text-primary text-lg">{panelsNeeded} panels</span>
-                <p className="text-xs text-gray-400">(400W panels)</p>
+                <p className="text-xs text-gray-400">({panelSizeWatts}W panels)</p>
               </div>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
@@ -287,6 +298,201 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
           </div>
         )}
       </div>
+
+      {/* ── DAYTIME HEAVY ANALYSIS ── */}
+      {daytimeAnalysis.isDaytimeHeavy && (
+        <div className="bg-amber-50 border-l-4 border-amber-400 rounded-2xl p-5 my-6">
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xl">☀️</span>
+            <h3 className="font-bold text-amber-900 text-sm">
+              Daytime-Heavy Load Detected
+            </h3>
+          </div>
+
+          {/* What this means */}
+          <p className="text-sm text-amber-800 mb-4 leading-relaxed">
+            {Math.round(daytimeAnalysis.daytimeRatio * 100)}% of your power is used during 
+            daylight hours (6am–6pm). This means you can run a 
+            <strong> larger solar array</strong> to handle heavy daytime loads directly, 
+            while keeping a <strong> smaller battery bank</strong> just for nighttime 
+            essentials — saving money on battery cost.
+          </p>
+
+          {/* Two-column split: day vs night */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            {/* Daytime */}
+            <div className="bg-white rounded-xl p-3 border border-amber-200">
+              <p className="text-xs font-bold text-amber-700 mb-2 uppercase tracking-wide">
+                ☀️ Daytime (Solar Direct)
+              </p>
+              <p className="text-lg font-black text-text-primary">
+                {daytimeAnalysis.daytimeLoadKw.toFixed(1)}kW
+              </p>
+              <p className="text-xs text-text-muted">
+                avg daytime load
+              </p>
+              <p className="text-xs font-semibold text-primary mt-2">
+                {daytimeAnalysis.recommendedPanelKw.toFixed(1)}kW panels recommended
+              </p>
+            </div>
+
+            {/* Nighttime */}
+            <div className="bg-white rounded-xl p-3 border border-amber-200">
+              <p className="text-xs font-bold text-amber-700 mb-2 uppercase tracking-wide">
+                🌙 Nighttime (Battery)
+              </p>
+              <p className="text-lg font-black text-text-primary">
+                {daytimeAnalysis.nighttimeLoadKw.toFixed(1)}kW
+              </p>
+              <p className="text-xs text-text-muted">
+                avg nighttime load
+              </p>
+              <p className="text-xs font-semibold text-primary mt-2">
+                {daytimeAnalysis.recommendedNightBatteryKwh.toFixed(1)}kWh battery sufficient
+              </p>
+            </div>
+          </div>
+
+          {/* Multiple MPPT warning */}
+          {daytimeAnalysis.requiresMultipleMppt && (
+            <div className="bg-white border border-amber-300 rounded-xl p-3 mb-3">
+              <p className="text-xs font-bold text-orange-700 mb-1">
+                ⚠️ Multiple PV Inputs Required
+              </p>
+              <p className="text-xs text-text-muted leading-relaxed">
+                Your panel array ({daytimeAnalysis.recommendedPanelKw.toFixed(1)}kW) 
+                is too large for a single MPPT input. You need an inverter with{' '}
+                <strong>{daytimeAnalysis.mpptInputsNeeded} MPPT inputs</strong>.
+              </p>
+              {daytimeAnalysis.panelStringSplit && (
+                <p className="text-xs font-mono text-primary mt-1 bg-primary/5 rounded px-2 py-1">
+                  Panel split: {daytimeAnalysis.panelStringSplit}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Inverter recommendation */}
+          {daytimeAnalysis.recommendedInverterNote && (
+            <p className="text-xs text-amber-800 italic leading-relaxed">
+              💡 {daytimeAnalysis.recommendedInverterNote}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── COMPONENT BREAKDOWN (micro / basic / starter) ── */}
+      {(inputs.systemTier === 'micro' || inputs.systemTier === 'basic' || inputs.systemTier === 'starter') && (() => {
+        const pkg = SYSTEM_PACKAGES[inputs.systemTier];
+        const total = Object.values(pkg.componentBreakdown).reduce((s, i) => s + i.cost, 0) + (chargeController.estimatedCost || 0);
+        return (
+          <div className="bg-white rounded-2xl border border-border p-6">
+            <h3 className="font-bold text-text-primary text-lg mb-4 flex items-center gap-2">
+              <span>{pkg.emoji}</span> Estimated Component Costs
+            </h3>
+
+            <div className="space-y-3">
+              {Object.entries(pkg.componentBreakdown).map(([key, item]) => (
+                <div key={key}>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-text-primary">{item.description}</p>
+                    <p className="text-sm font-bold text-text-primary tabular-nums ml-4 flex-shrink-0">
+                      ₦{item.cost.toLocaleString()}
+                    </p>
+                  </div>
+                  {key === 'inverter' && chargeController.type !== 'none' && (
+                    <div className="flex items-start justify-between py-3 border-b border-border">
+                      <div className="flex-1 pr-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-semibold text-text-primary">
+                            Charge Controller
+                          </span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${chargeController.type === 'MPPT' ? 'bg-primary/10 text-primary' : 'bg-amber-100 text-amber-700'}`}>
+                            {chargeController.type}{' · '}{chargeController.amps}A
+                          </span>
+                        </div>
+                        <p className="text-xs text-text-muted leading-relaxed">
+                          {chargeController.reason}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-bold text-text-primary">
+                          ₦{chargeController.estimatedCost.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-text-muted">estimated</p>
+                      </div>
+                    </div>
+                  )}
+                  {key === 'inverter' && chargeController.type === 'none' && (
+                    <div className="flex items-center gap-2 py-2 text-xs text-green-700 mt-2">
+                      <span>✓</span>
+                      <span>MPPT charge controller built into your hybrid inverter — no separate unit needed</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Total */}
+            <div className="mt-4 pt-4 border-t border-border flex justify-between">
+              <p className="font-bold text-text-primary">Total Estimate</p>
+              <p className="font-bold text-primary text-lg">₦{total.toLocaleString()}</p>
+            </div>
+
+            <p className="text-xs text-text-muted mt-3">
+              * Prices are Lagos market estimates (May 2026). Final price depends on your installer and exact brands chosen.
+            </p>
+
+            {/* Monthly savings estimate */}
+            <div className="mt-4 bg-green-50 border border-green-100 rounded-xl p-4 flex justify-between items-center">
+              <div>
+                <p className="text-sm font-semibold text-green-800">Estimated Monthly Savings</p>
+                <p className="text-xs text-green-700 mt-0.5">Based on average generator + NEPA spend</p>
+              </div>
+              <p className="text-sm font-bold text-green-700">
+                ₦{pkg.monthlySavingsMin.toLocaleString()}–₦{pkg.monthlySavingsMax.toLocaleString()}
+              </p>
+            </div>
+
+            {/* Payback cross-check */}
+            <div className="mt-3 bg-primary/5 border border-primary/10 rounded-xl p-4 flex justify-between items-center">
+              <p className="text-sm font-semibold text-text-primary">Typical Payback Period</p>
+              <p className="text-sm font-bold text-primary">~{pkg.paybackYears} years</p>
+            </div>
+
+            {/* DIY tip for micro/basic */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
+              <p className="text-sm text-amber-800">
+                <strong>💡 Tip for {pkg.label} systems:</strong>{' '}
+                For this size, you don&apos;t need a professional installer. Many Nigerians set up {pkg.label.toLowerCase()} systems themselves.
+                However, we still recommend getting a quick check from a local electrician for ₦5,000–₦15,000.
+              </p>
+            </div>
+
+            {/* Micro-specific runtime note */}
+            {inputs.systemTier === 'micro' && (
+              <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>⚡ Runtime note:</strong> Your {pkg.panelWatts}W panel will generate approx.
+                  {' '}<strong>{pkg.dailyOutputKwh} kWh/day</strong> in Lagos sun.
+                  That keeps your lights and fan running for ~{pkg.hoursBackup} hours on battery overnight.
+                </p>
+              </div>
+            )}
+
+            {/* Basic: charge controller tip */}
+            {inputs.systemTier === 'basic' && (
+              <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>💡 Cost tip:</strong> For a {pkg.panelWatts}W / 24V system like this, a PWM charge controller
+                  (₦8,000–₦15,000) works well and costs less than MPPT. Ask your installer for the PWM option.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* LEAD GATE */}
       <AnimatePresence mode="wait">

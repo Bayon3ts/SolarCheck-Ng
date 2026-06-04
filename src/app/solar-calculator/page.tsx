@@ -11,6 +11,8 @@ export const metadata: Metadata = {
     "Free solar calculator for Nigeria. Enter your electricity bill and appliances to get your recommended system size, exact cost range, and payback period in under 2 minutes.",
 };
 
+import DynamicPriceHeader from "@/components/calculator/dynamic-price-header";
+
 export default function SolarCalculatorPage() {
   return (
     <>
@@ -30,9 +32,7 @@ export default function SolarCalculatorPage() {
             estimate of solar system cost, monthly savings vs generator, and payback period
             — all based on real Nigerian market data.
           </p>
-          <p className="mt-2 text-sm font-medium text-gray-500">
-            Last updated: May 2026 · Fuel price: ₦1,000/L · NERC tariff: Band A–E
-          </p>
+          <DynamicPriceHeader />
           
           <div className="flex flex-wrap items-center justify-center gap-6 mt-8 mb-6 text-sm text-gray-600">
             <div className="flex items-center gap-1.5">

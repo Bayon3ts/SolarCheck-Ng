@@ -6,6 +6,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { CalculatorInputs, CalculatorResults } from './types';
 import { MONTHLY_PSH, DEFAULT_MONTHLY_PSH } from './irradiance';
+import { SYSTEM_PACKAGES } from '@/data/system-packages';
 
 // ── Live fuel price (fetched from Supabase, falls back to constant) ────────
 let _fuelPriceCache: number = 1000; // updated by getFuelPrice()
@@ -723,6 +724,201 @@ export function getEffectiveTariff(disco: string, band?: string): number {
   return DISCO_TARIFF[acronym] ?? 65;
 }
 
+// ── Charge Controller ──────────────────────────────────────────
+export type ChargeControllerType = 
+  | 'none'   // hybrid inverter — built in
+  | 'PWM'    // small off-grid systems
+  | 'MPPT'   // larger off-grid systems
+
+export interface ChargeControllerSpec {
+  type: ChargeControllerType
+  amps: number          // e.g. 40
+  reason: string        // explanation string
+  estimatedCost: number // ₦
+}
+
+/**
+ * Determines whether a separate charge 
+ * controller is needed and what spec.
+ *
+ * Hybrid inverters have built-in MPPT —
+ * no external controller needed.
+ * Off-grid / PCU inverters need a 
+ * separate controller wired between 
+ * the panels and the battery bank.
+ */
+export function getChargeControllerSpec(
+  inverterType: 'hybrid' | 'off-grid' | 
+                'pcu' | 'on-grid',
+  totalPanelWatts: number,
+  batteryVoltage: 12 | 24 | 48
+): ChargeControllerSpec {
+
+  // Hybrid inverters have built-in MPPT
+  if (inverterType === 'hybrid' || 
+      inverterType === 'on-grid') {
+    return {
+      type: 'none',
+      amps: 0,
+      reason: 'Hybrid inverter has built-in MPPT charge controller — no separate unit needed.',
+      estimatedCost: 0,
+    }
+  }
+
+  // Calculate required amps
+  // Add 25% safety margin (standard practice)
+  const requiredAmps = Math.ceil(
+    (totalPanelWatts / batteryVoltage) * 1.25
+  )
+
+  // PWM for small 12V systems only
+  // (PWM wastes power on 24V/48V systems)
+  const usePWM = 
+    batteryVoltage === 12 && 
+    totalPanelWatts <= 300
+
+  if (usePWM) {
+    // Round up to nearest standard PWM size
+    const pwmSize = requiredAmps <= 10 ? 10
+      : requiredAmps <= 20 ? 20
+      : 30
+
+    // Nigerian market pricing for PWM
+    const pwmCost = pwmSize <= 10 ? 15000
+      : pwmSize <= 20 ? 22000
+      : 35000
+
+    return {
+      type: 'PWM',
+      amps: pwmSize,
+      reason: `${pwmSize}A PWM charge controller required. Your off-grid inverter does not have a built-in solar charge controller. PWM is suitable for this small 12V system.`,
+      estimatedCost: pwmCost,
+    }
+  }
+
+  // MPPT for all other off-grid systems
+  // Round up to nearest standard MPPT size
+  const mpptSize = 
+    requiredAmps <= 20 ? 20
+    : requiredAmps <= 30 ? 30
+    : requiredAmps <= 40 ? 40
+    : requiredAmps <= 60 ? 60
+    : requiredAmps <= 80 ? 80
+    : 100
+
+  // Nigerian market pricing for MPPT
+  // (Victron, EPever, Renogy are common brands)
+  const mpptCost = 
+    mpptSize <= 20 ? 45000
+    : mpptSize <= 30 ? 65000
+    : mpptSize <= 40 ? 95000
+    : mpptSize <= 60 ? 175000
+    : mpptSize <= 80 ? 250000
+    : 350000
+
+  return {
+    type: 'MPPT',
+    amps: mpptSize,
+    reason: `${mpptSize}A MPPT charge controller required. Your off-grid inverter has no built-in solar controller. MPPT is essential for 24V/48V systems — it recovers 10-30% more solar energy than PWM in Nigeria's climate.`,
+    estimatedCost: mpptCost,
+  }
+}
+
+// ── Daytime Heavy Analysis ──────────────────────────────────────
+export interface DaytimeHeavyAnalysis {
+  isDaytimeHeavy: boolean
+  daytimeLoadKw: number
+  nighttimeLoadKw: number
+  daytimeRatio: number    // e.g. 0.78 = 78% of load is daytime
+  recommendedPanelKw: number  // for daytime load
+  recommendedNightBatteryKwh: number // minimum for night
+  requiresMultipleMppt: boolean
+  mpptInputsNeeded: number
+  recommendedInverterNote: string
+  panelStringSplit?: string  // e.g. "2 strings of 4 panels"
+}
+
+/**
+ * Detects whether the user's load 
+ * pattern favours a daytime-heavy 
+ * solar setup — large panel array 
+ * for direct daytime use, small battery 
+ * bank covering only nighttime essentials.
+ */
+export function analyzeDaytimeLoad(
+  appliances: Array<{
+    name: string
+    watts: number
+    quantity: number
+    hoursPerDay: number
+    daytimeHours: number
+  }>,
+  totalPanelWatts: number,
+  singleMpptMaxW: number = 5500
+): DaytimeHeavyAnalysis {
+
+  let daytimeKwh = 0
+  let nighttimeKwh = 0
+
+  appliances.forEach(a => {
+    const totalWh = a.watts * a.quantity * a.hoursPerDay
+    const daytimeWh = a.watts * a.quantity * a.daytimeHours
+    const nighttimeWh = totalWh - daytimeWh
+
+    daytimeKwh += daytimeWh / 1000
+    nighttimeKwh += nighttimeWh / 1000
+  })
+
+  const totalKwh = daytimeKwh + nighttimeKwh
+  const daytimeRatio = totalKwh > 0 ? daytimeKwh / totalKwh : 0
+
+  const isDaytimeHeavy = daytimeRatio >= 0.65
+
+  const daytimeLoadKw = daytimeKwh / 8
+  const recommendedPanelKw = isDaytimeHeavy
+    ? Math.ceil((daytimeLoadKw + (nighttimeKwh / 8)) * 1.3 * 10) / 10
+    : totalPanelWatts / 1000
+
+  const recommendedNightBatteryKwh = isDaytimeHeavy
+    ? Math.ceil(nighttimeKwh * 1.2 * 10) / 10
+    : 0
+
+  const panelWatts = recommendedPanelKw * 1000
+  const requiresMultipleMppt = panelWatts > singleMpptMaxW
+
+  const mpptInputsNeeded = requiresMultipleMppt
+    ? Math.ceil(panelWatts / singleMpptMaxW)
+    : 1
+
+  let panelStringSplit: string | undefined
+  if (requiresMultipleMppt) {
+    const totalPanels = Math.ceil(panelWatts / 550)
+    const panelsPerString = Math.floor(totalPanels / mpptInputsNeeded)
+    const remainder = totalPanels - (panelsPerString * (mpptInputsNeeded - 1))
+    panelStringSplit = `${mpptInputsNeeded - 1} strings of ${panelsPerString} panels + 1 string of ${remainder} panels`
+  }
+
+  let recommendedInverterNote = ''
+  if (isDaytimeHeavy && requiresMultipleMppt) {
+    recommendedInverterNote = `Your panel array (${(panelWatts/1000).toFixed(1)}kW) exceeds what a single MPPT input can handle (${(singleMpptMaxW/1000).toFixed(1)}kW). You need an inverter with ${mpptInputsNeeded} MPPT inputs — such as the Deye SUN-8K (2 MPPT, 10.4kW PV) or Growatt MIN 6000 (2 MPPT, 8kW PV). Panels split: ${panelStringSplit}.`
+  } else if (isDaytimeHeavy) {
+    recommendedInverterNote = `Your load is mostly daytime — a standard hybrid inverter with 1 MPPT input handles your ${(panelWatts/1000).toFixed(1)}kW array. The small battery bank (${recommendedNightBatteryKwh}kWh) covers your nighttime essentials only.`
+  }
+
+  return {
+    isDaytimeHeavy,
+    daytimeLoadKw,
+    nighttimeLoadKw: nighttimeKwh / 12,
+    daytimeRatio,
+    recommendedPanelKw,
+    recommendedNightBatteryKwh,
+    requiresMultipleMppt,
+    mpptInputsNeeded,
+    recommendedInverterNote,
+    panelStringSplit,
+  }
+}
+
 export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResults {
   const {
     state, monthlyBill, generatorSpend,
@@ -809,7 +1005,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   
   if (batteryKwh > 0) {
     batteryKwh = Math.round(batteryKwh / 2) * 2; // Round to nearest 2
-    if (batteryKwh < 4) batteryKwh = 4; // Min 4kWh lithium
+    // Only clamp to 4kWh if no tier selected (generic calculation)
+    // Tier-selected systems use their own batteryKwh below
+    if (!inputs.systemTier && batteryKwh < 4) batteryKwh = 4;
   }
 
   // COST CALCULATIONS
@@ -856,16 +1054,11 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const tenYearSavings = calculateNPVSavings(10);
 
   // Payback period
-  const systemCostMid = (systemCostMin + systemCostMax) / 2;
   const fInf = fuelInflation / 100;
   const tInf = nepaInflation / 100;
   
   const monthlySolarOffset = monthlyCurrentSpend * (coveragePct / 100);
   const firstYearMonthlySaving = monthlySolarOffset * (1 + (tInf + fInf) / 2) * 12 / 12;
-
-  const paybackMonths = Math.round(
-    systemCostMid / (firstYearMonthlySaving * (1 + (tInf + fInf) / 4))
-  );
 
   // AFTER SOLAR MONTHLY COST
   let afterSolarMonthlyCost = monthlyCurrentSpend * (1 - coveragePct / 100);
@@ -877,15 +1070,68 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const co2SavedKgPerYear = (monthlyProduction.reduce((a, b) => a + b, 0)) * 0.43;
   const treesEquivalent = Math.round(co2SavedKgPerYear / 21);
 
+  // ── Tier overrides ────────────────────────────────────────────────────────
+  // The generic formula is calibrated for standard/large systems.
+  // For small tiers (micro/basic/starter) it over-estimates cost dramatically
+  // because of the 4kWh lithium minimum and kWp-based pricing.
+  // When a tier is pre-selected, use pre-researched Lagos market prices instead.
+  const tierPkg = inputs.systemTier ? SYSTEM_PACKAGES[inputs.systemTier] : null;
+
+  const totalPanelWatts = tierPkg ? tierPkg.panelWatts : actualPvKwp * 1000;
+  const batteryVoltage = tierPkg ? tierPkg.batteryVoltage : (actualPvKwp < 1 ? 12 : actualPvKwp < 3 ? 24 : 48);
+  const selectedInverterType = tierPkg ? ((tierPkg.tier === 'micro' || tierPkg.tier === 'basic') ? 'off-grid' : 'hybrid') : 'hybrid';
+  
+  const chargeController = getChargeControllerSpec(
+    selectedInverterType,
+    totalPanelWatts,
+    batteryVoltage
+  );
+
+  const finalCostMin    = (tierPkg ? tierPkg.priceMin      : systemCostMin) + chargeController.estimatedCost;
+  const finalCostMax    = (tierPkg ? tierPkg.priceMax      : systemCostMax) + chargeController.estimatedCost;
+  const finalBatteryKwh = tierPkg ? tierPkg.batteryKwh     : batteryKwh;
+  
+  const newSystemCostMid = (finalCostMin + finalCostMax) / 2;
+  const genericPaybackMonths = Math.round(newSystemCostMid / (firstYearMonthlySaving * (1 + (tInf + fInf) / 4)));
+  const finalPayback    = tierPkg ? Math.round(tierPkg.paybackYears * 12) : genericPaybackMonths;
+
+  let finalBatteryType: CalculatorResults['batteryType'] = finalBatteryKwh > 0 ? 'lithium' : 'none';
+  if (tierPkg && finalBatteryKwh > 0) {
+    finalBatteryType = tierPkg.batteryType === 'LFP' ? 'lithium' : 'lead-acid';
+  }
+
+  const appliancesWithDaytimeHours = inputs.appliances.map(appSelection => {
+    const appDef = APPLIANCES.find(a => a.id === appSelection.id);
+    const qty = appSelection.qty;
+    const watts = appDef?.watts || 0;
+    const hoursPerDay = appDef?.typicalHours || 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const daytimeHours = (appSelection as any).daytimeHours ?? Math.min(hoursPerDay, 8);
+    return {
+      name: appDef?.name || appSelection.id,
+      watts,
+      quantity: qty,
+      hoursPerDay,
+      daytimeHours
+    };
+  });
+
+  const daytimeAnalysis = analyzeDaytimeLoad(
+    appliancesWithDaytimeHours,
+    totalPanelWatts,
+    5500
+  );
+
   return {
-    pvKwp: actualPvKwp,
-    panelsNeeded,
-    inverterKva,
-    batteryKwh,
-    batteryType: batteryKwh > 0 ? 'lithium' : 'none',
-    systemCostMin,
-    systemCostMax,
-    paybackMonths,
+    pvKwp: tierPkg ? tierPkg.panelWatts / 1000 : actualPvKwp,
+    panelsNeeded: tierPkg ? Math.ceil(tierPkg.panelWatts / tierPkg.recommendedPanelWatts) : panelsNeeded,
+    panelSizeWatts: tierPkg ? tierPkg.recommendedPanelWatts : 400,
+    inverterKva: tierPkg ? tierPkg.inverterKva : inverterKva,
+    batteryKwh: finalBatteryKwh,
+    batteryType: finalBatteryType,
+    systemCostMin: finalCostMin,
+    systemCostMax: finalCostMax,
+    paybackMonths: finalPayback,
     fiveYearSavings,
     tenYearSavings,
     monthlyCurrentSpend,
@@ -896,8 +1142,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     selectedBand: inputs.lagosElectricityBand ? (inputs.lagosElectricityBand.replace('band_', '').toUpperCase() as 'A' | 'B' | 'C' | 'D' | 'E') : null,
     avgPSH,
     co2SavedKgPerYear,
-    treesEquivalent
-  };
+    treesEquivalent,
+    chargeController,
+    daytimeAnalysis,
+  } as CalculatorResults & { chargeController: ChargeControllerSpec; daytimeAnalysis: DaytimeHeavyAnalysis };
 }
 
 export function getInverterSize(kva: number): string {

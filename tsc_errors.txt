@@ -1,0 +1,2 @@
+src/components/forms/calculator-dashboard.tsx(247,17): error TS2322: Type 'CalculatorResults' is not assignable to type 'CalculatorResults & { chargeController: ChargeControllerSpec; daytimeAnalysis: DaytimeHeavyAnalysis; }'.
+  Type 'CalculatorResults' is missing the following properties from type '{ chargeController: ChargeControllerSpec; daytimeAnalysis: DaytimeHeavyAnalysis; }': chargeController, daytimeAnalysis

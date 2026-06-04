@@ -6,6 +6,7 @@ import { ChevronDown, Minus, Plus } from "lucide-react";
 import { CalculatorInputs, OwnershipStatus, RoofType, RoofDirection, RoofPitch, PropertyType } from "@/lib/calculator/types";
 import { NIGERIAN_STATES } from "@/lib/validations";
 import { DISCO_BY_STATE, APPLIANCES, IKEDC_BANDS, getEffectiveTariff, getFuelPrice, updateFuelPriceCache } from "@/lib/calculator/calculations";
+import { SYSTEM_PACKAGES, SystemTier, formatTierPrice, getNextTier } from "@/data/system-packages";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
@@ -21,18 +22,19 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   const [showAppliances, setShowAppliances] = useState(false);
   const [openAssumptions, setOpenAssumptions] = useState<string | null>(null);
   const [applianceSearch, setApplianceSearch] = useState("");
+  const [showAllCanPower, setShowAllCanPower] = useState(false);
   const [fuelData, setFuelData] = useState<{
     price: number;
     updatedAt: string;
     source: string;
   }>({
     price: 1000,
-    updatedAt: '',
-    source: '',
+    updatedAt: "",
+    source: "",
   });
 
   useEffect(() => {
-    getFuelPrice().then((data) => {
+    getFuelPrice().then(data => {
       setFuelData(data);
       updateFuelPriceCache(data.price);
     });
@@ -67,6 +69,19 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
     onChange({ appliances: newApps });
   };
 
+  const updateApplianceDaytimeHours = (id: string, hours: number) => {
+    const existingIdx = inputs.appliances.findIndex(a => a.id === id);
+    if (existingIdx !== -1) {
+      const newApps = [...inputs.appliances] as Array<{id: string, qty: number, daytimeHours?: number}>;
+      const appDef = APPLIANCES.find(a => a.id === id);
+      const maxHours = appDef?.typicalHours || 24;
+      const validHours = hours < 0 ? 0 : hours > maxHours ? maxHours : hours;
+      newApps[existingIdx] = { ...newApps[existingIdx], daytimeHours: validHours };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onChange({ appliances: newApps as any });
+    }
+  };
+
   const totalApplianceKwh = inputs.appliances.reduce((sum, app) => {
     const def = APPLIANCES.find(a => a.id === app.id);
     return sum + (def ? def.kwhPerDay * app.qty : 0);
@@ -76,8 +91,121 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
 
   const CATEGORIES = Array.from(new Set(APPLIANCES.map(a => a.category)));
 
+  // ── Tier support helpers ──────────────────────────────────
+  const selectedPkg = SYSTEM_PACKAGES[inputs.systemTier];
+  const supportedIds = new Set(selectedPkg.supportedAppliances);
+
+  function isApplianceSupported(id: string): boolean {
+    return supportedIds.has(id);
+  }
+
+  function getUpgradeTierLabel(id: string): string {
+    const tiers: SystemTier[] = ["micro", "basic", "starter", "standard", "premium"];
+    for (const t of tiers) {
+      if (SYSTEM_PACKAGES[t].supportedAppliances.includes(id)) {
+        return SYSTEM_PACKAGES[t].label;
+      }
+    }
+    return "a higher tier";
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+
+      {/* ══════════════════════════════════════════════════ */}
+      {/* SYSTEM TIER SELECTOR — appears first              */}
+      {/* ══════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-3xl border border-border p-5 space-y-3">
+        <label className="text-sm font-bold text-text-primary block">
+          What size system do you need?
+        </label>
+
+        {/* Tier pills */}
+        <div className="flex flex-wrap gap-1.5">
+          {Object.values(SYSTEM_PACKAGES).map(pkg => (
+            <button
+              key={pkg.tier}
+              type="button"
+              onClick={() => onChange({ systemTier: pkg.tier as SystemTier })}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all duration-200 ${
+                inputs.systemTier === pkg.tier
+                  ? "bg-primary text-white border-primary shadow-md"
+                  : "bg-white text-text-muted border-border hover:border-primary/40 hover:text-primary"
+              }`}
+            >
+              <span>{pkg.emoji}</span>
+              <span>{pkg.label.replace(" System", "")}</span>
+              <span className={`font-normal text-[10px] ${inputs.systemTier === pkg.tier ? "text-white/80" : "text-gray-400"}`}>
+                {formatTierPrice(pkg.priceMin)}–{formatTierPrice(pkg.priceMax)}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Selected tier info card */}
+        <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">{selectedPkg.emoji}</span>
+            <div>
+              <p className="font-bold text-sm text-text-primary">{selectedPkg.label}</p>
+              <p className="text-xs text-text-muted leading-snug">{selectedPkg.targetUser}</p>
+            </div>
+          </div>
+
+          {/* Can power */}
+          <div className="space-y-1 mt-2">
+            <p className="text-xs font-semibold text-green-700 mb-1">✓ Can power:</p>
+            {(showAllCanPower ? selectedPkg.canPower : selectedPkg.canPower.slice(0, 4)).map((item, i) => (
+              <p key={i} className="text-xs text-text-muted flex items-start gap-1">
+                <span className="text-green-500 flex-shrink-0 mt-0.5">✓</span>
+                <span>{item}</span>
+              </p>
+            ))}
+            {selectedPkg.canPower.length > 4 && (
+              <button
+                type="button"
+                onClick={() => setShowAllCanPower(p => !p)}
+                className="text-xs text-primary font-medium"
+              >
+                {showAllCanPower
+                  ? "Show less"
+                  : `+${selectedPkg.canPower.length - 4} more...`}
+              </button>
+            )}
+          </div>
+
+          {/* Cannot power */}
+          {inputs.systemTier !== "premium" && (
+            <div className="space-y-1 mt-2 pt-2 border-t border-border">
+              <p className="text-xs font-semibold text-red-600 mb-1">✗ Cannot power:</p>
+              {selectedPkg.cannotPower.slice(0, 3).map((item, i) => (
+                <p key={i} className="text-xs text-text-muted flex items-start gap-1">
+                  <span className="text-red-400 flex-shrink-0 mt-0.5">✗</span>
+                  <span>{item}</span>
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Upgrade tip for micro/basic */}
+          {(inputs.systemTier === "micro" || inputs.systemTier === "basic") && (() => {
+            const next = getNextTier(inputs.systemTier);
+            return next ? (
+              <button
+                type="button"
+                onClick={() => onChange({ systemTier: next })}
+                className="mt-2 w-full text-xs font-semibold text-primary bg-primary/5 hover:bg-primary/10 rounded-lg py-1.5 transition-colors"
+              >
+                Upgrade to {SYSTEM_PACKAGES[next].label} {SYSTEM_PACKAGES[next].emoji} →
+              </button>
+            ) : null;
+          })()}
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════ */}
+      {/* HOME DETAILS                                       */}
+      {/* ══════════════════════════════════════════════════ */}
       <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10">
         <h2 className="text-xl font-bold text-text-primary mb-6 flex items-center gap-2">
           <span>🏠</span> Enter Your Home Details
@@ -87,7 +215,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
         <div className="space-y-3 mb-6">
           <label className="block text-sm font-semibold text-text-primary">Ownership Status</label>
           <div className="grid grid-cols-2 gap-3">
-            {(['owner', 'tenant'] as OwnershipStatus[]).map(status => (
+            {(["owner", "tenant"] as OwnershipStatus[]).map(status => (
               <button
                 key={status}
                 type="button"
@@ -98,12 +226,12 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                     : "border-border bg-white hover:border-gray-300"
                 }`}
               >
-                <div className="text-2xl mb-1">{status === 'owner' ? '🏠' : '🔑'}</div>
-                <div className="text-sm font-bold text-text-primary uppercase">I {status === 'owner' ? 'Own' : 'Rent'}</div>
+                <div className="text-2xl mb-1">{status === "owner" ? "🏠" : "🔑"}</div>
+                <div className="text-sm font-bold text-text-primary uppercase">I {status === "owner" ? "Own" : "Rent"}</div>
               </button>
             ))}
           </div>
-          {inputs.ownershipStatus === 'tenant' && (
+          {inputs.ownershipStatus === "tenant" && (
             <div className="text-sm bg-blue-50 text-blue-800 p-3 rounded-lg border border-blue-100">
               <p><strong>Note:</strong> Solar requires landlord approval. You can still use this calculator to estimate costs for your landlord discussion!</p>
             </div>
@@ -119,7 +247,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               const selectedState = e.target.value;
               onChange({
                 state: selectedState,
-                lagosElectricityBand: selectedState === 'Lagos' ? 'band_b' : undefined
+                lagosElectricityBand: selectedState === "Lagos" ? "band_b" : undefined,
               });
             }}
             className="w-full px-4 py-3 rounded-xl border border-border bg-white text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
@@ -129,21 +257,21 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
-          {disco && !disco.includes('IKEDC / EKEDC') && (
+          {disco && !disco.includes("IKEDC / EKEDC") && (
             <p className="text-xs text-primary font-medium mt-1 flex items-center gap-1">
-              Using {disco.split(' ')[0]} rate: ₦{getEffectiveTariff(disco).toFixed(2)}/kWh
+              Using {disco.split(" ")[0]} rate: ₦{getEffectiveTariff(disco).toFixed(2)}/kWh
             </p>
           )}
         </div>
 
-        {/* 2b. Lagos Band Selector — shown only for Lagos */}
-        {disco?.includes('IKEDC / EKEDC') && (
+        {/* 2b. Lagos Band Selector */}
+        {disco?.includes("IKEDC / EKEDC") && (
           <div className="space-y-2 mb-6">
             <label className="block text-sm font-semibold text-text-primary">
               How many hours of electricity do you get daily?
             </label>
             <select
-              value={inputs.lagosElectricityBand || ''}
+              value={inputs.lagosElectricityBand || ""}
               onChange={e => onChange({ lagosElectricityBand: e.target.value || undefined })}
               className="w-full px-4 py-3 rounded-xl border border-border bg-white text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
             >
@@ -153,7 +281,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               ))}
             </select>
 
-            <Link 
+            <Link
               href="/lagos-power-bands"
               target="_blank"
               rel="noopener noreferrer"
@@ -220,7 +348,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
         <div className="space-y-3 mb-6">
           <label className="block text-sm font-semibold text-text-primary">Property Type</label>
           <div className="flex gap-2 text-sm">
-            {(['home', 'small-business', 'large-business'] as PropertyType[]).map(pt => (
+            {(["home", "small-business", "large-business"] as PropertyType[]).map(pt => (
               <label key={pt} className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
@@ -229,7 +357,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                   onChange={() => onChange({ propertyType: pt })}
                   className="accent-primary"
                 />
-                <span className="capitalize">{pt.replace('-', ' ')}</span>
+                <span className="capitalize">{pt.replace("-", " ")}</span>
               </label>
             ))}
           </div>
@@ -240,11 +368,11 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
           <label className="block text-sm font-semibold text-text-primary">Roof Type</label>
           <div className="grid grid-cols-2 gap-2 text-xs">
             {([
-              { id: 'flat_concrete', icon: '🏠', label: 'Flat Concrete' },
-              { id: 'corrugated_iron', icon: '🏚️', label: 'Corrugated Iron' },
-              { id: 'aluminum_deck', icon: '🏗️', label: 'Aluminum/Deck' },
-              { id: 'clay_tiles', icon: '🏛️', label: 'Clay Tiles' },
-              { id: 'not_sure', icon: '🤷', label: 'Not Sure' }
+              { id: "flat_concrete", icon: "🏠", label: "Flat Concrete" },
+              { id: "corrugated_iron", icon: "🏚️", label: "Corrugated Iron" },
+              { id: "aluminum_deck", icon: "🏗️", label: "Aluminum/Deck" },
+              { id: "clay_tiles", icon: "🏛️", label: "Clay Tiles" },
+              { id: "not_sure", icon: "🤷", label: "Not Sure" },
             ] as const).map(rt => (
               <button
                 key={rt.id} type="button"
@@ -268,7 +396,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               onChange={e => onChange({ roofDirection: e.target.value as RoofDirection })}
               className="w-full px-3 py-2 rounded-lg border border-border text-sm outline-none focus:border-primary"
             >
-              {['North', 'North-East', 'East', 'South-East', 'South', 'South-West', 'West', 'North-West'].map(d => (
+              {["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West"].map(d => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
@@ -280,7 +408,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               onChange={e => onChange({ roofPitch: e.target.value as RoofPitch })}
               className="w-full px-3 py-2 rounded-lg border border-border text-sm outline-none focus:border-primary"
             >
-              {['Flat (0°)', 'Low (10-15°)', 'Medium (20-30°)', 'Steep (35-45°)'].map(p => (
+              {["Flat (0°)", "Low (10-15°)", "Medium (20-30°)", "Steep (35-45°)"].map(p => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
@@ -306,7 +434,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
         </div>
 
         {!hasCalculated && (() => {
-          const isLagosWithoutBand = inputs.state === 'Lagos' && !inputs.lagosElectricityBand;
+          const isLagosWithoutBand = inputs.state === "Lagos" && !inputs.lagosElectricityBand;
           return (
             <button
               onClick={onCalculate}
@@ -336,9 +464,9 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               </p>
             )}
           </div>
-          <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showAppliances ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showAppliances ? "rotate-180" : ""}`} />
         </button>
-        
+
         <AnimatePresence>
           {showAppliances && (
             <motion.div
@@ -348,35 +476,73 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               className="overflow-hidden border-t border-border"
             >
               <div className="p-4 space-y-6 max-h-[400px] overflow-y-auto custom-scrollbar">
-                <input 
-                  type="text" 
-                  placeholder="Search appliances..." 
+                {/* Tier hint */}
+                <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-800 flex items-center gap-2">
+                  <span>{selectedPkg.emoji}</span>
+                  <span>
+                    Showing all appliances — grayed items require an upgrade from your selected <strong>{selectedPkg.label}</strong>.
+                  </span>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Search appliances..."
                   value={applianceSearch}
                   onChange={e => setApplianceSearch(e.target.value)}
                   className="w-full px-4 py-2 rounded-xl border border-border text-sm outline-none focus:border-primary transition-all"
                 />
                 {CATEGORIES.map(cat => {
-                  const filteredApps = APPLIANCES.filter(a => a.category === cat && a.name.toLowerCase().includes(applianceSearch.toLowerCase()));
+                  const filteredApps = APPLIANCES.filter(
+                    a => a.category === cat && a.name.toLowerCase().includes(applianceSearch.toLowerCase())
+                  );
                   if (filteredApps.length === 0) return null;
                   return (
                     <div key={cat} className="space-y-3">
                       <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">{cat}</h4>
                       <div className="space-y-2">
                         {filteredApps.map(app => {
-                          const qty = getQty(app.id);
+                          const quantityItem = inputs.appliances.find(a => a.id === app.id) as { id: string, qty: number, daytimeHours?: number } | undefined;
+                          const qty = quantityItem?.qty || 0;
+                          const daytimeHours = quantityItem?.daytimeHours ?? Math.min(app.typicalHours, 8);
+                          const supported = isApplianceSupported(app.id);
+                          const upgradeTo = supported ? null : getUpgradeTierLabel(app.id);
                           return (
-                            <div key={app.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
-                              <div className="flex items-center gap-3">
-                                <span className="text-xl">{app.icon}</span>
-                                <div>
-                                  <p className="text-sm font-semibold text-text-primary leading-tight">
-                                    {app.name} 
-                                    {app.isInverter && <span className="ml-2 text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase">Inverter</span>}
+                            <div
+                              key={app.id}
+                              title={supported ? undefined : `Upgrade to ${upgradeTo} to include this appliance`}
+                              className={`flex items-center justify-between p-3 rounded-xl border bg-gray-50 transition-opacity ${
+                                supported ? "border-gray-100 opacity-100" : "border-gray-100 opacity-40"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="text-xl flex-shrink-0">{app.icon}</span>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-text-primary leading-tight truncate">
+                                    {app.name}
+                                    {app.isInverter && (
+                                      <span className="ml-2 text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase">Inverter</span>
+                                    )}
                                   </p>
-                                  <p className="text-xs text-text-muted">{app.kwhPerDay} kWh/day • {app.watts}W</p>
+                                  <p className="text-xs text-text-muted">
+                                    {supported ? `${app.kwhPerDay} kWh/day • ${app.watts}W` : `⬆ Needs ${upgradeTo}`}
+                                  </p>
+                                  {qty > 0 && supported && (
+                                    <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
+                                      <span>Daytime use:</span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={app.typicalHours}
+                                        value={daytimeHours}
+                                        onChange={(e) => updateApplianceDaytimeHours(app.id, parseInt(e.target.value) || 0)}
+                                        className="w-14 border border-border rounded px-2 py-0.5 text-xs text-center outline-none bg-white"
+                                      />
+                                      <span>hrs (6am–6pm)</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3 bg-white border border-border rounded-lg p-1">
+                              <div className={`flex items-center gap-3 bg-white border border-border rounded-lg p-1 flex-shrink-0 ${!supported ? "pointer-events-none" : ""}`}>
                                 <button onClick={() => updateApplianceQty(app.id, -1)} className="p-1 hover:bg-gray-100 rounded-md text-text-muted">
                                   <Minus className="w-4 h-4" />
                                 </button>
@@ -401,14 +567,14 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
       {/* Assumptions Sidebar Section */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-text-primary px-2">Assumptions</h3>
-        
+
         {/* PRODUCTION */}
         <div className="bg-white rounded-xl border border-border overflow-hidden text-sm">
-          <button onClick={() => toggleAssumptions('production')} className="w-full p-4 flex items-center justify-between hover:bg-gray-50 font-semibold">
+          <button onClick={() => toggleAssumptions("production")} className="w-full p-4 flex items-center justify-between hover:bg-gray-50 font-semibold">
             <span>☀️ Production</span>
-            <ChevronDown className={`w-4 h-4 transition-transform ${openAssumptions === 'production' ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 transition-transform ${openAssumptions === "production" ? "rotate-180" : ""}`} />
           </button>
-          {openAssumptions === 'production' && (
+          {openAssumptions === "production" && (
             <div className="p-4 pt-0 space-y-4 border-t border-border mt-2">
               <div className="space-y-2 pt-2">
                 <div className="flex justify-between">
@@ -431,11 +597,11 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
 
         {/* SAVINGS */}
         <div className="bg-white rounded-xl border border-border overflow-hidden text-sm">
-          <button onClick={() => toggleAssumptions('savings')} className="w-full p-4 flex items-center justify-between hover:bg-gray-50 font-semibold">
-            <span>💰 Savings & Inflation</span>
-            <ChevronDown className={`w-4 h-4 transition-transform ${openAssumptions === 'savings' ? 'rotate-180' : ''}`} />
+          <button onClick={() => toggleAssumptions("savings")} className="w-full p-4 flex items-center justify-between hover:bg-gray-50 font-semibold">
+            <span>💰 Savings &amp; Inflation</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${openAssumptions === "savings" ? "rotate-180" : ""}`} />
           </button>
-          {openAssumptions === 'savings' && (
+          {openAssumptions === "savings" && (
             <div className="p-4 pt-0 space-y-4 border-t border-border mt-2">
               <div className="space-y-2 pt-2">
                 <div className="flex justify-between">
@@ -486,7 +652,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
           <div className="text-text-muted text-xs mt-0.5">
             {fuelData.updatedAt
               ? `Updated ${formatRelativeTime(fuelData.updatedAt)}`
-              : 'Live crowdsourced'}
+              : "Live crowdsourced"}
           </div>
         </div>
       </div>
@@ -497,7 +663,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
 function formatRelativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const hours = Math.floor(diff / 3600000);
-  if (hours < 1) return 'just now';
+  if (hours < 1) return "just now";
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;

@@ -9,12 +9,18 @@ export type RoofType = 'flat_concrete' | 'corrugated_iron' | 'aluminum_deck' | '
 export type RoofDirection = 'North' | 'North-East' | 'East' | 'South-East' | 'South' | 'South-West' | 'West' | 'North-West';
 export type RoofPitch = 'Flat (0°)' | 'Low (10-15°)' | 'Medium (20-30°)' | 'Steep (35-45°)';
 
+// System tier — mirrors SystemTier in @/data/system-packages to avoid circular dep
+export type SystemTier = 'micro' | 'basic' | 'starter' | 'standard' | 'premium';
+
 export interface ApplianceSelection {
   id: string;
   qty: number;
 }
 
 export interface CalculatorInputs {
+  // System tier (drives appliance filtering & pre-fill)
+  systemTier: SystemTier;
+
   // Screen 1 equivalents
   ownershipStatus: OwnershipStatus;
   state: string;
@@ -56,6 +62,7 @@ export interface CostBand {
 export interface CalculatorResults {
   pvKwp: number;
   panelsNeeded: number;
+  panelSizeWatts: number;
   inverterKva: number;
   batteryKwh: number;
   batteryType: BatteryType | 'none';
