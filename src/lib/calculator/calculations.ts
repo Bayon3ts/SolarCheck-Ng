@@ -4,7 +4,7 @@
 /* ═══════════════════════════════════════════════════ */
 
 import { createClient } from '@supabase/supabase-js';
-import { CalculatorInputs, CalculatorResults } from './types';
+import { CalculatorInputs, CalculatorResults, SystemTier } from './types';
 import { MONTHLY_PSH, DEFAULT_MONTHLY_PSH } from './irradiance';
 import { SYSTEM_PACKAGES } from '@/data/system-packages';
 
@@ -824,6 +824,30 @@ export function getChargeControllerSpec(
   }
 }
 
+// ── Tier recommendation from monthly spend ────────────────────
+/**
+ * Maps combined monthly electricity + generator spend (₦)
+ * to the system tier that would realistically replace that cost level.
+ */
+export function recommendTierFromSpend(
+  monthlySpendNaira: number
+): SystemTier {
+  if (monthlySpendNaira < 15000)  return 'micro'
+  if (monthlySpendNaira < 40000)  return 'basic'
+  if (monthlySpendNaira < 80000)  return 'starter'
+  if (monthlySpendNaira < 200000) return 'standard'
+  return 'premium'
+}
+
+// Per-tier minimum battery kWh floors (real-world component sizes)
+const BATTERY_MINIMUMS: Record<SystemTier, number> = {
+  micro:    1.2,   // 1× 100Ah 12V
+  basic:    2.4,   // 2× 100Ah 12V
+  starter:  4.8,   // 1× 48V 100Ah LFP
+  standard: 9.6,   // 2× 48V 100Ah LFP
+  premium:  19.2,  // 4× 48V 100Ah LFP
+}
+
 // ── Daytime Heavy Analysis ──────────────────────────────────────
 export interface DaytimeHeavyAnalysis {
   isDaytimeHeavy: boolean
@@ -854,7 +878,8 @@ export function analyzeDaytimeLoad(
     daytimeHours: number
   }>,
   totalPanelWatts: number,
-  singleMpptMaxW: number = 5500
+  singleMpptMaxW: number = 5500,
+  systemTier?: SystemTier
 ): DaytimeHeavyAnalysis {
 
   let daytimeKwh = 0
@@ -879,9 +904,11 @@ export function analyzeDaytimeLoad(
     ? Math.ceil((daytimeLoadKw + (nighttimeKwh / 8)) * 1.3 * 10) / 10
     : totalPanelWatts / 1000
 
-  const recommendedNightBatteryKwh = isDaytimeHeavy
+  const rawNightBatteryKwh = isDaytimeHeavy
     ? Math.ceil(nighttimeKwh * 1.2 * 10) / 10
     : 0
+  const batteryFloor = systemTier ? BATTERY_MINIMUMS[systemTier] : 0
+  const recommendedNightBatteryKwh = Math.max(rawNightBatteryKwh, batteryFloor)
 
   const panelWatts = recommendedPanelKw * 1000
   const requiresMultipleMppt = panelWatts > singleMpptMaxW
@@ -1119,7 +1146,8 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const daytimeAnalysis = analyzeDaytimeLoad(
     appliancesWithDaytimeHours,
     totalPanelWatts,
-    5500
+    5500,
+    inputs.systemTier
   );
 
   return {

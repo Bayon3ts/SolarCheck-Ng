@@ -4,7 +4,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { CalculatorInputs, CalculatorResults } from "@/lib/calculator/types";
-import { ChargeControllerSpec, DaytimeHeavyAnalysis } from "@/lib/calculator/calculations";
+import { ChargeControllerSpec, DaytimeHeavyAnalysis, recommendTierFromSpend } from "@/lib/calculator/calculations";
+import { SystemTier } from "@/lib/calculator/types";
 import AnimatedCounter from "@/components/animations/animated-counter";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Cell } from "recharts";
 import { SYSTEM_PACKAGES } from "@/data/system-packages";
@@ -48,6 +49,21 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
   } as DaytimeHeavyAnalysis;
 
   const isTenant = inputs.ownershipStatus === 'tenant';
+
+  // ── Tier helpers (FIX 2) ────────────────────────────────────────
+  const TIER_ORDER: SystemTier[] = ['micro', 'basic', 'starter', 'standard', 'premium'];
+  function isTierLower(a: SystemTier, b: SystemTier): boolean {
+    return TIER_ORDER.indexOf(a) < TIER_ORDER.indexOf(b);
+  }
+  const suggestedTier = recommendTierFromSpend(results.monthlyCurrentSpend);
+  const showTierSuggestion =
+    suggestedTier !== inputs.systemTier &&
+    isTierLower(inputs.systemTier, suggestedTier);
+
+  // ── Battery chemistry display (FIX 4) ───────────────────────────
+  const tierPkg = SYSTEM_PACKAGES[inputs.systemTier];
+  const pkgBatteryLabel = tierPkg.batteryType;    // 'LFP' | 'Lead-Acid'
+  const pkgBatteryVoltage = tierPkg.batteryVoltage; // 12 | 24 | 48
 
   const formatMillions = (num: number) => {
     if (num >= 1_000_000) {
@@ -142,8 +158,20 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
               <span className="font-bold text-text-primary">{pvKwp.toFixed(1)} kWp / {inverterKva}kVA</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
-              <span className="text-text-muted text-sm font-medium">Battery</span>
-              <span className="font-bold text-text-primary">{batteryKwh} kWh ({batteryType})</span>
+              {/* FIX 4 — Battery label + chemistry pill inline */}
+              <div className="flex items-center gap-2">
+                <span className="text-text-muted text-sm font-medium">Battery</span>
+                {batteryType !== 'none' && (
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    pkgBatteryLabel === 'LFP'
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {pkgBatteryLabel}{' · '}{pkgBatteryVoltage}V
+                  </span>
+                )}
+              </div>
+              <span className="font-bold text-text-primary">{batteryKwh} kWh</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100 group relative cursor-help">
               <span className="text-text-muted text-sm font-medium border-b border-dashed border-gray-300">Payback Period</span>
@@ -300,7 +328,10 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
       </div>
 
       {/* ── DAYTIME HEAVY ANALYSIS ── */}
-      {daytimeAnalysis.isDaytimeHeavy && (
+      {/* FIX 1 — only show for Standard / Premium with meaningful daytime load */}
+      {daytimeAnalysis.isDaytimeHeavy &&
+       (inputs.systemTier === 'standard' || inputs.systemTier === 'premium') &&
+       daytimeAnalysis.daytimeLoadKw >= 1.5 && (
         <div className="bg-amber-50 border-l-4 border-amber-400 rounded-2xl p-5 my-6">
           {/* Header */}
           <div className="flex items-center gap-2 mb-3">
@@ -379,6 +410,23 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
               💡 {daytimeAnalysis.recommendedInverterNote}
             </p>
           )}
+        </div>
+      )}
+
+      {/* ── FIX 2 — TIER SUGGESTION BANNER ── */}
+      {showTierSuggestion && (
+        <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-xl px-4 py-2.5 text-xs text-text-muted">
+          <span className="text-primary flex-shrink-0">💡</span>
+          <span>
+            Based on your ₦{results.monthlyCurrentSpend.toLocaleString()}/mo spend, a{' '}
+            <button
+              onClick={() => onChange({ systemTier: suggestedTier })}
+              className="text-primary font-semibold underline underline-offset-2"
+            >
+              {SYSTEM_PACKAGES[suggestedTier].label}
+            </button>
+            {' '}may be more appropriate for your needs.
+          </span>
         </div>
       )}
 
