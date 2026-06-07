@@ -33,7 +33,15 @@ export default function CalcStickyBar({ inputs, results, onRecalculate }: Props)
           className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-border shadow-sm pt-[72px]" // Offset for main navbar
         >
           <div className="container-custom py-3 flex items-center justify-between">
-            <div className="hidden md:flex items-center gap-6 text-sm text-text-muted">
+            <div className="hidden md:flex items-center gap-3 overflow-x-auto text-sm text-text-muted">
+              {/* NEW — Load Analysis label */}
+              <span className="flex-shrink-0 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                📋 Load Analysis
+              </span>
+
+              {/* Divider */}
+              <span className="text-border flex-shrink-0">|</span>
+
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-text-primary">Location:</span> {inputs.state}
               </div>
@@ -51,9 +59,14 @@ export default function CalcStickyBar({ inputs, results, onRecalculate }: Props)
             </div>
 
             {/* Mobile View Summary */}
-            <div className="md:hidden flex flex-col text-xs text-text-muted">
-              <div><span className="font-semibold">State:</span> {inputs.state}</div>
-              <div><span className="font-semibold">Spend:</span> ₦{(inputs.monthlyBill + inputs.generatorSpend).toLocaleString()}</div>
+            <div className="md:hidden flex items-center gap-3 overflow-x-auto">
+              <span className="flex-shrink-0 text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+                📋 Load Analysis
+              </span>
+              <div className="flex flex-col text-xs text-text-muted flex-shrink-0">
+                <div><span className="font-semibold">State:</span> {inputs.state}</div>
+                <div><span className="font-semibold">Spend:</span> ₦{(inputs.monthlyBill + inputs.generatorSpend).toLocaleString()}</div>
+              </div>
             </div>
 
             <button

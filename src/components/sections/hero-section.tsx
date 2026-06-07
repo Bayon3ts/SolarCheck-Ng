@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import HeroLeadForm from "@/components/forms/hero-lead-form";
 import TrustBarMarquee from "@/components/animations/trust-bar-marquee";
@@ -10,8 +11,21 @@ import TrustBarMarquee from "@/components/animations/trust-bar-marquee";
 /* Stitch: #0D1B12 bg, dramatic, immersive */
 /* ═══════════════════════════════════════ */
 
+const BUTTON_LABELS = [
+  'Calculate My Savings →',
+  'Calculate Now →',
+];
+
 export default function HeroSection() {
   const line1Words = ["Stop", "Overpaying", "for", "Power."];
+  const [labelIndex, setLabelIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLabelIndex(prev => prev === 0 ? 1 : 0);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
   const line2Words = ["Find", "Out", "What", "Solar", "Really", "Costs", "You."];
 
   return (
@@ -143,9 +157,19 @@ export default function HeroSection() {
               >
                 <Link
                   href="/solar-calculator"
-                  className="w-full md:w-auto px-8 py-4 bg-[#F5A623] text-[#0D1B12] font-bold rounded-full text-base text-center transition-all duration-300 hover:brightness-110 hover:scale-[1.02] active:scale-95"
+                  className="w-full md:w-auto px-8 py-4 bg-[#F5A623] text-[#0D1B12] font-bold rounded-full text-base text-center transition-all duration-300 hover:brightness-110 hover:scale-[1.02] active:scale-95 overflow-hidden min-w-[240px] flex justify-center items-center"
                 >
-                  Calculate My Savings →
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={labelIndex}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.25 }}
+                    >
+                      {BUTTON_LABELS[labelIndex]}
+                    </motion.span>
+                  </AnimatePresence>
                 </Link>
                 <Link
                   href="/get-quotes"
@@ -162,7 +186,7 @@ export default function HeroSection() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 1.2 }}
               >
-                ⚡ 500+ verified installers · ₦0 cost to homeowners · Results in 60 seconds
+                ⚡ Free Load Analysis included · 500+ verified installers · ₦0 cost to homeowners
               </motion.p>
             </div>
           </div>

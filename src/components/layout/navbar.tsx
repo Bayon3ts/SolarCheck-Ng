@@ -13,6 +13,11 @@ import { cn } from "@/lib/utils";
 /* Transparent on hero → white on scroll   */
 /* ═══════════════════════════════════════ */
 
+const BUTTON_LABELS = [
+  'Calculate My Savings →',
+  'Calculate Now →',
+];
+
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -20,6 +25,15 @@ export default function Navbar() {
   // Mega menu states
   const [megaMenuOpen, setMegaMenuOpen] = useState(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [labelIndex, setLabelIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLabelIndex(prev => prev === 0 ? 1 : 0);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   // Mobile accordion states
   const [mobileMegaOpen, setMobileMegaOpen] = useState(false);
@@ -258,21 +272,39 @@ export default function Navbar() {
               <div className="bg-primary/5 p-8 border-r border-border">
                 <div className="text-2xl mb-3">☀️</div>
                 <h3 className="font-bold text-base text-text-primary mb-2">
-                  Solar Savings Calculator
+                  Free Load Analysis
                 </h3>
+                
+                {/* New badge */}
+                <div className="inline-flex items-center gap-1.5 bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full mb-3">
+                  <span>💰</span>
+                  Installers charge ₦5k–₦30k for this
+                </div>
+
                 <p className="text-sm text-text-muted mb-4 leading-relaxed">
-                  Get exact Naira pricing for your home. Uses live fuel prices. 
-                  Works for ₦80k student setups to ₦8M premium systems.
+                  Get a complete solar load analysis for your home — free. See exactly what system you need, what it costs in Naira, and when you break even. No installer visit required.
                 </p>
-                <Link href="/solar-calculator"
+                <Link
+                  href="/solar-calculator"
                   onClick={() => setMegaMenuOpen(false)}
-                  className="inline-flex items-center gap-2 bg-primary text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-primary-dark transition-colors">
-                  Calculate My Savings →
+                  className="inline-flex items-center gap-2 bg-primary text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-primary-dark transition-colors overflow-hidden min-w-[200px] justify-center"
+                >
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={labelIndex}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.25 }}
+                    >
+                      {BUTTON_LABELS[labelIndex]}
+                    </motion.span>
+                  </AnimatePresence>
                 </Link>
                 
                 {/* Trust signal */}
                 <p className="text-xs text-text-muted mt-4">
-                  Free · No sign up · Live fuel prices
+                  Free · No sign up · Replaces paid load analysis
                 </p>
               </div>
 

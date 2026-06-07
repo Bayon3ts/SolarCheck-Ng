@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     "Free solar calculator for Nigeria. Enter your electricity bill and appliances to get your recommended system size, exact cost range, and payback period in under 2 minutes.",
 };
 
-import DynamicPriceHeader from "@/components/calculator/dynamic-price-header";
+
 
 export default function SolarCalculatorPage() {
   return (
@@ -19,34 +19,33 @@ export default function SolarCalculatorPage() {
       <Navbar />
       <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-28 pb-24">
         {/* Hero */}
-        <div className="container-custom max-w-4xl text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
-            ☀️ Free Solar Sizing Tool
+        <div className="text-center py-10 bg-primary px-4 mb-12">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 bg-white/15 text-white text-xs font-bold px-4 py-1.5 rounded-full mb-4">
+            <span>⚡</span>
+            Free — Installers charge ₦5,000–₦30,000 for this
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-text-primary leading-tight">
-            Nigerian Solar Cost <br className="hidden md:block"/>
-            <span className="text-primary">and Savings Calculator</span>
+
+          <h1 className="text-3xl md:text-4xl font-black text-white mb-3">
+            Free Solar Load Analysis
           </h1>
-          <p className="mt-4 text-lg text-text-muted max-w-2xl mx-auto">
-            Using your state and monthly electricity bills, our calculator gives you an accurate
-            estimate of solar system cost, monthly savings vs generator, and payback period
-            — all based on real Nigerian market data.
+
+          <p className="text-white/80 max-w-xl mx-auto text-base leading-relaxed">
+            Enter your appliances below and get a complete load analysis — the same report installers charge for. Includes exact system sizing, Naira pricing, and payback date.
           </p>
-          <DynamicPriceHeader />
-          
-          <div className="flex flex-wrap items-center justify-center gap-6 mt-8 mb-6 text-sm text-gray-600">
-            <div className="flex items-center gap-1.5">
-              <span className="text-primary font-bold">500+</span>
-              <span>verified Nigerian installers</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-primary font-bold">36</span>
-              <span>states covered</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-primary font-bold">Free</span>
-              <span>for homeowners · always</span>
-            </div>
+
+          {/* 3 trust pills */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
+            {[
+              '✓ Free forever',
+              '✓ No installer visit needed',
+              '✓ Live fuel prices',
+              '✓ Naira pricing',
+            ].map(item => (
+              <span key={item} className="text-xs text-white/70 bg-white/10 px-3 py-1 rounded-full">
+                {item}
+              </span>
+            ))}
           </div>
         </div>
 
