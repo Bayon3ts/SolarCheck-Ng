@@ -8,6 +8,25 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { ChevronLeft, Save } from "lucide-react";
 import Link from "next/link";
 
+const MarkdownPreview = ({ content }: { content: string }) => {
+  const formatted = content
+    .replace(/^### (.+)/gm, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
+    .replace(/^## (.+)/gm, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>')
+    .replace(/^# (.+)/gm, '<h1 class="text-2xl font-bold mt-8 mb-4">$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\n\n/g, '</p><p class="mb-4">');
+
+  return (
+    <div 
+      className="prose prose-sm max-w-none p-6 text-text-primary"
+      dangerouslySetInnerHTML={{ 
+        __html: `<p class="mb-4">${formatted}</p>` 
+      }}
+    />
+  );
+};
+
 export default function EditPostPage({ params }: { params: { id: string } }) {
   const isNew = params.id === "new";
   const [title, setTitle] = useState("");
@@ -51,21 +70,41 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
 
   const handleSave = async () => {
     setLoading(true);
+    
+    // Get current user for author field
+    const { data: { user } } = await supabase.auth.getUser();
+    const author = user?.email || "Admin";
+
     const postData = {
       title,
       slug,
       category,
       content,
+      author,
       excerpt: excerpt || null,
       is_published: isPublished,
+      status: isPublished ? 'published' : 'draft',
+      published_at: isPublished ? new Date().toISOString() : null,
       cover_image: coverImage || null,
       cover_image_alt: coverImageAlt || null,
     };
 
     if (isNew) {
-      await supabase.from("blog_posts").insert([postData]);
+      const { error } = await supabase.from("blog_posts").upsert([postData], { onConflict: 'slug' });
+      if (error) {
+        console.error("[BlogSave] Error inserting post:", error);
+        alert(`Failed to save post: ${error.message}`);
+        setLoading(false);
+        return;
+      }
     } else {
-      await supabase.from("blog_posts").update(postData).eq("id", params.id);
+      const { error } = await supabase.from("blog_posts").update(postData).eq("id", params.id);
+      if (error) {
+        console.error("[BlogSave] Error updating post:", error);
+        alert(`Failed to update post: ${error.message}`);
+        setLoading(false);
+        return;
+      }
     }
 
     setLoading(false);
@@ -220,11 +259,13 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
             />
           )}
           <h1 className="text-4xl font-bold mb-8">{title || "Post Title"}</h1>
-          <div className="whitespace-pre-wrap font-mono text-sm text-text-muted opacity-50 bg-gray-50 p-4 rounded-lg">
-            [MDX Live Preview Content would render here. Currently displaying
-            raw source.]{"\n\n"}
-            {content}
-          </div>
+          {content ? (
+            <MarkdownPreview content={content} />
+          ) : (
+            <p className="text-text-muted text-sm p-6 italic">
+              Start typing to see preview...
+            </p>
+          )}
         </div>
       </div>
     </div>

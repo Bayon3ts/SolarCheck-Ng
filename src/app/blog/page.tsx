@@ -1,9 +1,12 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Solar Energy Guide & Blog | SolarCheck Nigeria",
@@ -16,6 +19,7 @@ export default async function BlogPage() {
     .from("blog_posts")
     .select("title, slug, category, created_at, excerpt, cover_image, cover_image_alt")
     .eq("is_published", true)
+    .eq("status", "published")
     .order("created_at", { ascending: false });
 
   // Group by category for a simple filter, or just display all
@@ -47,11 +51,15 @@ export default async function BlogPage() {
                 <article className="card h-full flex flex-col overflow-hidden transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1">
                   {/* Cover image or fallback */}
                   {post.cover_image ? (
-                    <img
-                      src={post.cover_image}
-                      alt={post.cover_image_alt || post.title}
-                      className="w-full h-40 object-cover rounded-t-2xl group-hover:scale-105 transition-transform duration-500"
-                    />
+                    <div className="relative w-full h-48 rounded-t-2xl overflow-hidden bg-primary/5">
+                      <Image
+                        src={post.cover_image}
+                        alt={post.cover_image_alt || post.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                      />
+                    </div>
                   ) : (
                     <div className="w-full h-40 bg-primary/10 rounded-t-2xl flex items-center justify-center text-4xl group-hover:scale-105 transition-transform duration-500">
                       ☀️

@@ -1,14 +1,20 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function AdminBlogPage() {
-  const supabase = createServerClient();
-  const { data: posts } = await supabase
+  const supabase = createAdminClient();
+  const { data: posts, error } = await supabase
     .from("blog_posts")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[AdminBlogList] Error fetching posts:", error);
+  } else if (!posts || posts.length === 0) {
+    console.warn("[AdminBlogList] Fetch returned no posts. Check RLS policies if posts exist.");
+  }
 
   return (
     <div className="p-8">

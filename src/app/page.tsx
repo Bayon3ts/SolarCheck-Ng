@@ -8,6 +8,9 @@ import FeaturedInstallersSection from "@/components/sections/featured-installers
 import CalculatorTeaser from "@/components/sections/calculator-teaser";
 import VerificationSection from "@/components/sections/verification-section";
 import TestimonialsSection from "@/components/sections/testimonials-section";
+
+export const revalidate = 0;
+
 import BlogTeaser from "@/components/sections/blog-teaser";
 import FinalCTA from "@/components/sections/final-cta";
 import Navbar from "@/components/layout/navbar";

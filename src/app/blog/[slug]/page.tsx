@@ -1,11 +1,13 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronRight, Calendar, User, Clock } from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { MDXRemote } from "next-mdx-remote/rsc";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 
 export async function generateStaticParams() {
@@ -113,22 +115,107 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
   // MDX Components mapping
   const components = {
-    h1: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h1 className="text-3xl font-bold mt-8 mb-4 text-text-primary" {...props} />,
+    // ── TABLE ──────────────────────────────────────────────────────────────
+    table: ({ children, ...props }: React.HTMLAttributes<HTMLTableElement>) => (
+      <div className="overflow-x-auto my-8 rounded-2xl border border-border shadow-sm">
+        <table className="w-full border-collapse text-sm" {...props}>
+          {children}
+        </table>
+      </div>
+    ),
+    thead: ({ children, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
+      <thead className="bg-primary/5 border-b border-border" {...props}>
+        {children}
+      </thead>
+    ),
+    th: ({ children, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) => (
+      <th
+        className="px-4 py-3 text-left text-xs font-bold text-primary uppercase tracking-wider whitespace-nowrap"
+        {...props}
+      >
+        {children}
+      </th>
+    ),
+    tbody: ({ children, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
+      <tbody className="divide-y divide-border" {...props}>
+        {children}
+      </tbody>
+    ),
+    tr: ({ children, ...props }: React.HTMLAttributes<HTMLTableRowElement>) => (
+      <tr className="hover:bg-primary/5 transition-colors duration-150" {...props}>
+        {children}
+      </tr>
+    ),
+    td: ({ children, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) => (
+      <td className="px-4 py-3 text-text-primary text-sm align-top" {...props}>
+        {children}
+      </td>
+    ),
+    // ── HEADINGS ──────────────────────────────────────────────────────────
+    h1: (props: React.HTMLAttributes<HTMLHeadingElement>) => (
+      <h1 className="text-3xl font-black text-text-primary mt-10 mb-4" {...props} />
+    ),
     h2: (props: React.HTMLAttributes<HTMLHeadingElement>) => {
       const text = typeof props.children === "string" ? props.children : "";
       const id = text
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, "")
         .replace(/\s+/g, "-");
-      return <h2 id={id} className="text-2xl font-bold mt-8 mb-4 text-text-primary scroll-mt-24" {...props} />;
+      return (
+        <h2
+          id={id}
+          className="text-2xl font-bold text-text-primary mt-8 mb-3 pb-2 border-b border-border scroll-mt-24"
+          {...props}
+        />
+      );
     },
-    h3: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h3 className="text-xl font-bold mt-6 mb-3 text-text-primary" {...props} />,
-    p: (props: React.HTMLAttributes<HTMLParagraphElement>) => <p className="text-text-muted leading-relaxed mb-6" {...props} />,
-    ul: (props: React.HTMLAttributes<HTMLUListElement>) => <ul className="list-disc pl-6 mb-6 text-text-muted space-y-2" {...props} />,
-    ol: (props: React.HTMLAttributes<HTMLOListElement>) => <ol className="list-decimal pl-6 mb-6 text-text-muted space-y-2" {...props} />,
-    li: (props: React.LiHTMLAttributes<HTMLLIElement>) => <li {...props} />,
-    blockquote: (props: React.BlockquoteHTMLAttributes<HTMLQuoteElement>) => <blockquote className="border-l-4 border-primary pl-4 italic text-text-primary my-6" {...props} />,
-    a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a className="text-primary hover:underline underline-offset-4" {...props} />,
+    h3: (props: React.HTMLAttributes<HTMLHeadingElement>) => (
+      <h3 className="text-xl font-bold text-text-primary mt-6 mb-2" {...props} />
+    ),
+    // ── PARAGRAPH ─────────────────────────────────────────────────────────
+    p: (props: React.HTMLAttributes<HTMLParagraphElement>) => (
+      <p className="text-text-primary leading-relaxed mb-4 text-base" {...props} />
+    ),
+    // ── STRONG / BOLD ─────────────────────────────────────────────────────
+    strong: (props: React.HTMLAttributes<HTMLElement>) => (
+      <strong className="font-bold text-text-primary" {...props} />
+    ),
+    // ── HR ────────────────────────────────────────────────────────────────
+    hr: (props: React.HTMLAttributes<HTMLHRElement>) => (
+      <hr className="my-8 border-border" {...props} />
+    ),
+    // ── BLOCKQUOTE ────────────────────────────────────────────────────────
+    blockquote: (props: React.BlockquoteHTMLAttributes<HTMLQuoteElement>) => (
+      <blockquote
+        className="border-l-4 border-primary bg-primary/5 px-5 py-4 my-6 rounded-r-xl italic text-text-muted"
+        {...props}
+      />
+    ),
+    // ── LISTS ─────────────────────────────────────────────────────────────
+    ul: (props: React.HTMLAttributes<HTMLUListElement>) => (
+      <ul className="list-disc list-inside space-y-2 mb-4 text-text-primary" {...props} />
+    ),
+    ol: (props: React.HTMLAttributes<HTMLOListElement>) => (
+      <ol className="list-decimal list-inside space-y-2 mb-4 text-text-primary" {...props} />
+    ),
+    li: (props: React.LiHTMLAttributes<HTMLLIElement>) => (
+      <li className="text-base leading-relaxed pl-2" {...props} />
+    ),
+    // ── LINKS ─────────────────────────────────────────────────────────────
+    a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+      <a
+        className="text-primary font-semibold underline underline-offset-2 hover:opacity-80 transition-colors"
+        {...props}
+      />
+    ),
+    // ── INLINE CODE ───────────────────────────────────────────────────────
+    code: (props: React.HTMLAttributes<HTMLElement>) => (
+      <code
+        className="bg-primary/5 text-primary text-sm px-1.5 py-0.5 rounded font-mono"
+        {...props}
+      />
+    ),
+    // ── CUSTOM CTA COMPONENT ──────────────────────────────────────────────
     CTA: (props: CTAProps) => (
       <div className="bg-primary/5 border border-primary/10 rounded-2xl p-8 my-8 text-center">
         <h3 className="text-2xl font-bold text-primary-dark mb-4">{props.title || "Ready to switch to solar?"}</h3>
@@ -192,11 +279,13 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
             {/* Cover image */}
             {post.cover_image && (
-              <div className="w-full aspect-[1200/630] rounded-2xl overflow-hidden mb-8 -mx-4 sm:mx-0">
-                <img
+              <div className="relative w-full h-64 md:h-96 rounded-3xl overflow-hidden mb-8">
+                <Image
                   src={post.cover_image}
                   alt={post.cover_image_alt || post.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  priority
                 />
               </div>
             )}
@@ -204,7 +293,15 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             <div className="relative flex items-start gap-12">
               {/* Main Content */}
               <div className="flex-1 w-full max-w-none prose prose-lg prose-gray">
-                <MDXRemote source={post.content} components={components} />
+                <MDXRemote
+                  source={post.content}
+                  options={{
+                    mdxOptions: {
+                      remarkPlugins: [remarkGfm],
+                    },
+                  }}
+                  components={components}
+                />
 
                 {/* Fallback Mid-article CTA if not included in MDX */}
                 {!post.content.includes('<CTA') && (

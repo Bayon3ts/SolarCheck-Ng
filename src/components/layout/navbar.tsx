@@ -278,7 +278,7 @@ export default function Navbar() {
                 {/* New badge */}
                 <div className="inline-flex items-center gap-1.5 bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full mb-3">
                   <span>💰</span>
-                  Installers charge ₦5k–₦30k for this
+                  Installers charge ₦25k–₦50k for this
                 </div>
 
                 <p className="text-sm text-text-muted mb-4 leading-relaxed">
