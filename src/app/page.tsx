@@ -36,7 +36,7 @@ export default function HomePage() {
         <section className="py-16 bg-white">
           <div className="container-custom text-center mb-10">
             <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
-              ⭐ Unbiased Nigerian Market Reviews
+              <span className="inline-block animate-spin" style={{ animationDuration: "3s" }}>⭐</span> Unbiased Nigerian Market Reviews
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-text-primary mb-3">
               Find expert reviews of the solar equipment you need
