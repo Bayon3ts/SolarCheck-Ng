@@ -3,7 +3,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
-  if (path === '/robots.txt' || path === '/sitemap.xml') {
+  if (
+    path.startsWith('/_next') ||
+    path.startsWith('/api') ||
+    path === '/favicon.ico' ||
+    path === '/robots.txt' ||
+    path === '/sitemap.xml' ||
+    path.match(/\.(svg|png|jpg|jpeg|gif|webp)$/)
+  ) {
     return NextResponse.next()
   }
 
@@ -64,12 +71,8 @@ export async function middleware(request: NextRequest) {
   // ✅ Removed duplicate `const path = ...` that was here
 
   if (path.startsWith('/admin')) {
-    // Allow the admin login page to be accessible without a session
+    // Exclude /admin/login from the auth check so it's always accessible
     if (path === '/admin/login') {
-      // If already logged in, bounce straight to the dashboard
-      if (session) {
-        return NextResponse.redirect(new URL('/admin', request.url))
-      }
       return response
     }
 
@@ -77,13 +80,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
+    const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
+    const isAdmin = 
+      session.user?.user_metadata?.role === 'admin' || 
+      (session.user?.email && adminEmails.includes(session.user.email.toLowerCase()));
 
-    if (profile?.role !== 'admin') {
+    if (!isAdmin) {
       // Not an admin — kick back to the admin login with a clear message
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }

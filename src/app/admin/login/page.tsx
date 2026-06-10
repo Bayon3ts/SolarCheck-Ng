@@ -33,14 +33,13 @@ export default function AdminLoginPage() {
       return;
     }
 
-    // Verify the user has admin role
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user?.id)
-      .single();
+    // Verify the user has admin role via user_metadata or environment variable
+    const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
+    const isAdmin = 
+      data.user?.user_metadata?.role === 'admin' || 
+      (data.user?.email && adminEmails.includes(data.user.email.toLowerCase()));
 
-    if (profileError || profile?.role !== "admin") {
+    if (!isAdmin) {
       // Sign them back out — not an admin
       await supabase.auth.signOut();
       setError("Access denied. This portal is for SolarCheck admins only.");
