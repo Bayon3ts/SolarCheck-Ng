@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, ChevronRight, Loader2, ArrowLeft, Building2, Upload } from "lucide-react";
+import { CheckCircle2, ChevronRight, Loader2, ArrowLeft, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
@@ -36,9 +36,39 @@ function InstallerRegistrationForm() {
     system_sizes: [] as string[],
     brands_used: [] as string[],
     plan: initialPlan,
+    id_type: '',
+    id_number: '',
+    id_file: null as File | null,
   });
 
-  const handleNext = () => setStep((p) => p + 1);
+  const handleNext = () => {
+    if (step === 3) {
+      // Require ID type
+      if (!formData.id_type) {
+        alert('Please select an ID type')
+        return
+      }
+
+      // Require ID number
+      if (!formData.id_number?.trim()) {
+        alert('Please enter your ID number')
+        return
+      }
+
+      // Require NIN to be 11 digits
+      if (formData.id_type === 'nin' && !/^\d{11}$/.test(formData.id_number)) {
+        alert('NIN must be exactly 11 digits')
+        return
+      }
+
+      // Require document upload
+      if (!formData.id_file) {
+        alert('Please upload your ID document')
+        return
+      }
+    }
+    setStep((p) => p + 1);
+  };
   const handleBack = () => setStep((p) => p - 1);
 
   const updateField = (field: keyof typeof formData, value: string | string[]) => {
@@ -349,32 +379,205 @@ function InstallerRegistrationForm() {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-6"
               >
-                <h3 className="text-xl font-bold text-text-primary mb-6 flex items-center gap-2">
-                  Verification Documents
-                </h3>
-                <p className="text-sm text-text-muted mb-4">
-                  To maintain quality, SolarCheck requires all installers to provide their CAC registration.
-                </p>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-text-primary">CAC Registration Number *</label>
-                  <input 
-                    type="text" 
-                    value={formData.cac_number}
-                    onChange={(e) => updateField("cac_number", e.target.value)}
-                    placeholder="e.g. RC 123456"
-                    className="input-field w-full font-mono"
-                    required
-                  />
+                <div>
+                  <h2 className="text-xl font-bold text-text-primary mb-1">
+                    Identity Verification
+                  </h2>
+                  <p className="text-sm text-text-muted">
+                    Since you don&apos;t have a CAC registration, we require a valid government-issued ID to verify your identity and protect homeowners on SolarCheck.
+                  </p>
                 </div>
 
-                <div className="mt-6 border-2 border-dashed border-border rounded-xl p-8 text-center bg-gray-50">
-                  <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-text-primary mb-1">Upload CAC Certificate</p>
-                  <p className="text-xs text-text-muted mb-4">PDF, JPG or PNG (Max 5MB)</p>
-                  <Button type="button" variant="outline" size="sm">Select File</Button>
-                  <p className="text-xs text-text-muted mt-4 italic">Document upload is simulated for this demo.</p>
+                {/* ── Notice banner ── */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
+                  <span className="text-lg flex-shrink-0">ℹ️</span>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-900 mb-1">
+                      No CAC? No problem — for now.
+                    </p>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      You can list with ID verification. However, installers with CAC registration get a <strong>Verified badge</strong> and rank higher in search results. You can add your CAC later from your dashboard.
+                    </p>
+                  </div>
                 </div>
+
+                {/* ── ID Type Selector ── */}
+                <div>
+                  <label className="text-sm font-semibold text-text-primary block mb-3">
+                    Select ID Type *
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      {
+                        value: 'nin',
+                        label: 'NIN',
+                        icon: '🪪',
+                        description: 'National ID Number',
+                      },
+                      {
+                        value: 'passport',
+                        label: 'Int\'l Passport',
+                        icon: '📘',
+                        description: 'International Passport',
+                      },
+                      {
+                        value: 'voters_card',
+                        label: "Voter's Card",
+                        icon: '🗳️',
+                        description: "Permanent Voter's Card",
+                      },
+                    ].map(id => (
+                      <button
+                        key={id.value}
+                        type="button"
+                        onClick={() =>
+                          setFormData(prev => ({
+                            ...prev,
+                            id_type: id.value,
+                          }))
+                        }
+                        className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 text-center transition-all ${formData.id_type === id.value ? 'border-primary bg-primary/5' : 'border-border bg-white hover:border-primary/30'}`}
+                      >
+                        <span className="text-2xl">{id.icon}</span>
+                        <div>
+                          <p className={`text-sm font-bold ${formData.id_type === id.value ? 'text-primary' : 'text-text-primary'}`}>
+                            {id.label}
+                          </p>
+                          <p className="text-xs text-text-muted mt-0.5 leading-tight">
+                            {id.description}
+                          </p>
+                        </div>
+                        {formData.id_type === id.value && (
+                          <span className="text-primary text-xs font-bold">
+                            ✓ Selected
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── ID Number Input ── */}
+                {formData.id_type && (
+                  <div>
+                    <label className="text-sm font-semibold text-text-primary block mb-2">
+                      {formData.id_type === 'nin' && 'NIN (11-digit number) *'}
+                      {formData.id_type === 'passport' && 'Passport Number *'}
+                      {formData.id_type === 'voters_card' && "Voter's Card Number *"}
+                    </label>
+
+                    <input
+                      type="text"
+                      value={formData.id_number || ''}
+                      onChange={e =>
+                        setFormData(prev => ({
+                          ...prev,
+                          id_number: e.target.value,
+                        }))
+                      }
+                      placeholder={
+                        formData.id_type === 'nin'
+                          ? '12345678901 (11 digits)'
+                          : formData.id_type === 'passport'
+                            ? 'A12345678'
+                            : 'Enter card number'
+                      }
+                      maxLength={formData.id_type === 'nin' ? 11 : 20}
+                      className="w-full px-4 py-3.5 border-2 border-border rounded-xl text-sm font-mono tracking-wider focus:border-primary focus:outline-none transition-colors"
+                    />
+
+                    {/* NIN digit counter */}
+                    {formData.id_type === 'nin' && (
+                      <div className="flex justify-between mt-1">
+                        <p className="text-xs text-text-muted">
+                          Numbers only, no spaces
+                        </p>
+                        <p className={`text-xs font-mono ${(formData.id_number?.length || 0) === 11 ? 'text-green-600 font-bold' : 'text-text-muted'}`}>
+                          {formData.id_number?.length || 0}/11
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── ID Document Upload ── */}
+                {formData.id_type && (
+                  <div>
+                    <label className="text-sm font-semibold text-text-primary block mb-2">
+                      Upload ID Document *
+                      <span className="font-normal text-text-muted ml-1">
+                        (JPG, PNG or PDF · Max 5MB)
+                      </span>
+                    </label>
+
+                    {!formData.id_file ? (
+                      <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-2xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group">
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".jpg,.jpeg,.png,.pdf"
+                          onChange={e => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            if (file.size > 5242880) {
+                              alert('File too large. Maximum 5MB.')
+                              return
+                            }
+                            setFormData(prev => ({
+                              ...prev,
+                              id_file: file,
+                            }))
+                          }}
+                        />
+                        <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">
+                          📎
+                        </div>
+                        <p className="text-sm font-semibold text-text-muted group-hover:text-primary transition-colors">
+                          Click to select file
+                        </p>
+                        <p className="text-xs text-text-muted mt-1">
+                          Front of ID card — all corners must be visible
+                        </p>
+                        <p className="text-xs text-text-muted mt-0.5">
+                          Good lighting · No blur · No glare
+                        </p>
+                      </label>
+                    ) : (
+                      <div className="p-4 bg-green-50 border-2 border-green-200 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-xl">
+                            ✅
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-green-800 truncate max-w-[180px]">
+                              {formData.id_file.name}
+                            </p>
+                            <p className="text-xs text-green-600">
+                              {(formData.id_file.size / 1024 / 1024).toFixed(2)}MB · Ready
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData(prev => ({
+                              ...prev,
+                              id_file: null,
+                            }))
+                          }
+                          className="text-xs text-red-500 hover:text-red-700 font-semibold px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-text-muted mt-3 flex items-center gap-1.5">
+                      <span>🔒</span>
+                      Your ID is encrypted and stored securely. Only used for verification — never shown to homeowners or third parties.
+                    </p>
+                  </div>
+                )}
               </motion.div>
             )}
 

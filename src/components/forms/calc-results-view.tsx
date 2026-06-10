@@ -36,7 +36,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
 
   const { 
     pvKwp, panelsNeeded, panelSizeWatts, inverterKva, batteryKwh, batteryType,
-    systemCostMin, systemCostMax, paybackMonths,
+    systemCostMin, systemCostMax,
     fiveYearSavings, tenYearSavings,
     monthlyCurrentSpend, afterSolarMonthlyCost,
     monthlyProduction, avgPSH, discoTariff
@@ -172,13 +172,6 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
                 )}
               </div>
               <span className="font-bold text-text-primary">{batteryKwh} kWh</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 group relative cursor-help">
-              <span className="text-text-muted text-sm font-medium border-b border-dashed border-gray-300">Payback Period</span>
-              <span className="font-bold text-text-primary">{paybackMonths} months</span>
-              <div className="hidden group-hover:block absolute bottom-full left-0 mb-2 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-10">
-                Time to recover installation cost through generator fuel & NEPA savings.
-              </div>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-text-muted text-sm font-medium">5-Year Net Savings</span>

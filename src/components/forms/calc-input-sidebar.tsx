@@ -9,6 +9,120 @@ import { DISCO_BY_STATE, APPLIANCES, IKEDC_BANDS, getEffectiveTariff, getFuelPri
 import { SYSTEM_PACKAGES, SystemTier, formatTierPrice, getNextTier } from "@/data/system-packages";
 import { motion, AnimatePresence } from "framer-motion";
 
+// ── NairaInput ───────────────────────────────────────────────────
+interface NairaInputProps {
+  label: string
+  sublabel?: string
+  value: number
+  onChange: (value: number) => void
+  presets: number[]
+  placeholder?: string
+  helpText?: string
+}
+
+function NairaInput({
+  label,
+  sublabel,
+  value,
+  onChange,
+  presets,
+  placeholder = '0',
+  helpText,
+}: NairaInputProps) {
+  const formatNumber = (n: number) =>
+    n === 0 ? '' : n.toLocaleString('en-NG')
+
+  const parseInput = (raw: string) => {
+    const cleaned = raw.replace(/[^0-9]/g, '')
+    return cleaned === '' ? 0 : parseInt(cleaned, 10)
+  }
+
+  const [displayValue, setDisplayValue] = useState(formatNumber(value))
+
+  useEffect(() => {
+    setDisplayValue(formatNumber(value))
+  }, [value])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value
+    setDisplayValue(raw)
+    const parsed = parseInput(raw)
+    onChange(parsed)
+  }
+
+  const handleBlur = () => {
+    setDisplayValue(formatNumber(value))
+  }
+
+  const handlePreset = (preset: number) => {
+    onChange(preset)
+    setDisplayValue(formatNumber(preset))
+  }
+
+  return (
+    <div className="space-y-2">
+      <div>
+        <label className="text-sm font-semibold text-text-primary">
+          {label}
+        </label>
+        {sublabel && (
+          <p className="text-xs text-text-muted mt-0.5">{sublabel}</p>
+        )}
+      </div>
+
+      <div className="relative flex items-center">
+        <div className="absolute left-0 top-0 bottom-0 flex items-center pl-3.5 pointer-events-none">
+          <span className="text-sm font-bold text-primary">₦</span>
+        </div>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={displayValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          className="w-full pl-8 pr-16 py-3 bg-white border-2 border-border rounded-xl text-sm font-bold text-text-primary focus:border-primary focus:outline-none transition-colors placeholder:text-text-muted placeholder:font-normal"
+        />
+        {value > 0 && (
+          <div className="absolute right-3 top-0 bottom-0 flex items-center pointer-events-none">
+            <span className="text-xs text-text-muted font-medium">
+              {value >= 1000000
+                ? `₦${(value / 1000000).toFixed(1)}M`
+                : value >= 1000
+                ? `₦${(value / 1000).toFixed(0)}k`
+                : ''}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {presets.map(preset => (
+          <button
+            key={preset}
+            type="button"
+            onClick={() => handlePreset(preset)}
+            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+              value === preset
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-text-muted border-border hover:border-primary/40 hover:text-primary'
+            }`}
+          >
+            {preset >= 1000000
+              ? `₦${(preset / 1000000).toFixed(1)}M`
+              : `₦${(preset / 1000).toFixed(0)}k`}
+          </button>
+        ))}
+      </div>
+
+      {helpText && (
+        <p className="text-xs text-text-muted leading-relaxed">{helpText}</p>
+      )}
+    </div>
+  )
+}
+// ─────────────────────────────────────────────────────────────────
+
 interface Props {
   inputs: CalculatorInputs;
   onChange: (updates: Partial<CalculatorInputs>) => void;
@@ -312,35 +426,28 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
         )}
 
         {/* 3. NEPA Bill */}
-        <div className="space-y-3 mb-6">
-          <div className="flex justify-between items-end">
-            <label className="block text-sm font-semibold text-text-primary">Monthly NEPA Bill</label>
-            <span className="text-sm font-bold text-primary">₦{inputs.monthlyBill.toLocaleString()}</span>
-          </div>
-          <input
-            type="range"
-            min={5000} max={500000} step={5000}
+        <div className="mb-6">
+          <NairaInput
+            label="Monthly NEPA Bill"
+            sublabel="Your average electricity bill per month"
             value={inputs.monthlyBill}
-            onChange={e => onChange({ monthlyBill: Number(e.target.value) })}
-            className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary"
+            onChange={(val) => onChange({ monthlyBill: val })}
+            presets={[5000, 10000, 20000, 35000, 50000, 100000]}
+            placeholder="Enter amount"
+            helpText="Check your NEPA bill or estimate based on your tariff band. Not sure? Use ₦20,000 as a starting point."
           />
         </div>
 
         {/* 4. Generator Spend */}
-        <div className="space-y-3 mb-6">
-          <div className="flex justify-between items-end">
-            <div>
-              <label className="block text-sm font-semibold text-text-primary">Generator Fuel Spend</label>
-              <p className="text-xs text-text-muted mt-0.5">Incl. maintenance</p>
-            </div>
-            <span className="text-sm font-bold text-amber-600">₦{inputs.generatorSpend.toLocaleString()}</span>
-          </div>
-          <input
-            type="range"
-            min={0} max={500000} step={5000}
+        <div className="mb-6">
+          <NairaInput
+            label="Generator Fuel Spend"
+            sublabel="Monthly fuel + maintenance"
             value={inputs.generatorSpend}
-            onChange={e => onChange({ generatorSpend: Number(e.target.value) })}
-            className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-amber-500"
+            onChange={(val) => onChange({ generatorSpend: val })}
+            presets={[10000, 30000, 50000, 75000, 100000, 150000]}
+            placeholder="Enter amount"
+            helpText="Include petrol cost and servicing. 0 if you don't use a generator."
           />
         </div>
 

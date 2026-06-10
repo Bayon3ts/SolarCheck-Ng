@@ -64,9 +64,19 @@ export async function middleware(request: NextRequest) {
   // ✅ Removed duplicate `const path = ...` that was here
 
   if (path.startsWith('/admin')) {
-    if (!session) {
-      return NextResponse.redirect(new URL('/login', request.url))
+    // Allow the admin login page to be accessible without a session
+    if (path === '/admin/login') {
+      // If already logged in, bounce straight to the dashboard
+      if (session) {
+        return NextResponse.redirect(new URL('/admin', request.url))
+      }
+      return response
     }
+
+    if (!session) {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -74,9 +84,8 @@ export async function middleware(request: NextRequest) {
       .single()
 
     if (profile?.role !== 'admin') {
-      // TEMP FIX: Commented out to allow local testing of the admin page. 
-      // Ensure your user has role='admin' in the 'profiles' table for production.
-      // return NextResponse.redirect(new URL('/dashboard', request.url))
+      // Not an admin — kick back to the admin login with a clear message
+      return NextResponse.redirect(new URL('/admin/login', request.url))
     }
   }
 

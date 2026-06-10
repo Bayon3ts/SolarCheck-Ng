@@ -52,7 +52,7 @@ export default function ForInstallersPage() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button variant="secondary" size="lg" className="w-full sm:w-auto" asChild>
-                <Link href="/installers/register">Apply for Verification</Link>
+                <Link href="/installers/register">Apply for Verification (For users without CAC)</Link>
               </Button>
               <p className="text-sm text-white/50">Approval takes 24-48 hours.</p>
             </div>
@@ -72,7 +72,7 @@ export default function ForInstallersPage() {
               href="/for-installers/apply"
               className="bg-primary text-white font-bold px-8 py-4 rounded-full text-lg inline-block hover:bg-primary-dark transition-colors"
             >
-              Apply for Free Listing →
+              Apply for Free Listing (For users with CAC) →
             </Link>
             <p className="text-primary-dark/50 text-xs mt-4">
               Free for the first 6 months · No credit card required

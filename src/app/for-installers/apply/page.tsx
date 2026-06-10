@@ -96,6 +96,16 @@ export default function InstallerApplyPage() {
   const [approvedCount, setApprovedCount] = useState<number>(0);
   const [charCount, setCharCount] = useState(0);
 
+  const [idType, setIdType] = useState('')
+  const [idNumber, setIdNumber] = useState('')
+  const [idFile, setIdFile] = useState<File | null>(null)
+  const [idTypeError, setIdTypeError] = useState('')
+  const [idNumberError, setIdNumberError] = useState('')
+  const [idFileError, setIdFileError] = useState('')
+  const [cacError, setCacError] = useState('')
+  const [cacFile, setCacFile] = useState<File | null>(null)
+  const [cacFileError, setCacFileError] = useState('')
+
   // Fetch approved installer count
   useEffect(() => {
     async function fetchCount() {
@@ -132,13 +142,60 @@ export default function InstallerApplyPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setCacError('');
+    setCacFileError('');
+    setIdTypeError('');
+    setIdNumberError('');
+    setIdFileError('');
+
+    // Validate CAC (now mandatory)
+    if (!formData.cac_number?.trim()) {
+      setCacError('CAC number is required');
+      return;
+    }
+
+    if (!cacFile) {
+      setCacFileError('Please upload your CAC document');
+      return;
+    }
+
+    // Validate ID type
+    if (!idType) {
+      setIdTypeError('Please select an ID type');
+      return;
+    }
+
+    // Validate ID number
+    if (!idNumber.trim()) {
+      setIdNumberError('Please enter your ID number');
+      return;
+    }
+
+    // Validate NIN is 11 digits
+    if (idType === 'nin' && !/^\d{11}$/.test(idNumber)) {
+      setIdNumberError('NIN must be exactly 11 digits');
+      return;
+    }
+
+    // Validate ID file
+    if (!idFile) {
+      setIdFileError('Please upload your ID document');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
+      const payload = {
+        ...formData,
+        id_type: idType,
+        id_number: idNumber,
+      };
+
       const res = await fetch("/api/installers/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const result = await res.json();
@@ -350,10 +407,10 @@ export default function InstallerApplyPage() {
                   />
                 </div>
 
-                {/* Website */}
+                {/* Portfolio Link */}
                 <div>
                   <label htmlFor="website" className="block text-sm font-medium text-text-primary mb-1.5">
-                    Website URL <span className="text-text-muted text-xs">(optional)</span>
+                    Portfolio Link <span className="text-text-muted text-xs">(visible only to admin)</span>
                   </label>
                   <input
                     id="website"
@@ -362,7 +419,7 @@ export default function InstallerApplyPage() {
                     value={formData.website}
                     onChange={handleChange}
                     className="input-field"
-                    placeholder="https://yourcompany.com"
+                    placeholder="https://yourportfolio.com"
                   />
                 </div>
 
@@ -543,24 +600,249 @@ export default function InstallerApplyPage() {
                 {/* CAC Number */}
                 <div>
                   <label htmlFor="cac_number" className="block text-sm font-medium text-text-primary mb-1.5">
-                    CAC Registration Number{" "}
-                    <span className="text-text-muted text-xs">(optional)</span>
+                    CAC Registration Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="cac_number"
                     name="cac_number"
                     type="text"
+                    required
                     value={formData.cac_number}
                     onChange={handleChange}
                     className="input-field"
                     placeholder="RC-XXXXXXX"
                   />
+                  {cacError && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {cacError}
+                    </p>
+                  )}
                   <p className="text-xs text-text-muted mt-1.5">
-                    Not required but builds customer trust
+                    Required for verified installer badge
                   </p>
+                </div>
+
+                {/* CAC Document Upload */}
+                <div className="mt-4">
+                  <label className="text-sm font-semibold text-text-primary block mb-2">
+                    Upload CAC Document *
+                    <span className="text-text-muted font-normal ml-1">
+                      (JPG, PNG or PDF · Max 5MB)
+                    </span>
+                  </label>
+
+                  {!cacFile ? (
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all group">
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (file && file.size <= 5242880) {
+                            setCacFile(file)
+                            setCacFileError('')
+                          } else if (file) {
+                            setCacFileError('File too large. Max 5MB.')
+                          }
+                        }}
+                      />
+                      <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">
+                        📎
+                      </div>
+                      <p className="text-sm font-medium text-text-muted group-hover:text-primary">
+                        Click to upload
+                      </p>
+                    </label>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-600 text-lg">✓</span>
+                        <div>
+                          <p className="text-sm font-semibold text-green-800 truncate max-w-[200px]">
+                            {cacFile.name}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            {(cacFile.size / 1024 / 1024).toFixed(2)}MB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCacFile(null)}
+                        className="text-xs text-red-500 hover:text-red-700 font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {cacFileError && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {cacFileError}
+                    </p>
+                  )}
                 </div>
               </div>
             </fieldset>
+
+            <div className="space-y-5 pt-6 border-t border-border">
+              <div>
+                <h3 className="text-base font-bold text-text-primary">
+                  Identity Verification
+                </h3>
+                <p className="text-sm text-text-muted mt-1">
+                  Upload a valid government-issued ID alongside your CAC. This protects homeowners and builds trust.
+                </p>
+              </div>
+
+              {/* ── ID Type Selector ── */}
+              <div>
+                <label className="text-sm font-semibold text-text-primary block mb-2">
+                  ID Type *
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { 
+                      value: 'nin', 
+                      label: 'NIN',
+                      icon: '🪪',
+                      full: 'National ID Number'
+                    },
+                    { 
+                      value: 'passport', 
+                      label: 'Passport',
+                      icon: '📘',
+                      full: 'International Passport'
+                    },
+                    { 
+                      value: 'voters_card', 
+                      label: "Voter's Card",
+                      icon: '🗳️',
+                      full: "Permanent Voter's Card"
+                    },
+                  ].map(id => (
+                    <button
+                      key={id.value}
+                      type="button"
+                      onClick={() => setIdType(id.value)}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-center transition-all ${idType === id.value ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-text-muted hover:border-primary/40'}`}
+                    >
+                      <span className="text-xl">{id.icon}</span>
+                      <span className="text-xs font-semibold leading-tight">{id.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* Validation error */}
+                {idTypeError && (
+                  <p className="text-xs text-red-500 mt-1">
+                    Please select an ID type
+                  </p>
+                )}
+              </div>
+
+              {/* ── ID Number Input ── */}
+              {idType && (
+                <div>
+                  <label className="text-sm font-semibold text-text-primary block mb-2">
+                    {idType === 'nin' && 'NIN (11 digits) *'}
+                    {idType === 'passport' && 'Passport Number *'}
+                    {idType === 'voters_card' && "Voter's Card Number *"}
+                  </label>
+                  <input
+                    type="text"
+                    value={idNumber}
+                    onChange={e => setIdNumber(e.target.value)}
+                    placeholder={
+                      idType === 'nin' 
+                        ? '12345678901'
+                        : idType === 'passport'
+                          ? 'A12345678'
+                          : 'Enter card number'
+                    }
+                    maxLength={idType === 'nin' ? 11 : 20}
+                    className="w-full px-4 py-3 border-2 border-border rounded-xl text-sm focus:border-primary focus:outline-none font-mono tracking-wider"
+                  />
+                  {idNumberError && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {idType === 'nin' ? 'NIN must be exactly 11 digits' : 'Please enter your ID number'}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ── ID Document Upload ── */}
+              {idType && (
+                <div>
+                  <label className="text-sm font-semibold text-text-primary block mb-2">
+                    Upload ID Document *
+                    <span className="text-text-muted font-normal ml-1">
+                      (JPG, PNG or PDF · Max 5MB)
+                    </span>
+                  </label>
+
+                  {!idFile ? (
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all group">
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (file && file.size <= 5242880) {
+                            setIdFile(file)
+                            setIdFileError('')
+                          } else if (file) {
+                            setIdFileError('File too large. Max 5MB.')
+                          }
+                        }}
+                      />
+                      <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">
+                        📎
+                      </div>
+                      <p className="text-sm font-medium text-text-muted group-hover:text-primary">
+                        Click to upload
+                      </p>
+                      <p className="text-xs text-text-muted mt-1">
+                        Clear photo of your ID — all 4 corners visible
+                      </p>
+                    </label>
+                  ) : (
+                    // File selected state
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-600 text-lg">✓</span>
+                        <div>
+                          <p className="text-sm font-semibold text-green-800 truncate max-w-[200px]">
+                            {idFile.name}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            {(idFile.size / 1024 / 1024).toFixed(2)}MB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIdFile(null)}
+                        className="text-xs text-red-500 hover:text-red-700 font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {idFileError && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {idFileError}
+                    </p>
+                  )}
+
+                  <p className="text-xs text-text-muted mt-2">
+                    🔒 Your ID is encrypted and only used for verification. Never shown to homeowners.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* ── Verification ── */}
             <fieldset>
@@ -600,7 +882,7 @@ export default function InstallerApplyPage() {
                   Submitting...
                 </span>
               ) : (
-                "Apply for Free Listing →"
+                "Apply for Free Listing (For users CAC) →"
               )}
             </button>
 

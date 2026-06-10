@@ -228,8 +228,11 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
                 </span>
               </label>
               <ImageUpload
-                value={coverImage || null}
-                onChange={setCoverImage}
+                currentImage={coverImage || null}
+                onUpload={(url: string) => {
+                  console.log('[BlogEditor] Cover image URL:', url);
+                  setCoverImage(url);
+                }}
                 altValue={coverImageAlt}
                 onAltChange={setCoverImageAlt}
               />
