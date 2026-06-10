@@ -1,8 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const cookieStore = cookies()
 
   const supabase = createServerClient(
@@ -25,8 +25,7 @@ export async function POST() {
 
   await supabase.auth.signOut()
 
-  return NextResponse.redirect(
-    new URL('/admin/login', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
-    { status: 302 }
-  )
+  // Use the request's own origin so this works in both dev and production
+  const origin = request.nextUrl.origin
+  return NextResponse.redirect(new URL('/admin/login', origin), { status: 302 })
 }

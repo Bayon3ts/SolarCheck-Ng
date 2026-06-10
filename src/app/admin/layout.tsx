@@ -10,6 +10,11 @@ export default async function AdminLayout({
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Don't render the sidebar shell on the login page (no authenticated user)
+  if (!user) {
+    return <>{children}</>;
+  }
+
   const { count: pendingCount } = await supabase
     .from("installer_applications")
     .select("*", { count: "exact", head: true })
