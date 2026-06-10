@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, MapPin, CheckCircle2 } from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,8 @@ import EmptyInstallerState from "@/components/ui/empty-installer-state";
 
 // The LGA column is for matching only. One URL per unique state+city.
 export async function generateStaticParams() {
-  const supabase = createServerClient();
+  // Use the cookie-free admin client — cookies() cannot be called at build time
+  const supabase = createAdminClient();
   const { data: locations } = await supabase
     .from("nigerian_locations")
     .select("state, city"); // Need to filter duplicates later if not DISTINCT

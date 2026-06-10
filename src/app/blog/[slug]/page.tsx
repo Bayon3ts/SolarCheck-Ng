@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight, Calendar, User, Clock } from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { MDXRemote } from "next-mdx-remote/rsc";
@@ -11,7 +12,8 @@ import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 
 export async function generateStaticParams() {
-  const supabase = createServerClient();
+  // Use the cookie-free admin client — cookies() cannot be called at build time
+  const supabase = createAdminClient();
   const { data: posts } = await supabase
     .from("blog_posts")
     .select("slug")
@@ -21,7 +23,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const supabase = createServerClient();
+  // Use the cookie-free admin client — generateMetadata also runs at build time
+  const supabase = createAdminClient();
   const { data: post } = await supabase
     .from("blog_posts")
     .select("title, excerpt, cover_image")

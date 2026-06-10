@@ -4,13 +4,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight, MapPin, BadgeCheck, Globe, Phone, CheckCircle2, Star } from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import StarRating from "@/components/ui/star-rating";
 
 export async function generateStaticParams() {
-  const supabase = createServerClient();
+  // Use the cookie-free admin client — cookies() cannot be called at build time
+  const supabase = createAdminClient();
   const { data: installers } = await supabase
     .from("installers")
     .select("slug")
@@ -20,7 +22,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const supabase = createServerClient();
+  const supabase = createAdminClient();
   const { data: installer } = await supabase
     .from("installers")
     .select("company_name, city, state, description")
