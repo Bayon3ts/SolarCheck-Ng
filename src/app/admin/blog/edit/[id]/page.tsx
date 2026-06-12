@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { ChevronLeft, Save } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 const MarkdownPreview = ({ content }: { content: string }) => {
   const formatted = content
@@ -255,11 +256,14 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         {/* Live Preview Pane */}
         <div className="w-1/2 bg-white p-8 overflow-y-auto prose max-w-none">
           {coverImage && (
-            <img
-              src={coverImage}
-              alt={coverImageAlt || title}
-              className="w-full h-48 object-cover rounded-xl mb-6"
-            />
+            <div className="relative w-full h-48 mb-6">
+              <Image
+                src={coverImage}
+                alt={coverImageAlt || title}
+                fill
+                className="object-cover rounded-xl"
+              />
+            </div>
           )}
           <h1 className="text-4xl font-bold mb-8">{title || "Post Title"}</h1>
           {content ? (
