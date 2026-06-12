@@ -14,9 +14,22 @@ export default async function DashboardPage() {
   // ── 1. Check authentication ────────────────────────
   const { data: { user } } = await supabase.auth.getUser();
 
+  interface Lead {
+    id: string;
+    created_at: string;
+    full_name: string;
+    city: string;
+    state: string;
+    system_size: string;
+    monthly_bill_range: string;
+    status: string;
+    phone: string;
+    whatsapp: string;
+  }
+
   let installer = null;
-  let leads: any[] = [];
-  let reviews: any[] = [];
+  let leads: Lead[] = [];
+  let reviews: unknown[] = [];
 
   if (user) {
     // ── 2a. Try matching by user_id ────────────────

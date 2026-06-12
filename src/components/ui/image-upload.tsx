@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Image from 'next/image';
 
 interface ImageUploadProps {
   currentImage: string | null;
@@ -135,11 +136,14 @@ export function ImageUpload({
   if (currentImage) {
     return (
       <div className="relative rounded-2xl overflow-hidden border border-border">
-        <img
-          src={currentImage}
-          alt={altValue}
-          className="w-full h-48 object-cover"
-        />
+        <div className="relative w-full h-48">
+          <Image
+            src={currentImage}
+            alt={altValue}
+            fill
+            className="object-cover"
+          />
+        </div>
         <button
           type="button"
           onClick={handleRemove}
