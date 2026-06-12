@@ -23,9 +23,9 @@ interface Props {
 
 export default function CalcResultsView({ inputs, results, onChange, leadSubmitted, onLeadSubmit }: Props) {
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [seasonTab, setSeasonTab] = useState<'annual'|'rainy'|'dry'>('annual');
+  const [seasonTab, setSeasonTab] = useState<'annual' | 'rainy' | 'dry'>('annual');
   const [showBreakdown, setShowBreakdown] = useState(false);
-  
+
   // Lead form state
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -34,7 +34,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const { 
+  const {
     pvKwp, panelsNeeded, panelSizeWatts, inverterKva, batteryKwh, batteryType,
     systemCostMin, systemCostMax,
     fiveYearSavings, tenYearSavings,
@@ -79,7 +79,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
   ];
 
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
+
   // Calculate average daily usage based on target
   // We can derive target monthly usage from production or inputs
   // But let's just use monthlyCurrentSpend/discoTariff for total load or just show production
@@ -93,9 +93,9 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
     production: monthlyProduction[i],
   }));
 
-  const areaData = seasonTab === 'annual' 
-    ? allMonthsData 
-    : seasonTab === 'rainy' 
+  const areaData = seasonTab === 'annual'
+    ? allMonthsData
+    : seasonTab === 'rainy'
       ? allMonthsData.slice(4, 10) // May-Oct
       : [...allMonthsData.slice(10, 12), ...allMonthsData.slice(0, 4)]; // Nov-Apr
 
@@ -162,11 +162,10 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
               <div className="flex items-center gap-2">
                 <span className="text-text-muted text-sm font-medium">Battery</span>
                 {batteryType !== 'none' && (
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    pkgBatteryLabel === 'LFP'
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${pkgBatteryLabel === 'LFP'
                       ? 'bg-primary/10 text-primary'
                       : 'bg-amber-100 text-amber-700'
-                  }`}>
+                    }`}>
                     {pkgBatteryLabel}{' · '}{pkgBatteryVoltage}V
                   </span>
                 )}
@@ -186,7 +185,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
                 {formatMillions(systemCostMin)}–{formatMillions(systemCostMax)}
               </p>
             </div>
-            
+
             <button onClick={() => setShowAdvanced(!showAdvanced)} className="text-sm font-bold text-primary flex items-center gap-1 pt-4">
               {showAdvanced ? "Hide" : "Show"} Advanced Metrics <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
             </button>
@@ -194,7 +193,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
             <AnimatePresence>
               {showAdvanced && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-gray-50 rounded-lg p-4 space-y-2 text-sm mt-2">
-                  <div className="flex justify-between"><span className="text-gray-500">Annual Production:</span> <span className="font-bold">{Math.round(monthlyProduction.reduce((a,b)=>a+b,0)).toLocaleString()} kWh</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Annual Production:</span> <span className="font-bold">{Math.round(monthlyProduction.reduce((a, b) => a + b, 0)).toLocaleString()} kWh</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">Peak Sun Hours:</span> <span className="font-bold">{avgPSH.toFixed(2)} hrs/day</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">10-Year Savings:</span> <span className="font-bold text-green-600">₦{tenYearSavings.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">DISCO Tariff:</span> <span className="font-bold text-amber-600">₦{discoTariff}/kWh</span></div>
@@ -213,7 +212,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
                   <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 600, fill: '#6B7280' }} />
                   <YAxis hide domain={[0, 'dataMax + 20000']} />
-                  <Tooltip 
+                  <Tooltip
                     cursor={{ fill: 'transparent' }}
                     formatter={(value: unknown) => [`₦${Math.round(Number(value)).toLocaleString()}`, 'Cost']}
                   />
@@ -244,7 +243,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
         <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
           <span>☀️</span> Solar Generation vs Usage
         </h2>
-        
+
         <div className="flex flex-col sm:flex-row justify-between mb-6 gap-4">
           <div className="flex gap-2 p-1 bg-gray-100 rounded-lg self-start">
             {(['annual', 'rainy', 'dry'] as const).map(tab => (
@@ -268,7 +267,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
             <AreaChart data={areaData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => `${val/1000}k`} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => `${val / 1000}k`} />
               <Tooltip formatter={(value: unknown) => [`${Math.round(Number(value))} kWh`, '']} />
               <Area type="monotone" dataKey="usage" stroke="#9CA3AF" fill="#9CA3AF" fillOpacity={0.3} strokeWidth={2} isAnimationActive={false} />
               <Area type="monotone" dataKey="production" stroke="#0A5C36" fill="#0A5C36" fillOpacity={0.5} strokeWidth={2} isAnimationActive={false} />
@@ -282,7 +281,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
         <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
           <span>🔋</span> Battery Backup Strategy
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {([
             { id: 'surplus', label: 'Store surplus solar energy', desc: 'Most economic — charges during day' },
@@ -323,88 +322,88 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
       {/* ── DAYTIME HEAVY ANALYSIS ── */}
       {/* FIX 1 — only show for Standard / Premium with meaningful daytime load */}
       {daytimeAnalysis.isDaytimeHeavy &&
-       (inputs.systemTier === 'standard' || inputs.systemTier === 'premium') &&
-       daytimeAnalysis.daytimeLoadKw >= 1.5 && (
-        <div className="bg-amber-50 border-l-4 border-amber-400 rounded-2xl p-5 my-6">
-          {/* Header */}
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">☀️</span>
-            <h3 className="font-bold text-amber-900 text-sm">
-              Daytime-Heavy Load Detected
-            </h3>
-          </div>
-
-          {/* What this means */}
-          <p className="text-sm text-amber-800 mb-4 leading-relaxed">
-            {Math.round(daytimeAnalysis.daytimeRatio * 100)}% of your power is used during 
-            daylight hours (6am–6pm). This means you can run a 
-            <strong> larger solar array</strong> to handle heavy daytime loads directly, 
-            while keeping a <strong> smaller battery bank</strong> just for nighttime 
-            essentials — saving money on battery cost.
-          </p>
-
-          {/* Two-column split: day vs night */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            {/* Daytime */}
-            <div className="bg-white rounded-xl p-3 border border-amber-200">
-              <p className="text-xs font-bold text-amber-700 mb-2 uppercase tracking-wide">
-                ☀️ Daytime (Solar Direct)
-              </p>
-              <p className="text-lg font-black text-text-primary">
-                {daytimeAnalysis.daytimeLoadKw.toFixed(1)}kW
-              </p>
-              <p className="text-xs text-text-muted">
-                avg daytime load
-              </p>
-              <p className="text-xs font-semibold text-primary mt-2">
-                {daytimeAnalysis.recommendedPanelKw.toFixed(1)}kW panels recommended
-              </p>
+        (inputs.systemTier === 'standard' || inputs.systemTier === 'premium') &&
+        daytimeAnalysis.daytimeLoadKw >= 1.5 && (
+          <div className="bg-amber-50 border-l-4 border-amber-400 rounded-2xl p-5 my-6">
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">☀️</span>
+              <h3 className="font-bold text-amber-900 text-sm">
+                Daytime-Heavy Load Detected
+              </h3>
             </div>
 
-            {/* Nighttime */}
-            <div className="bg-white rounded-xl p-3 border border-amber-200">
-              <p className="text-xs font-bold text-amber-700 mb-2 uppercase tracking-wide">
-                🌙 Nighttime (Battery)
-              </p>
-              <p className="text-lg font-black text-text-primary">
-                {daytimeAnalysis.nighttimeLoadKw.toFixed(1)}kW
-              </p>
-              <p className="text-xs text-text-muted">
-                avg nighttime load
-              </p>
-              <p className="text-xs font-semibold text-primary mt-2">
-                {daytimeAnalysis.recommendedNightBatteryKwh.toFixed(1)}kWh battery sufficient
-              </p>
-            </div>
-          </div>
-
-          {/* Multiple MPPT warning */}
-          {daytimeAnalysis.requiresMultipleMppt && (
-            <div className="bg-white border border-amber-300 rounded-xl p-3 mb-3">
-              <p className="text-xs font-bold text-orange-700 mb-1">
-                ⚠️ Multiple PV Inputs Required
-              </p>
-              <p className="text-xs text-text-muted leading-relaxed">
-                Your panel array ({daytimeAnalysis.recommendedPanelKw.toFixed(1)}kW) 
-                is too large for a single MPPT input. You need an inverter with{' '}
-                <strong>{daytimeAnalysis.mpptInputsNeeded} MPPT inputs</strong>.
-              </p>
-              {daytimeAnalysis.panelStringSplit && (
-                <p className="text-xs font-mono text-primary mt-1 bg-primary/5 rounded px-2 py-1">
-                  Panel split: {daytimeAnalysis.panelStringSplit}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Inverter recommendation */}
-          {daytimeAnalysis.recommendedInverterNote && (
-            <p className="text-xs text-amber-800 italic leading-relaxed">
-              💡 {daytimeAnalysis.recommendedInverterNote}
+            {/* What this means */}
+            <p className="text-sm text-amber-800 mb-4 leading-relaxed">
+              {Math.round(daytimeAnalysis.daytimeRatio * 100)}% of your power is used during
+              daylight hours (6am–6pm). This means you can run a
+              <strong> larger solar array</strong> to handle heavy daytime loads directly,
+              while keeping a <strong> smaller battery bank</strong> just for nighttime
+              essentials — saving money on battery cost.
             </p>
-          )}
-        </div>
-      )}
+
+            {/* Two-column split: day vs night */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {/* Daytime */}
+              <div className="bg-white rounded-xl p-3 border border-amber-200">
+                <p className="text-xs font-bold text-amber-700 mb-2 uppercase tracking-wide">
+                  ☀️ Daytime (Solar Direct)
+                </p>
+                <p className="text-lg font-black text-text-primary">
+                  {daytimeAnalysis.daytimeLoadKw.toFixed(1)}kW
+                </p>
+                <p className="text-xs text-text-muted">
+                  avg daytime load
+                </p>
+                <p className="text-xs font-semibold text-primary mt-2">
+                  {daytimeAnalysis.recommendedPanelKw.toFixed(1)}kW panels recommended
+                </p>
+              </div>
+
+              {/* Nighttime */}
+              <div className="bg-white rounded-xl p-3 border border-amber-200">
+                <p className="text-xs font-bold text-amber-700 mb-2 uppercase tracking-wide">
+                  🌙 Nighttime (Battery)
+                </p>
+                <p className="text-lg font-black text-text-primary">
+                  {daytimeAnalysis.nighttimeLoadKw.toFixed(1)}kW
+                </p>
+                <p className="text-xs text-text-muted">
+                  avg nighttime load
+                </p>
+                <p className="text-xs font-semibold text-primary mt-2">
+                  {daytimeAnalysis.recommendedNightBatteryKwh.toFixed(1)}kWh battery sufficient
+                </p>
+              </div>
+            </div>
+
+            {/* Multiple MPPT warning */}
+            {daytimeAnalysis.requiresMultipleMppt && (
+              <div className="bg-white border border-amber-300 rounded-xl p-3 mb-3">
+                <p className="text-xs font-bold text-orange-700 mb-1">
+                  ⚠️ Multiple PV Inputs Required
+                </p>
+                <p className="text-xs text-text-muted leading-relaxed">
+                  Your panel array ({daytimeAnalysis.recommendedPanelKw.toFixed(1)}kW)
+                  is too large for a single MPPT input. You need an inverter with{' '}
+                  <strong>{daytimeAnalysis.mpptInputsNeeded} MPPT inputs</strong>.
+                </p>
+                {daytimeAnalysis.panelStringSplit && (
+                  <p className="text-xs font-mono text-primary mt-1 bg-primary/5 rounded px-2 py-1">
+                    Panel split: {daytimeAnalysis.panelStringSplit}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Inverter recommendation */}
+            {daytimeAnalysis.recommendedInverterNote && (
+              <p className="text-xs text-amber-800 italic leading-relaxed">
+                💡 {daytimeAnalysis.recommendedInverterNote}
+              </p>
+            )}
+          </div>
+        )}
 
       {/* ── FIX 2 — TIER SUGGESTION BANNER ── */}
       {showTierSuggestion && (
@@ -549,7 +548,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
             <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
               <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required className="input-field w-full" />
               <input type="tel" placeholder="WhatsApp Number" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} required className="input-field w-full" />
-              
+
               <select value={timeline} onChange={e => setTimeline(e.target.value)} className="select-field w-full" required>
                 <option value="asap">Ready to install ASAP</option>
                 <option value="1-3months">Within 1–3 months</option>
@@ -566,7 +565,7 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
               {formError && <p className="text-sm text-red-600 bg-red-50 p-2 rounded-lg text-center">{formError}</p>}
 
               <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-4 text-base font-bold flex justify-center items-center">
-                {isSubmitting ? <><Loader2 className="w-5 h-5 animate-spin mr-2"/> Processing...</> : 
+                {isSubmitting ? <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Processing...</> :
                   (isTenant ? "Help me talk to my landlord about solar →" : "See Full Results + Find Installers →")
                 }
               </button>
@@ -574,14 +573,14 @@ export default function CalcResultsView({ inputs, results, onChange, leadSubmitt
           </motion.div>
         ) : (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-            
+
             {/* COST BREAKDOWN */}
             <div className="card p-6 shadow-sm border border-border">
               <button onClick={() => setShowBreakdown(!showBreakdown)} className="w-full flex justify-between items-center font-bold text-lg text-text-primary">
                 <span>🧾 Full Cost Breakdown</span>
                 <ChevronDown className={`transition-transform ${showBreakdown ? 'rotate-180' : ''}`} />
               </button>
-              
+
               <AnimatePresence>
                 {showBreakdown && (
                   <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden mt-4">

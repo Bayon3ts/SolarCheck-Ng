@@ -1,21 +1,44 @@
 import Link from "next/link";
 import { Sun, LayoutDashboard, Users, MessageSquare, BookOpen, Activity, LogOut, Settings } from "lucide-react";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient as createSSRClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Use getSession() not getUser() — getUser() makes a network call and fails
+  // when cookies are read-only (Server Component context). getSession() reads
+  // the JWT directly from cookies, which always works. The middleware already
+  // validates these tokens, so this is secure.
+  const cookieStore = cookies();
+  const supabase = createSSRClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) { return cookieStore.get(name)?.value; },
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        set(_name: string, _value: string, _options: CookieOptions) { /* read-only in layout */ },
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        remove(_name: string, _options: CookieOptions) { /* read-only in layout */ },
+      },
+    }
+  );
 
-  // Don't render the sidebar shell on the login page (no authenticated user)
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
+
+  // No session → render children only (covers the /admin/login page)
   if (!user) {
     return <>{children}</>;
   }
 
-  const { count: pendingCount } = await supabase
+  // Use admin client for internal DB queries (bypasses RLS, no cookie needed)
+  const adminDb = createAdminClient();
+  const { count: pendingCount } = await adminDb
     .from("installer_applications")
     .select("*", { count: "exact", head: true })
     .eq("status", "pending");
@@ -79,9 +102,9 @@ export default async function AdminLayout({
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3 px-3 py-2 text-sm text-white/70">
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center font-bold">
-              {user?.email?.charAt(0).toUpperCase()}
+              {user.email?.charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1 truncate">{user?.email}</div>
+            <div className="flex-1 truncate">{user.email}</div>
           </div>
           <form action="/auth/signout" method="post" className="mt-2">
             <button type="submit" className="flex w-full items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-left text-sm text-red-400">

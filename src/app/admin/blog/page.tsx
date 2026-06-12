@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DeletePostButton from "@/components/admin/delete-post-button";
 
 export default async function AdminBlogPage() {
   const supabase = createAdminClient();
@@ -58,9 +59,12 @@ export default async function AdminBlogPage() {
                   )}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/blog/edit/${post.id}`}>Edit</Link>
-                  </Button>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/admin/blog/edit/${post.id}`}>Edit</Link>
+                    </Button>
+                    <DeletePostButton postId={post.id} title={post.title} />
+                  </div>
                 </td>
               </tr>
             ))}

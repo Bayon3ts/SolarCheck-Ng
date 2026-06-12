@@ -164,17 +164,15 @@ export default function CalculatorDashboard() {
             <div
               key={pkg.tier}
               onClick={() => jumpToCalculator(pkg.tier)}
-              className={`bg-white rounded-2xl border-2 p-4 cursor-pointer hover:border-primary hover:shadow-lg transition-all group ${
-                inputs.systemTier === pkg.tier
+              className={`bg-white rounded-2xl border-2 p-4 cursor-pointer hover:border-primary hover:shadow-lg transition-all group ${inputs.systemTier === pkg.tier
                   ? "border-primary shadow-md"
                   : "border-border"
-              }`}
+                }`}
             >
               {/* Emoji + label */}
               <div className="text-2xl mb-1.5">{pkg.emoji}</div>
-              <h3 className={`font-bold text-xs mb-0.5 transition-colors ${
-                inputs.systemTier === pkg.tier ? "text-primary" : "text-text-primary group-hover:text-primary"
-              }`}>
+              <h3 className={`font-bold text-xs mb-0.5 transition-colors ${inputs.systemTier === pkg.tier ? "text-primary" : "text-text-primary group-hover:text-primary"
+                }`}>
                 {pkg.label}
               </h3>
               <p className="text-[10px] text-text-muted mb-2 leading-relaxed">{pkg.tagline}</p>

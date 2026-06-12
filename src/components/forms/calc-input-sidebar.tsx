@@ -89,8 +89,8 @@ function NairaInput({
               {value >= 1000000
                 ? `₦${(value / 1000000).toFixed(1)}M`
                 : value >= 1000
-                ? `₦${(value / 1000).toFixed(0)}k`
-                : ''}
+                  ? `₦${(value / 1000).toFixed(0)}k`
+                  : ''}
             </span>
           </div>
         )}
@@ -102,11 +102,10 @@ function NairaInput({
             key={preset}
             type="button"
             onClick={() => handlePreset(preset)}
-            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-              value === preset
+            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${value === preset
                 ? 'bg-primary text-white border-primary'
                 : 'bg-white text-text-muted border-border hover:border-primary/40 hover:text-primary'
-            }`}
+              }`}
           >
             {preset >= 1000000
               ? `₦${(preset / 1000000).toFixed(1)}M`
@@ -186,7 +185,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   const updateApplianceDaytimeHours = (id: string, hours: number) => {
     const existingIdx = inputs.appliances.findIndex(a => a.id === id);
     if (existingIdx !== -1) {
-      const newApps = [...inputs.appliances] as Array<{id: string, qty: number, daytimeHours?: number}>;
+      const newApps = [...inputs.appliances] as Array<{ id: string, qty: number, daytimeHours?: number }>;
       const appDef = APPLIANCES.find(a => a.id === id);
       const maxHours = appDef?.typicalHours || 24;
       const validHours = hours < 0 ? 0 : hours > maxHours ? maxHours : hours;
@@ -241,11 +240,10 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               key={pkg.tier}
               type="button"
               onClick={() => onChange({ systemTier: pkg.tier as SystemTier })}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all duration-200 ${
-                inputs.systemTier === pkg.tier
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all duration-200 ${inputs.systemTier === pkg.tier
                   ? "bg-primary text-white border-primary shadow-md"
                   : "bg-white text-text-muted border-border hover:border-primary/40 hover:text-primary"
-              }`}
+                }`}
             >
               <span>{pkg.emoji}</span>
               <span>{pkg.label.replace(" System", "")}</span>
@@ -334,11 +332,10 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                 key={status}
                 type="button"
                 onClick={() => onChange({ ownershipStatus: status })}
-                className={`p-4 rounded-xl border-2 text-center transition-all ${
-                  inputs.ownershipStatus === status
+                className={`p-4 rounded-xl border-2 text-center transition-all ${inputs.ownershipStatus === status
                     ? "border-primary bg-primary/10"
                     : "border-border bg-white hover:border-gray-300"
-                }`}
+                  }`}
               >
                 <div className="text-2xl mb-1">{status === "owner" ? "🏠" : "🔑"}</div>
                 <div className="text-sm font-bold text-text-primary uppercase">I {status === "owner" ? "Own" : "Rent"}</div>
@@ -484,9 +481,8 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               <button
                 key={rt.id} type="button"
                 onClick={() => onChange({ roofType: rt.id as RoofType })}
-                className={`p-2 rounded-lg border flex items-center gap-2 text-left transition-all ${
-                  inputs.roofType === rt.id ? "border-primary bg-primary/10 font-bold" : "border-border bg-white"
-                }`}
+                className={`p-2 rounded-lg border flex items-center gap-2 text-left transition-all ${inputs.roofType === rt.id ? "border-primary bg-primary/10 font-bold" : "border-border bg-white"
+                  }`}
               >
                 <span>{rt.icon}</span> <span>{rt.label}</span>
               </button>
@@ -617,9 +613,8 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                             <div
                               key={app.id}
                               title={supported ? undefined : `Upgrade to ${upgradeTo} to include this appliance`}
-                              className={`flex items-center justify-between p-3 rounded-xl border bg-gray-50 transition-opacity ${
-                                supported ? "border-gray-100 opacity-100" : "border-gray-100 opacity-40"
-                              }`}
+                              className={`flex items-center justify-between p-3 rounded-xl border bg-gray-50 transition-opacity ${supported ? "border-gray-100 opacity-100" : "border-gray-100 opacity-40"
+                                }`}
                             >
                               <div className="flex items-center gap-3 min-w-0">
                                 <span className="text-xl flex-shrink-0">{app.icon}</span>
