@@ -23,7 +23,7 @@ export default function SolarCalculatorPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-white/15 text-white text-xs font-bold px-4 py-1.5 rounded-full mb-4">
             <span>⚡</span>
-            Free — Installers charge ₦5,000–₦30,000 for this
+            Free — Installers charge ₦25,000–₦50,000 for this
           </div>
 
           <h1 className="text-3xl md:text-4xl font-black text-white mb-3">

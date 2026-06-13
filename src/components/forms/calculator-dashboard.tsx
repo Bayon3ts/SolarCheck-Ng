@@ -6,12 +6,10 @@ import { calculateSolarSystem } from "@/lib/calculator/calculations";
 import CalcInputSidebar from "./calc-input-sidebar";
 import CalcResultsView from "./calc-results-view";
 import CalcStickyBar from "./calc-sticky-bar";
-import { SYSTEM_PACKAGES, SystemTier, formatTierPrice } from "@/data/system-packages";
 
 import { useSearchParams } from "next/navigation";
 
 const DEFAULT_INPUTS: CalculatorInputs = {
-  systemTier: "standard",
   ownershipStatus: "owner",
   state: "",
   monthlyBill: 45000,
@@ -28,7 +26,7 @@ const DEFAULT_INPUTS: CalculatorInputs = {
   nepaInflation: 20,
   discountRate: 22,
   fuelEfficiency: 2.0,
-  batteryScenario: "overnight",
+  systemMode: "hybrid",
   batteryType: "lithium",
   autonomyDays: 1,
 };
@@ -88,6 +86,10 @@ export default function CalculatorDashboard() {
   }
 
   function handleCalculate() {
+    if (inputs.appliances.length === 0) {
+      alert("INSUFFICIENT LOAD DATA — PLEASE ADD APPLIANCES");
+      return;
+    }
     if (!inputs.state) {
       alert("Please select your state first.");
       return;
@@ -100,31 +102,24 @@ export default function CalculatorDashboard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  /** Jump to calculator and pre-select a tier */
-  function jumpToCalculator(tier: SystemTier) {
-    setInputs(prev => ({ ...prev, systemTier: tier }));
-    setTimeout(() => {
-      calcRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
-  }
-
+  
   async function handleLeadSubmit(lead: { full_name: string; whatsapp: string; timeline: string; landlord_consent?: boolean }) {
     if (!results) return;
     const payload = {
       ...inputs,
       system_pv_kwp: results.pvKwp,
-      system_inverter_kva: results.inverterKva,
+      system_inverter_kva: 0,
       system_battery_kwh: results.batteryKwh,
-      cost_low: results.systemCostMin,
-      cost_mid: (results.systemCostMin + results.systemCostMax) / 2,
-      cost_high: results.systemCostMax,
-      monthly_savings: results.monthlyCurrentSpend - results.afterSolarMonthlyCost,
-      payback_months: results.paybackMonths,
-      five_year_savings: results.fiveYearSavings,
+      cost_low: 0,
+      cost_mid: 0,
+      cost_high: 0,
+      roi_months: 0,
+      payback_months: 0,
+      five_year_savings: 0,
       full_name: lead.full_name,
       whatsapp: lead.whatsapp,
       timeline: lead.timeline,
-      landlord_consent: lead.landlord_consent,
+      lead_consent: lead.landlord_consent ?? false,
       appliances_with_qty: inputs.appliances,
     };
 
@@ -146,79 +141,6 @@ export default function CalculatorDashboard() {
           <span>✓</span> {toastMessage}
         </div>
       </div>
-
-      {/* ── PACKAGE CARDS SECTION ─────────────────────────────── */}
-      <section className="mb-12">
-        <div className="text-center mb-6">
-          <h2 className="text-xl md:text-2xl font-bold text-text-primary mb-1">
-            Know your budget? Start here.
-          </h2>
-          <p className="text-sm text-text-muted">
-            Pick your system size — we&apos;ll show you exactly what it costs, what it powers, and when you&apos;ll break even.
-          </p>
-        </div>
-
-        {/* 5 package cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          {Object.values(SYSTEM_PACKAGES).map(pkg => (
-            <div
-              key={pkg.tier}
-              onClick={() => jumpToCalculator(pkg.tier)}
-              className={`bg-white rounded-2xl border-2 p-4 cursor-pointer hover:border-primary hover:shadow-lg transition-all group ${inputs.systemTier === pkg.tier
-                  ? "border-primary shadow-md"
-                  : "border-border"
-                }`}
-            >
-              {/* Emoji + label */}
-              <div className="text-2xl mb-1.5">{pkg.emoji}</div>
-              <h3 className={`font-bold text-xs mb-0.5 transition-colors ${inputs.systemTier === pkg.tier ? "text-primary" : "text-text-primary group-hover:text-primary"
-                }`}>
-                {pkg.label}
-              </h3>
-              <p className="text-[10px] text-text-muted mb-2 leading-relaxed">{pkg.tagline}</p>
-
-              {/* Price range */}
-              <div className="bg-primary/5 rounded-xl px-2 py-1.5 mb-2">
-                <p className="text-[9px] text-text-muted mb-0.5">System cost</p>
-                <p className="font-bold text-xs text-primary">
-                  {formatTierPrice(pkg.priceMin)}–{formatTierPrice(pkg.priceMax)}
-                </p>
-              </div>
-
-              {/* Top 3 "can power" */}
-              <div className="space-y-0.5">
-                {pkg.canPower.slice(0, 3).map((item, i) => (
-                  <p key={i} className="text-[10px] text-text-muted flex items-start gap-1">
-                    <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
-                    <span className="leading-tight">{item}</span>
-                  </p>
-                ))}
-              </div>
-
-              {/* Payback */}
-              <div className="mt-2 pt-2 border-t border-border">
-                <p className="text-[10px] text-text-muted">~{pkg.paybackYears}yr payback</p>
-              </div>
-
-              {/* CTA */}
-              <div className="mt-1.5">
-                <span className="text-[10px] font-semibold text-primary group-hover:underline">
-                  Calculate savings →
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* OR divider */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-text-muted font-medium whitespace-nowrap">
-            or enter your details below for a precise estimate
-          </span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
-      </section>
 
       {/* ── MAIN CALCULATOR ───────────────────────────────────── */}
       <div ref={calcRef}>

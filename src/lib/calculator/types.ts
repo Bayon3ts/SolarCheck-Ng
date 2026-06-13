@@ -2,6 +2,15 @@
 /* SolarCheck Nigeria — Calculator Types               */
 /* ═══════════════════════════════════════════════════ */
 
+
+export type SystemMode = 'grid-tied' | 'hybrid' | 'off-grid';
+
+export interface SavingsRange {
+  conservative: number;
+  expected: number;
+  stressCase: number;
+}
+
 export type BatteryType = 'lithium' | 'lead-acid';
 export type PropertyType = 'home' | 'small-business' | 'large-business';
 export type OwnershipStatus = 'owner' | 'tenant';
@@ -9,8 +18,7 @@ export type RoofType = 'flat_concrete' | 'corrugated_iron' | 'aluminum_deck' | '
 export type RoofDirection = 'North' | 'North-East' | 'East' | 'South-East' | 'South' | 'South-West' | 'West' | 'North-West';
 export type RoofPitch = 'Flat (0°)' | 'Low (10-15°)' | 'Medium (20-30°)' | 'Steep (35-45°)';
 
-// System tier — mirrors SystemTier in @/data/system-packages to avoid circular dep
-export type SystemTier = 'micro' | 'basic' | 'starter' | 'standard' | 'premium';
+
 
 export interface ApplianceSelection {
   id: string;
@@ -18,9 +26,6 @@ export interface ApplianceSelection {
 }
 
 export interface CalculatorInputs {
-  // System tier (drives appliance filtering & pre-fill)
-  systemTier: SystemTier;
-
   // Screen 1 equivalents
   ownershipStatus: OwnershipStatus;
   state: string;
@@ -44,10 +49,10 @@ export interface CalculatorInputs {
   discountRate: number;
   fuelEfficiency: number; // kWh per liter
   
-  // Advanced Battery Scenarios
-  batteryScenario: 'surplus' | 'overnight' | 'specific' | 'none';
+  systemMode: SystemMode;
   batteryType: BatteryType;
-  autonomyDays: number; // For generic calculation
+  autonomyDays: number; // 0.5, 1, 2+
+  nightLoadPct?: number; // Optional user override, else derived
 
   // Lagos-specific band selection
   lagosElectricityBand?: string; // e.g. 'band_a', 'band_b', etc.
@@ -59,30 +64,19 @@ export interface CostBand {
   high: number;
 }
 
+
 export interface CalculatorResults {
+  isValid: boolean;
+  dailyLoadKwh: number;
   pvKwp: number;
   panelsNeeded: number;
-  panelSizeWatts: number;
-  inverterKva: number;
   batteryKwh: number;
-  batteryType: BatteryType | 'none';
-  systemCostMin: number;
-  systemCostMax: number;
-  paybackMonths: number;
-  fiveYearSavings: number;
-  tenYearSavings: number;
-  monthlyCurrentSpend: number;
-  afterSolarMonthlyCost: number;
-  monthlyProduction: number[];
-  discoName: string;
-  discoTariff: number;
-  selectedBand: 'A' | 'B' | 'C' | 'D' | 'E' | null;
-  avgPSH: number;
-  co2SavedKgPerYear: number;
-  treesEquivalent: number;
+  autonomyHours: number;
+  systemStatus: 'PASS' | 'FAIL';
 }
 
 export interface LeadCaptureData {
+
   full_name: string;
   whatsapp: string;
   timeline: string;

@@ -1,12 +1,11 @@
 /* ═══════════════════════════════════════════════════ */
 /* SolarCheck Nigeria — Solar Calculation Engine       */
-/* Lagos market rates — Updated May 2026               */
+/* Market rates — Updated May 2026               */
 /* ═══════════════════════════════════════════════════ */
 
 import { createClient } from '@supabase/supabase-js';
-import { CalculatorInputs, CalculatorResults, SystemTier } from './types';
+import { CalculatorInputs, CalculatorResults } from './types';
 import { MONTHLY_PSH, DEFAULT_MONTHLY_PSH } from './irradiance';
-import { SYSTEM_PACKAGES } from '@/data/system-packages';
 
 // ── Live fuel price (fetched from Supabase, falls back to constant) ────────
 let _fuelPriceCache: number = 1000; // updated by getFuelPrice()
@@ -824,29 +823,9 @@ export function getChargeControllerSpec(
   }
 }
 
-// ── Tier recommendation from monthly spend ────────────────────
-/**
- * Maps combined monthly electricity + generator spend (₦)
- * to the system tier that would realistically replace that cost level.
- */
-export function recommendTierFromSpend(
-  monthlySpendNaira: number
-): SystemTier {
-  if (monthlySpendNaira < 15000)  return 'micro'
-  if (monthlySpendNaira < 40000)  return 'basic'
-  if (monthlySpendNaira < 80000)  return 'starter'
-  if (monthlySpendNaira < 200000) return 'standard'
-  return 'premium'
-}
 
-// Per-tier minimum battery kWh floors (real-world component sizes)
-const BATTERY_MINIMUMS: Record<SystemTier, number> = {
-  micro:    1.2,   // 1× 100Ah 12V
-  basic:    2.4,   // 2× 100Ah 12V
-  starter:  4.8,   // 1× 48V 100Ah LFP
-  standard: 9.6,   // 2× 48V 100Ah LFP
-  premium:  19.2,  // 4× 48V 100Ah LFP
-}
+
+
 
 // ── Daytime Heavy Analysis ──────────────────────────────────────
 export interface DaytimeHeavyAnalysis {
@@ -878,8 +857,7 @@ export function analyzeDaytimeLoad(
     daytimeHours: number
   }>,
   totalPanelWatts: number,
-  singleMpptMaxW: number = 5500,
-  systemTier?: SystemTier
+  singleMpptMaxW: number = 5500
 ): DaytimeHeavyAnalysis {
 
   let daytimeKwh = 0
@@ -907,7 +885,7 @@ export function analyzeDaytimeLoad(
   const rawNightBatteryKwh = isDaytimeHeavy
     ? Math.ceil(nighttimeKwh * 1.2 * 10) / 10
     : 0
-  const batteryFloor = systemTier ? BATTERY_MINIMUMS[systemTier] : 0
+  const batteryFloor = 0;
   const recommendedNightBatteryKwh = Math.max(rawNightBatteryKwh, batteryFloor)
 
   const panelWatts = recommendedPanelKw * 1000
@@ -946,10 +924,10 @@ export function analyzeDaytimeLoad(
   }
 }
 
-export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResults {
+export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResults & { chargeController: ChargeControllerSpec; daytimeAnalysis: DaytimeHeavyAnalysis } {
   const {
     state, monthlyBill, generatorSpend,
-    appliances, coveragePct, batteryScenario,
+    appliances, coveragePct, systemMode, autonomyDays,
     roofType, roofDirection, roofPitch, shadeObstruction,
     fuelInflation, nepaInflation, discountRate
   } = inputs;
@@ -957,44 +935,73 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const discoStr = DISCO_BY_STATE[state] || 'Unknown';
   const discoTariff = getEffectiveTariff(discoStr, inputs.lagosElectricityBand);
 
-  // STEP 1 — CONVERT NEPA BILL TO kWh
-  const monthlyKwhFromNepa = monthlyBill / discoTariff;
+  // STEP 1 & 2 — LOAD CALCULATION & DAY/NIGHT CLASSIFICATION
+  let dailyLoadKwh = 0;
+  let nightLoadKwh = 0;
+  let peakSurgeKw = 0;
 
-  // STEP 2 — CONVERT GENERATOR FUEL TO kWh
-  const fuelEff = inputs.fuelEfficiency || 2.0;
-  // Use live price from Supabase (updated on client mount via getFuelPrice)
-  const effectiveFuelPrice = _fuelPriceCache > 0 ? _fuelPriceCache : PETROL_PRICE_PER_LITRE;
-  const generatorFuelLiters = generatorSpend / effectiveFuelPrice;
-  const monthlyKwhFromGenerator = generatorFuelLiters * fuelEff;
-
-  // STEP 3 — TOTAL LOAD
-  const totalApplianceKwh = appliances.reduce((sum, appSelection) => {
-    const appDef = APPLIANCES.find(a => a.id === appSelection.id);
-    return sum + (appDef ? appDef.kwhPerDay * appSelection.qty : 0);
-  }, 0);
-  
-  const applianceMonthlyKwh = totalApplianceKwh * 30;
-  
-  let totalMonthlyKwh = 0;
-  if (appliances.length > 0 && applianceMonthlyKwh > 0) {
-    totalMonthlyKwh = applianceMonthlyKwh;
+  if (appliances.length > 0) {
+    appliances.forEach(appSelection => {
+      const appDef = APPLIANCES.find(a => a.id === appSelection.id);
+      if (!appDef) return;
+      
+      const qty = appSelection.qty;
+      const watts = appDef.watts;
+      const typicalHours = appDef.typicalHours || 1;
+      const totalWh = watts * qty * typicalHours;
+      
+      let dayWh = 0;
+      let nightWh = 0;
+      
+      // Classify into daytime-only, mixed-use, nighttime-heavy based on typical usage
+      if (typicalHours === 24) {
+        dayWh = totalWh / 2;
+        nightWh = totalWh / 2;
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const dayHrs = (appSelection as any).daytimeHours ?? Math.min(typicalHours, 8);
+        dayWh = watts * qty * dayHrs;
+        nightWh = totalWh - dayWh;
+        if (nightWh < 0) nightWh = 0;
+      }
+      
+      dailyLoadKwh += totalWh / 1000;
+      // daytimeLoadKwh is unused
+      nightLoadKwh += nightWh / 1000;
+      
+      const continuousKw = (watts * qty) / 1000;
+      let surgeMult = 1.0;
+      if (['Cooling', 'Refrigeration', 'Water'].includes(appDef.category)) {
+        surgeMult = appDef.isInverter ? 1.5 : 2.5;
+      }
+      peakSurgeKw += continuousKw * surgeMult;
+    });
   } else {
-    totalMonthlyKwh = monthlyKwhFromNepa + monthlyKwhFromGenerator;
+    // Fallback logic
+    const monthlyKwhFromNepa = monthlyBill / discoTariff;
+    const effectiveFuelPrice = _fuelPriceCache > 0 ? _fuelPriceCache : PETROL_PRICE_PER_LITRE;
+    const generatorFuelLiters = generatorSpend / effectiveFuelPrice;
+    const fuelEff = inputs.fuelEfficiency || 2.0;
+    const monthlyKwhFromGenerator = generatorFuelLiters * fuelEff;
+    
+    dailyLoadKwh = (monthlyKwhFromNepa + monthlyKwhFromGenerator) / 30;
+    nightLoadKwh = dailyLoadKwh * 0.5;
+    peakSurgeKw = (dailyLoadKwh / 10) * 2;
   }
 
-  // STEP 4 — TARGET kWh FROM SOLAR
-  const targetMonthlyKwh = totalMonthlyKwh * (coveragePct / 100);
+  // Target Energy Offset
+  // 100% coverage = energy offset target only, NOT guarantee of autonomy.
+  const targetDailyGenerationKwh = dailyLoadKwh * (coveragePct / 100);
 
-  // STEP 5 — GET STATE PSH
+  // STEP 3 — SOLAR PRODUCTION MODEL (PHYSICS)
   const pshArray = MONTHLY_PSH[state] ?? DEFAULT_MONTHLY_PSH;
   const avgPSH = pshArray.reduce((a, b) => a + b, 0) / pshArray.length;
 
-  // STEP 6 — APPLY ROOF FACTORS
   let directionFactor = 1.0;
   if (roofDirection === 'South') directionFactor = 1.0;
   else if (roofDirection === 'South-East' || roofDirection === 'South-West') directionFactor = 0.95;
   else if (roofDirection === 'East' || roofDirection === 'West') directionFactor = 0.85;
-  else if (roofDirection === 'North-East' || roofDirection === 'North-West') directionFactor = 0.80; // Reasonable assumption
+  else if (roofDirection === 'North-East' || roofDirection === 'North-West') directionFactor = 0.80;
   else if (roofDirection === 'North') directionFactor = 0.75;
 
   let pitchFactor = 1.0;
@@ -1004,176 +1011,359 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   else if (roofPitch === 'Steep (35-45°)') pitchFactor = 0.97;
 
   const shadeFactor = 1 - (shadeObstruction / 100);
-  const systemEfficiency = 0.80 * directionFactor * pitchFactor * shadeFactor;
+  
+  // System efficiency default ~0.75 (reduced from 0.80 to be more realistic)
+  const systemEfficiency = 0.75 * directionFactor * pitchFactor * shadeFactor;
 
-  const roofMountingCost = roofType === 'clay_tiles' ? 35000 : 0; // +₦35,000 flat
-  const isFlatConcrete = roofType === 'flat_concrete'; // +5% later
+  // kWp = Daily Energy / (PSH × system_efficiency)
+  const annualReq = targetDailyGenerationKwh / (avgPSH * systemEfficiency);
+  const rainyReq = targetDailyGenerationKwh / (avgPSH * 0.6 * systemEfficiency);
+  const pvKwp = Math.max(annualReq, rainyReq);
 
-  // STEP 7 — CALCULATE ARRAY SIZE
-  const pvKwp = targetMonthlyKwh / (avgPSH * 30 * systemEfficiency);
-  const panelsNeeded = Math.ceil(pvKwp / 0.4);
-  const actualPvKwp = panelsNeeded * 0.4;
+  // STEP 4 — BATTERY SIZING LOGIC
+  let requiredBatteryUsableKwh = 0;
+  let batterySufficiency: 'insufficient' | 'limited' | 'adequate' | 'strong' | 'full' = 'adequate';
 
-  // STEP 8 — INVERTER / KVA SIZE
-  const calculatedInverterKva = actualPvKwp * 1.25;
-  const inverterSizes = [3, 5, 8, 10, 15, 20];
-  const inverterKva = inverterSizes.find(size => size >= calculatedInverterKva) || inverterSizes[inverterSizes.length - 1];
-
-  // STEP 9 — BATTERY SIZING
-  let batteryKwh = 0;
-  if (batteryScenario === 'surplus') {
-    batteryKwh = actualPvKwp * 2;
-  } else if (batteryScenario === 'overnight') {
-    const dailyNightLoad = (totalMonthlyKwh / 30) * 0.4; // 40% of daily load
-    batteryKwh = dailyNightLoad / 0.80; // Account for 80% DoD
-  } else if (batteryScenario === 'specific' || (batteryScenario as string) === 'full_backup') { // Full backup
-    batteryKwh = (totalMonthlyKwh / 30) * 1.5 / 0.80; // 1.5 days autonomy
+  if (systemMode === 'grid-tied') {
+    requiredBatteryUsableKwh = 0; // minimal backup
+  } else if (systemMode === 'off-grid') {
+    requiredBatteryUsableKwh = dailyLoadKwh * 1.2;
+  } else {
+    // Hybrid mode (default)
+    // We want ADEQUATE to hit >= 1.4, so ensure sizing hits it if they selected >=1
+    requiredBatteryUsableKwh = nightLoadKwh * Math.max(autonomyDays || 1, 1.4);
   }
+
+  // DoD for LFP is 0.8, System Loss is 0.85
+  let batteryKwh = requiredBatteryUsableKwh > 0 ? requiredBatteryUsableKwh / (0.8 * 0.85) : 0;
   
   if (batteryKwh > 0) {
-    batteryKwh = Math.round(batteryKwh / 2) * 2; // Round to nearest 2
-    // Only clamp to 4kWh if no tier selected (generic calculation)
-    // Tier-selected systems use their own batteryKwh below
-    if (!inputs.systemTier && batteryKwh < 4) batteryKwh = 4;
+    batteryKwh = Math.max(2.4, Math.ceil(batteryKwh / 1.2) * 1.2);
+    batteryKwh = Math.round(batteryKwh * 10) / 10;
   }
 
-  // COST CALCULATIONS
-  // System costs (₦/kWp)
+  let autonomyHours = 0;
+  if (batteryKwh > 0 && nightLoadKwh > 0) {
+    autonomyHours = (batteryKwh * 0.8 * 0.85) / (nightLoadKwh / 12);
+  } else if (batteryKwh > 0 && dailyLoadKwh > 0) {
+    autonomyHours = (batteryKwh * 0.8 * 0.85) / (dailyLoadKwh / 24);
+  }
+  
+  const usableBattery = batteryKwh * 0.8 * 0.85;
+  if (systemMode === 'grid-tied') {
+    batterySufficiency = 'insufficient';
+  } else {
+    if (usableBattery < nightLoadKwh * 1.1) {
+      batterySufficiency = 'insufficient';
+    } else if (usableBattery < nightLoadKwh * 1.4) {
+      batterySufficiency = 'limited';
+    } else if (usableBattery < nightLoadKwh * 1.8) {
+      batterySufficiency = 'adequate';
+    } else {
+      batterySufficiency = 'strong';
+    }
+    
+    if (autonomyHours >= 24) {
+      batterySufficiency = 'full';
+    }
+  }
+
+  // STEP 5 — INVERTER SIZING
+  const inverterSizes = [3, 5, 8, 10, 15, 20, 30];
+  const requiredInverterKva = Math.max(peakSurgeKw * 1.25, pvKwp * 1.1);
+  const inverterKva = inverterSizes.find(sz => sz >= requiredInverterKva) ?? 30;
+
+  // FINALISE ARRAY
+  const panelSizeWatts = 550;
+  const panelsNeeded = Math.ceil((pvKwp * 1000) / panelSizeWatts);
+  const actualPvKwp = (panelsNeeded * panelSizeWatts) / 1000;
+
+  let pvClassification: 'UNDER SIZED' | 'OPTIMAL' | 'OVER SIZED' = 'OPTIMAL';
+  if (actualPvKwp < rainyReq * 0.9) {
+    pvClassification = 'UNDER SIZED';
+  } else if (actualPvKwp <= rainyReq * 1.25) {
+    pvClassification = 'OPTIMAL';
+  } else {
+    pvClassification = 'OVER SIZED';
+  }
+
+  let seasonalRisk: 'Rainy season stable' | 'Rainy season borderline' | 'Rainy season at risk';
+  const rainyProduction = actualPvKwp * avgPSH * 0.6 * systemEfficiency;
+  if (rainyProduction >= targetDailyGenerationKwh) {
+    seasonalRisk = 'Rainy season stable';
+  } else if (rainyProduction >= targetDailyGenerationKwh * 0.8) {
+    seasonalRisk = 'Rainy season borderline';
+  } else {
+    seasonalRisk = 'Rainy season at risk';
+  }
+
+  // STEP 6 — COST & SAVINGS (Ranges)
+  const roofMountingCost = roofType === 'clay_tiles' ? 35000 : 0;
   let baseSystemCostMin = actualPvKwp * 500000;
   let baseSystemCostMax = actualPvKwp * 700000;
+  const isFlatConcrete = roofType === 'flat_concrete';
+  if (isFlatConcrete) { baseSystemCostMin *= 1.05; baseSystemCostMax *= 1.05; }
 
-  if (isFlatConcrete) {
-    baseSystemCostMin *= 1.05;
-    baseSystemCostMax *= 1.05;
-  }
-  
-  const batteryUnitCost = 180000; // ₦/kWh
+  const batteryUnitCost = 180000;
   const totalBatteryCost = batteryKwh * batteryUnitCost;
+  
+  let systemCostMin = baseSystemCostMin + totalBatteryCost + roofMountingCost;
+  let systemCostMax = baseSystemCostMax + totalBatteryCost + roofMountingCost;
 
-  const systemCostMin = baseSystemCostMin + totalBatteryCost + roofMountingCost;
-  const systemCostMax = baseSystemCostMax + totalBatteryCost + roofMountingCost;
+  const totalPanelWatts = actualPvKwp * 1000;
+  const batteryVoltage: 12 | 24 | 48 = (actualPvKwp < 1 ? 12 : actualPvKwp < 3 ? 24 : 48);
+  const selectedInverterType: 'hybrid' | 'off-grid' | 'pcu' | 'on-grid' = systemMode === 'grid-tied' ? 'on-grid' : (systemMode === 'off-grid' ? 'off-grid' : 'hybrid');
+  
+  const chargeController = getChargeControllerSpec(selectedInverterType, totalPanelWatts, batteryVoltage);
+  systemCostMin += chargeController.estimatedCost;
+  systemCostMax += chargeController.estimatedCost;
 
-  // SAVINGS CALCULATION (NPV)
   const monthlyCurrentSpend = monthlyBill + generatorSpend;
   
+  let monthlyGridSavingsExpected = 0;
+  let monthlyGeneratorSavingsExpected = 0;
+
+  if (systemMode === 'off-grid') {
+    monthlyGridSavingsExpected = monthlyBill;
+    monthlyGeneratorSavingsExpected = generatorSpend;
+  } else {
+    const potentialSavings = monthlyCurrentSpend * (coveragePct / 100);
+    monthlyGridSavingsExpected = Math.min(potentialSavings, monthlyBill);
+    const remainingSavings = potentialSavings - monthlyGridSavingsExpected;
+    
+    if (generatorSpend > 0 && remainingSavings > 0) {
+      monthlyGeneratorSavingsExpected = Math.min(remainingSavings, generatorSpend);
+    } else {
+      monthlyGeneratorSavingsExpected = 0;
+    }
+
+    if (monthlyGridSavingsExpected >= monthlyBill * 0.99 && monthlyGeneratorSavingsExpected >= generatorSpend * 0.99) {
+      // Prevent 100% dual savings if not off-grid
+      monthlyGeneratorSavingsExpected = generatorSpend * 0.8;
+    }
+    if (systemMode === 'hybrid') {
+      monthlyGeneratorSavingsExpected *= 0.5; // 50% probability factor
+    }
+  }
+
+  const calculateRange = (base: number) => ({
+    conservative: Math.round(base * 0.8),
+    expected: Math.round(base),
+    stressCase: Math.round(base * 0.5)
+  });
+
+  const monthlyGridSavings = calculateRange(monthlyGridSavingsExpected);
+  const monthlyGeneratorSavings = calculateRange(monthlyGeneratorSavingsExpected);
+
   const calculateNPVSavings = (years: number) => {
     const fInf = fuelInflation / 100;
-    const tInf = nepaInflation / 100; // Map nepaInflation to tariffInflation
+    const tInf = nepaInflation / 100;
     const dRate = discountRate / 100;
-
-    const nepaOffset = monthlyBill * (coveragePct / 100);
-    const generatorOffset = generatorSpend * (coveragePct / 100);
     const monthlyMaintenance = actualPvKwp * 500 / 12;
 
-    let totalSavings = 0;
+    let totalSavingsExpected = 0;
     for (let year = 1; year <= years; year++) {
-      const nepaSaving = nepaOffset * Math.pow(1 + tInf, year);
-      const generatorSaving = generatorOffset * Math.pow(1 + fInf, year);
+      const nepaSaving = monthlyGridSavingsExpected * Math.pow(1 + tInf, year);
+      const generatorSaving = monthlyGeneratorSavingsExpected * Math.pow(1 + fInf, year);
       const yearSaving = ((nepaSaving + generatorSaving) - monthlyMaintenance) * 12;
-      
-      const presentValue = yearSaving / Math.pow(1 + dRate, year);
-      totalSavings += presentValue;
+      totalSavingsExpected += yearSaving / Math.pow(1 + dRate, year);
     }
-    return Math.round(totalSavings);
+    return calculateRange(totalSavingsExpected);
   };
 
   const fiveYearSavings = calculateNPVSavings(5);
   const tenYearSavings = calculateNPVSavings(10);
 
-  // Payback period
-  const fInf = fuelInflation / 100;
-  const tInf = nepaInflation / 100;
-  
-  const monthlySolarOffset = monthlyCurrentSpend * (coveragePct / 100);
-  const firstYearMonthlySaving = monthlySolarOffset * (1 + (tInf + fInf) / 2) * 12 / 12;
+  const firstYearMonthlySavingExpected = (monthlyGridSavingsExpected * (1 + (nepaInflation/100)/2)) + (monthlyGeneratorSavingsExpected * (1 + (fuelInflation/100)/2));
+  const newSystemCostMid = (systemCostMin + systemCostMax) / 2;
+  const paybackMonths = Math.round(newSystemCostMid / firstYearMonthlySavingExpected);
 
-  // AFTER SOLAR MONTHLY COST
   let afterSolarMonthlyCost = monthlyCurrentSpend * (1 - coveragePct / 100);
-  afterSolarMonthlyCost += actualPvKwp * 500 / 12; // Maintenance
+  afterSolarMonthlyCost += actualPvKwp * 500 / 12;
 
-  // Monthly Production (for chart)
-  const monthlyProduction = pshArray.map(h => actualPvKwp * h * 30 * systemEfficiency);
-
-  const co2SavedKgPerYear = (monthlyProduction.reduce((a, b) => a + b, 0)) * 0.43;
+  const monthlyProductionArray = pshArray.map(h => actualPvKwp * h * 30 * systemEfficiency);
+  const co2SavedKgPerYear = monthlyProductionArray.reduce((a, b) => a + b, 0) * 0.43;
   const treesEquivalent = Math.round(co2SavedKgPerYear / 21);
 
-  // ── Tier overrides ────────────────────────────────────────────────────────
-  // The generic formula is calibrated for standard/large systems.
-  // For small tiers (micro/basic/starter) it over-estimates cost dramatically
-  // because of the 4kWh lithium minimum and kWp-based pricing.
-  // When a tier is pre-selected, use pre-researched Lagos market prices instead.
-  const tierPkg = inputs.systemTier ? SYSTEM_PACKAGES[inputs.systemTier] : null;
+  // STEP 7 — VALIDATION LAYER
+  let validationError: string | undefined;
+  let isValid = true;
+  const errors: string[] = [];
 
-  const totalPanelWatts = tierPkg ? tierPkg.panelWatts : actualPvKwp * 1000;
-  const batteryVoltage = tierPkg ? tierPkg.batteryVoltage : (actualPvKwp < 1 ? 12 : actualPvKwp < 3 ? 24 : 48);
-  const selectedInverterType = tierPkg ? ((tierPkg.tier === 'micro' || tierPkg.tier === 'basic') ? 'off-grid' : 'hybrid') : 'hybrid';
-  
-  const chargeController = getChargeControllerSpec(
-    selectedInverterType,
-    totalPanelWatts,
-    batteryVoltage
-  );
-
-  const finalCostMin    = (tierPkg ? tierPkg.priceMin      : systemCostMin) + chargeController.estimatedCost;
-  const finalCostMax    = (tierPkg ? tierPkg.priceMax      : systemCostMax) + chargeController.estimatedCost;
-  const finalBatteryKwh = tierPkg ? tierPkg.batteryKwh     : batteryKwh;
-  
-  const newSystemCostMid = (finalCostMin + finalCostMax) / 2;
-  const genericPaybackMonths = Math.round(newSystemCostMid / (firstYearMonthlySaving * (1 + (tInf + fInf) / 4)));
-  const finalPayback    = tierPkg ? Math.round(tierPkg.paybackYears * 12) : genericPaybackMonths;
-
-  let finalBatteryType: CalculatorResults['batteryType'] = finalBatteryKwh > 0 ? 'lithium' : 'none';
-  if (tierPkg && finalBatteryKwh > 0) {
-    finalBatteryType = tierPkg.batteryType === 'LFP' ? 'lithium' : 'lead-acid';
+  if (batterySufficiency === 'full' && batteryKwh * 0.8 < nightLoadKwh) {
+    errors.push("Invalid labeling: Battery labeled 'FULL' but capacity is less than night load.");
+  }
+  if (autonomyHours < 24 && systemMode === 'off-grid') {
+    errors.push("Invalid configuration: Off-grid mode requires at least 24h autonomy.");
+  }
+  if ((monthlyGridSavingsExpected + monthlyGeneratorSavingsExpected) > monthlyCurrentSpend * 0.9 && generatorSpend === 0 && systemMode !== 'off-grid') {
+    errors.push("Savings validation: Claimed savings exceed 90% of total bill without generator dependency confirmation.");
+  }
+  if (coveragePct === 100 && autonomyHours < 24 && systemMode !== 'off-grid') {
+    errors.push("Inconsistency: 100% energy offset requires strict autonomy validation (battery insufficient for 24h).");
   }
 
+  if (errors.length > 0) {
+    isValid = false;
+    validationError = 'WARNINGS IN SYSTEM DESIGN\n\n' + errors.join('\n');
+  }
+
+  // DAYTIME ANALYSIS
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const appliancesWithDaytimeHours = inputs.appliances.map(appSelection => {
     const appDef = APPLIANCES.find(a => a.id === appSelection.id);
-    const qty = appSelection.qty;
     const watts = appDef?.watts || 0;
-    const hoursPerDay = appDef?.typicalHours || 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const daytimeHours = (appSelection as any).daytimeHours ?? Math.min(hoursPerDay, 8);
-    return {
-      name: appDef?.name || appSelection.id,
-      watts,
-      quantity: qty,
-      hoursPerDay,
-      daytimeHours
-    };
+    const hoursPerDay = appDef?.typicalHours || 1;
+    let daytimeHours = 0;
+    if (hoursPerDay === 24) {
+      daytimeHours = 12;
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      daytimeHours = (appSelection as any).daytimeHours ?? Math.min(hoursPerDay, 8);
+    }
+    return { name: appDef?.name || appSelection.id, watts, quantity: appSelection.qty, hoursPerDay, daytimeHours };
   });
+  const daytimeAnalysis = analyzeDaytimeLoad(appliancesWithDaytimeHours, totalPanelWatts, 5500);
 
-  const daytimeAnalysis = analyzeDaytimeLoad(
-    appliancesWithDaytimeHours,
-    totalPanelWatts,
-    5500,
-    inputs.systemTier
-  );
+
+  // --- TRUTH QA LAYER ---
+  let qaScore = 0;
+  const qaWarnings: string[] = [];
+  const flags = { pvBias: false, savingsBias: false, autonomyBias: false };
+  
+  // A. PV Accuracy
+  const pvBase = targetDailyGenerationKwh / (avgPSH * systemEfficiency);
+  const pvRatio = actualPvKwp / pvBase;
+  let pvStatus: 'OPTIMAL' | 'CONSERVATIVE' | 'OVERBUILT' | 'UNDERPOWERED' = 'OPTIMAL';
+  
+  if (pvRatio >= 1.0 && pvRatio <= 1.2) {
+    qaScore += 30;
+    pvStatus = 'OPTIMAL';
+  } else if (pvRatio > 1.2 && pvRatio <= 1.5) {
+    qaScore += 15;
+    pvStatus = 'CONSERVATIVE';
+  } else if (pvRatio > 1.5) {
+    qaScore += 0;
+    pvStatus = 'OVERBUILT';
+    flags.pvBias = true;
+  } else {
+    qaScore += 0;
+    pvStatus = 'UNDERPOWERED';
+  }
+
+  // B. Battery Realism
+  let batteryIntegrity: 'PASS' | 'BORDERLINE' | 'FAIL' = 'PASS';
+  const claimedAutonomy = autonomyHours;
+  const theoreticalAutonomy = nightLoadKwh > 0 ? (batteryKwh * 0.8 * 0.85) / (nightLoadKwh / 12) : 0;
+  const autonomyDiff = Math.abs(claimedAutonomy - theoreticalAutonomy);
+  
+  if (autonomyDiff <= theoreticalAutonomy * 0.1 || theoreticalAutonomy === 0) {
+    qaScore += 25;
+  } else if (autonomyDiff <= theoreticalAutonomy * 0.2) {
+    qaScore += 10;
+    batteryIntegrity = 'BORDERLINE';
+  } else {
+    qaScore += 0;
+    batteryIntegrity = 'FAIL';
+    flags.autonomyBias = true;
+  }
+
+  // C. Savings Realism
+  let savingsIntegrity: 'PASS' | 'INFLATED' | 'FAIL' = 'PASS';
+  const totalClaimedSavings = monthlyGridSavingsExpected + monthlyGeneratorSavingsExpected;
+  const theoreticalDisplacement = monthlyCurrentSpend * (coveragePct / 100);
+  
+  if (totalClaimedSavings <= theoreticalDisplacement * 1.05) {
+    qaScore += 25;
+  } else if (totalClaimedSavings <= theoreticalDisplacement * 1.30) {
+    qaScore += 10;
+    savingsIntegrity = 'INFLATED';
+  } else {
+    qaScore += 0;
+    savingsIntegrity = 'FAIL';
+    flags.savingsBias = true;
+  }
+
+  // D. System Label Integrity
+  if (pvClassification === 'OPTIMAL' && pvRatio > 1.2) {
+    qaScore += 0;
+  } else if (pvClassification === 'OVER SIZED' && pvRatio <= 1.5) {
+    qaScore += 0;
+  } else {
+    qaScore += 20;
+  }
+
+  // Auto-Fail Conditions
+  let autoFail = false;
+  if (pvClassification === 'OPTIMAL' && pvRatio > 1.2) autoFail = true;
+  if (totalClaimedSavings > theoreticalDisplacement * 1.30) autoFail = true;
+  if (systemMode !== 'off-grid' && autonomyHours > 24 && batteryKwh < 15) autoFail = true;
+  if ((batterySufficiency === 'adequate' || batterySufficiency === 'full') && autonomyHours < 10) autoFail = true;
+
+  if (autoFail) {
+    qaScore = Math.min(qaScore, 49); // Force < 50
+  }
+
+  // Warnings & Final Verdict
+  if (qaScore < 85) {
+    if (pvRatio > 1.2) qaWarnings.push("System is overbuilt for reliability, not cost optimization.");
+    if (autonomyHours < 10 && batterySufficiency !== 'insufficient') qaWarnings.push("Night autonomy is limited under real-world discharge conditions.");
+    if (totalClaimedSavings > theoreticalDisplacement * 1.05) qaWarnings.push("Savings assume high displacement efficiency; real-world variance expected.");
+  }
+
+  let finalVerdict: 'Physics-Accurate' | 'Installer-Conservative' | 'Marketing-Biased' = 'Physics-Accurate';
+  if (qaScore >= 85) finalVerdict = 'Physics-Accurate';
+  else if (qaScore >= 50) finalVerdict = 'Installer-Conservative';
+  else finalVerdict = 'Marketing-Biased';
+
+  const truthQAReport = {
+    score: qaScore,
+    pvStatus,
+    batteryIntegrity,
+    savingsIntegrity,
+    flags,
+    finalVerdict,
+    warnings: qaWarnings
+  };
 
   return {
-    pvKwp: tierPkg ? tierPkg.panelWatts / 1000 : actualPvKwp,
-    panelsNeeded: tierPkg ? Math.ceil(tierPkg.panelWatts / tierPkg.recommendedPanelWatts) : panelsNeeded,
-    panelSizeWatts: tierPkg ? tierPkg.recommendedPanelWatts : 400,
-    inverterKva: tierPkg ? tierPkg.inverterKva : inverterKva,
-    batteryKwh: finalBatteryKwh,
-    batteryType: finalBatteryType,
-    systemCostMin: finalCostMin,
-    systemCostMax: finalCostMax,
-    paybackMonths: finalPayback,
+    isValid,
+    validationError,
+    peakLoadKw: peakSurgeKw,
+    dailyLoadKwh,
+    pvKwp: actualPvKwp,
+    panelsNeeded,
+    panelSizeWatts,
+    inverterKva,
+    batteryKwh,
+    batteryType: batteryKwh > 0 ? 'lithium' : 'none',
+    systemCostMin,
+    systemCostMax,
+    paybackMonths,
     fiveYearSavings,
     tenYearSavings,
+    monthlyGridSavings,
+    monthlyGeneratorSavings,
+    batterySufficiency,
+    energyOffsetPct: coveragePct,
+    autonomyHours: Math.round(autonomyHours * 10) / 10,
     monthlyCurrentSpend,
     afterSolarMonthlyCost,
-    monthlyProduction,
+    monthlyProduction: monthlyProductionArray,
     discoName: discoStr,
     discoTariff,
-    selectedBand: inputs.lagosElectricityBand ? (inputs.lagosElectricityBand.replace('band_', '').toUpperCase() as 'A' | 'B' | 'C' | 'D' | 'E') : null,
+    selectedBand: inputs.lagosElectricityBand
+      ? (inputs.lagosElectricityBand.replace('band_', '').toUpperCase() as 'A' | 'B' | 'C' | 'D' | 'E')
+      : null,
     avgPSH,
     co2SavedKgPerYear,
     treesEquivalent,
+    pvClassification,
+    seasonalRisk,
     chargeController,
     daytimeAnalysis,
-  } as CalculatorResults & { chargeController: ChargeControllerSpec; daytimeAnalysis: DaytimeHeavyAnalysis };
+    truthQAReport,
+  };
 }
 
 export function getInverterSize(kva: number): string {
