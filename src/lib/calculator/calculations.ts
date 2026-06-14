@@ -936,57 +936,82 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const discoTariff = getEffectiveTariff(discoStr, inputs.lagosElectricityBand);
 
   // STEP 1 & 2 — LOAD CALCULATION & DAY/NIGHT CLASSIFICATION
+  // ─────────────────────────────────────────────────────────
+  // ENGINEERING NOTE: We use kwhPerDay × qty (not watts × typicalHours).
+  // kwhPerDay already accounts for real-world duty cycles:
+  //   • Fridge compressor cycles on ~40% of the time → 1.5 kWh/day not 3.6
+  //   • Washing machine used 0.5×/day average → 0.25 kWh not 0.5
+  //   • This matches what a trained solar engineer would enter in a load sheet.
   let dailyLoadKwh = 0;
   let nightLoadKwh = 0;
   let peakSurgeKw = 0;
+  let simultaneousLoadKw = 0; // for inverter sizing
+  let hasAC = false;
+  let hasWaterPump = false;
 
   if (appliances.length > 0) {
     appliances.forEach(appSelection => {
       const appDef = APPLIANCES.find(a => a.id === appSelection.id);
       if (!appDef) return;
-      
+
       const qty = appSelection.qty;
-      const watts = appDef.watts;
+      if (qty <= 0) return;
+
       const typicalHours = appDef.typicalHours || 1;
-      const totalWh = watts * qty * typicalHours;
-      
-      let dayWh = 0;
-      let nightWh = 0;
-      
-      // Classify into daytime-only, mixed-use, nighttime-heavy based on typical usage
+
+      // ── FIX 1: Use kwhPerDay × qty (duty-cycle-aware) ──────────────────
+      const appDayKwh = appDef.kwhPerDay * qty;
+      dailyLoadKwh += appDayKwh;
+
+      // ── FIX 2: Night load — proportional split using actual hours ────────
+      let nightKwh = 0;
       if (typicalHours === 24) {
-        dayWh = totalWh / 2;
-        nightWh = totalWh / 2;
+        // 24h appliances (fridge, router, CCTV, etc.) split 50/50 day/night
+        nightKwh = appDayKwh * 0.5;
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const dayHrs = (appSelection as any).daytimeHours ?? Math.min(typicalHours, 8);
-        dayWh = watts * qty * dayHrs;
-        nightWh = totalWh - dayWh;
-        if (nightWh < 0) nightWh = 0;
+        const dayHrs = Math.min((appSelection as any).daytimeHours ?? Math.min(typicalHours, 8), typicalHours);
+        const nightHrs = Math.max(0, typicalHours - dayHrs);
+        nightKwh = typicalHours > 0 ? appDayKwh * (nightHrs / typicalHours) : 0;
       }
-      
-      dailyLoadKwh += totalWh / 1000;
-      // daytimeLoadKwh is unused
-      nightLoadKwh += nightWh / 1000;
-      
-      const continuousKw = (watts * qty) / 1000;
+      nightLoadKwh += nightKwh;
+
+      // ── FIX 3: Correct surge factors ────────────────────────────────────
+      // Fans are NOT compressors — they don't have 2.5× startup surge.
+      // Only compressors (AC, fridge, water pump) need high surge factors.
+      const continuousKw = (appDef.watts * qty) / 1000;
+      simultaneousLoadKw += continuousKw;
+
+      const isFan = appDef.id.startsWith('fan_');
+      const isAC  = appDef.id.startsWith('ac_');
+      const isCompressor = !isFan && ['Cooling', 'Refrigeration', 'Water'].includes(appDef.category);
+      const isWaterPump  = appDef.id.startsWith('borehole_');
+
+      if (isAC)  hasAC = true;
+      if (isWaterPump) hasWaterPump = true;
+
       let surgeMult = 1.0;
-      if (['Cooling', 'Refrigeration', 'Water'].includes(appDef.category)) {
+      if (isFan) {
+        surgeMult = 1.2;  // Small startup inrush — NOT compressor-level
+      } else if (isCompressor) {
         surgeMult = appDef.isInverter ? 1.5 : 2.5;
+      } else if (appDef.category === 'Laundry') {
+        surgeMult = 2.0;  // Motor startup
       }
       peakSurgeKw += continuousKw * surgeMult;
     });
   } else {
-    // Fallback logic
+    // No appliances entered — estimate from bill + generator spend
     const monthlyKwhFromNepa = monthlyBill / discoTariff;
     const effectiveFuelPrice = _fuelPriceCache > 0 ? _fuelPriceCache : PETROL_PRICE_PER_LITRE;
     const generatorFuelLiters = generatorSpend / effectiveFuelPrice;
     const fuelEff = inputs.fuelEfficiency || 2.0;
     const monthlyKwhFromGenerator = generatorFuelLiters * fuelEff;
-    
+
     dailyLoadKwh = (monthlyKwhFromNepa + monthlyKwhFromGenerator) / 30;
-    nightLoadKwh = dailyLoadKwh * 0.5;
-    peakSurgeKw = (dailyLoadKwh / 10) * 2;
+    nightLoadKwh = dailyLoadKwh * 0.45; // 45% at night (typical Nigerian home)
+    peakSurgeKw  = dailyLoadKwh * 0.2;  // rough estimate
+    simultaneousLoadKw = dailyLoadKwh * 0.15;
   }
 
   // Target Energy Offset
