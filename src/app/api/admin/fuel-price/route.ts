@@ -1,13 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // GET — return current fuel price settings
 export async function GET() {
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from('site_settings')
     .select('*')
@@ -33,6 +29,7 @@ export async function POST(request: Request) {
   }
 
   const now = new Date().toISOString()
+  const supabase = createAdminClient()
 
   await supabase.from('site_settings').upsert([
     {
