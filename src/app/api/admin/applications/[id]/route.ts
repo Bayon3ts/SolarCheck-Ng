@@ -8,7 +8,7 @@ import { Resend } from "resend";
 // Access to this endpoint is restricted by middleware
 // protecting all /admin/* page routes.
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +17,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     const body = await request.json();
     const { status } = body;
-    const { id } = params;
+    const { id } = await params;
 
     if (!['approved', 'rejected'].includes(status)) {
       return NextResponse.json({ success: false, error: "Invalid status" }, { status: 400 });

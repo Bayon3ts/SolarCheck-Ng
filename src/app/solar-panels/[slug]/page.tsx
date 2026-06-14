@@ -9,15 +9,16 @@ import EquipmentCard from '@/components/equipment/EquipmentCard'
 import { SOLAR_PANELS } from '@/data/solar-panels'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{slug: string}>
 }
 
 export function generateStaticParams() {
   return SOLAR_PANELS.map((p) => ({ slug: p.slug }))
 }
 
-export function generateMetadata({ params }: Props): Metadata {
-  const panel = SOLAR_PANELS.find((p) => p.slug === params.slug)
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const slug = (await params).slug;
+  const panel = SOLAR_PANELS.find((p) => p.slug === slug)
   if (!panel) return { title: 'Panel Not Found' }
   return {
     title: `${panel.brand} ${panel.model} Review — Price & Specs in Nigeria | SolarCheck`,
@@ -32,8 +33,9 @@ function formatPrice(n: number) {
 
 const ORIGIN_LABELS: Record<string, string> = { CN: '🇨🇳 China', US: '🇺🇸 USA', KR: '🇰🇷 South Korea', IN: '🇮🇳 India', NL: '🇳🇱 Netherlands' }
 
-export default function SolarPanelDetailPage({ params }: Props) {
-  const panel = SOLAR_PANELS.find((p) => p.slug === params.slug)
+export default async function SolarPanelDetailPage({ params }: Props) {
+  const slug = (await params).slug;
+  const panel = SOLAR_PANELS.find((p) => p.slug === slug)
   if (!panel) notFound()
 
   const related = SOLAR_PANELS.filter((p) => p.slug !== panel.slug).slice(0, 3)

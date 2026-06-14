@@ -13,7 +13,7 @@ export const revalidate = 0;
 /* ═══════════════════════════════════════ */
 
 export default async function BlogTeaser() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: fetchedPosts, error } = await supabase
     .from("blog_posts")
     .select("slug, title, excerpt, category, cover_image, cover_image_alt")

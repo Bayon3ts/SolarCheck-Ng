@@ -9,15 +9,16 @@ import EquipmentCard from '@/components/equipment/EquipmentCard'
 import { SOLAR_INVERTERS } from '@/data/solar-inverters'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{slug: string}>
 }
 
 export function generateStaticParams() {
   return SOLAR_INVERTERS.map((inv) => ({ slug: inv.slug }))
 }
 
-export function generateMetadata({ params }: Props): Metadata {
-  const inv = SOLAR_INVERTERS.find((i) => i.slug === params.slug)
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const slug = (await params).slug;
+  const inv = SOLAR_INVERTERS.find((i) => i.slug === slug)
   if (!inv) return { title: 'Inverter Not Found' }
   return {
     title: `${inv.brand} ${inv.model} Review — Price & Specs in Nigeria | SolarCheck`,
@@ -32,8 +33,9 @@ function formatPrice(n: number) {
 
 const ORIGIN_LABELS: Record<string, string> = { CN: '🇨🇳 China', US: '🇺🇸 USA', KR: '🇰🇷 South Korea', IN: '🇮🇳 India', NL: '🇳🇱 Netherlands' }
 
-export default function SolarInverterDetailPage({ params }: Props) {
-  const inv = SOLAR_INVERTERS.find((i) => i.slug === params.slug)
+export default async function SolarInverterDetailPage({ params }: Props) {
+  const slug = (await params).slug;
+  const inv = SOLAR_INVERTERS.find((i) => i.slug === slug)
   if (!inv) notFound()
 
   const related = SOLAR_INVERTERS.filter((i) => i.slug !== inv.slug).slice(0, 3)

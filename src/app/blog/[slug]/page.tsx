@@ -22,13 +22,13 @@ export async function generateStaticParams() {
   return posts?.map((post) => ({ slug: post.slug })) || [];
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   // Use the cookie-free admin client — generateMetadata also runs at build time
   const supabase = createAdminClient();
   const { data: post } = await supabase
     .from("blog_posts")
     .select("title, excerpt, cover_image")
-    .eq("slug", params.slug)
+    .eq("slug", (await params).slug)
     .single();
 
   if (!post) return { title: "Post Not Found" };
@@ -64,13 +64,13 @@ function extractHeadings(content: string): { text: string; id: string }[] {
   return headings;
 }
 
-export default async function BlogPostPage({ params }: { params: { slug: string } }) {
-  const supabase = createServerClient();
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const supabase = await createServerClient();
 
   const { data: post } = await supabase
     .from("blog_posts")
     .select("*")
-    .eq("slug", params.slug)
+    .eq("slug", (await params).slug)
     .eq("is_published", true)
     .single();
 

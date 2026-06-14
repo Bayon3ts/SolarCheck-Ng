@@ -21,12 +21,12 @@ export async function generateStaticParams() {
   return installers?.map((installer) => ({ slug: installer.slug })) || [];
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const supabase = createAdminClient();
   const { data: installer } = await supabase
     .from("installers")
     .select("company_name, city, state, description")
-    .eq("slug", params.slug)
+    .eq("slug", (await params).slug)
     .single();
 
   if (!installer) return { title: "Installer Not Found" };
@@ -37,13 +37,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function InstallerProfilePage({ params }: { params: { slug: string } }) {
-  const supabase = createServerClient();
+export default async function InstallerProfilePage({ params }: { params: Promise<{ slug: string }> }) {
+  const supabase = await createServerClient();
 
   const { data: installer } = await supabase
     .from("installers")
     .select("*")
-    .eq("slug", params.slug)
+    .eq("slug", (await params).slug)
     .eq("is_active", true)
     .single();
 

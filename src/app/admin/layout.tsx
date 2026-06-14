@@ -13,7 +13,7 @@ export default async function AdminLayout({
   // when cookies are read-only (Server Component context). getSession() reads
   // the JWT directly from cookies, which always works. The middleware already
   // validates these tokens, so this is secure.
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createSSRClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

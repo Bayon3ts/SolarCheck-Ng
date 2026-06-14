@@ -6,8 +6,8 @@ import { cookies } from "next/headers";
 /* Used in Server Components & API Routes  */
 /* ═══════════════════════════════════════ */
 
-export function createServerClient() {
-  const cookieStore = cookies();
+export async function createServerClient() {
+  const cookieStore = await cookies();
 
   return createSSRClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

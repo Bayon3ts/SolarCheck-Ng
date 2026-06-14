@@ -9,15 +9,16 @@ import EquipmentCard from '@/components/equipment/EquipmentCard'
 import { SOLAR_BATTERIES } from '@/data/solar-batteries'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{slug: string}>
 }
 
 export function generateStaticParams() {
   return SOLAR_BATTERIES.map((b) => ({ slug: b.slug }))
 }
 
-export function generateMetadata({ params }: Props): Metadata {
-  const battery = SOLAR_BATTERIES.find((b) => b.slug === params.slug)
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const slug = (await params).slug;
+  const battery = SOLAR_BATTERIES.find((b) => b.slug === slug)
   if (!battery) return { title: 'Battery Not Found' }
   return {
     title: `${battery.brand} ${battery.model} Review — Price & Specs in Nigeria | SolarCheck`,
@@ -32,8 +33,9 @@ function formatPrice(n: number) {
 
 const ORIGIN_LABELS: Record<string, string> = { CN: '🇨🇳 China', US: '🇺🇸 USA', KR: '🇰🇷 South Korea', IN: '🇮🇳 India', NL: '🇳🇱 Netherlands' }
 
-export default function SolarBatteryDetailPage({ params }: Props) {
-  const battery = SOLAR_BATTERIES.find((b) => b.slug === params.slug)
+export default async function SolarBatteryDetailPage({ params }: Props) {
+  const slug = (await params).slug;
+  const battery = SOLAR_BATTERIES.find((b) => b.slug === slug)
   if (!battery) notFound()
 
   const related = SOLAR_BATTERIES.filter((b) => b.slug !== battery.slug).slice(0, 3)

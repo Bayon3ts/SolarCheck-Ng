@@ -73,6 +73,7 @@ export interface CalculatorResults {
   batteryKwh: number;
   autonomyHours: number;
   systemStatus: 'PASS' | 'FAIL';
+  [key: string]: any;
 }
 
 export interface LeadCaptureData {

@@ -4,10 +4,10 @@ import { createServerClient } from "@/lib/supabase/server";
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Verify the caller is an authenticated admin
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS
@@ -26,7 +26,7 @@ export async function DELETE(
   const { error } = await admin
     .from("blog_posts")
     .delete()
-    .eq("id", params.id);
+    .eq("id", (await params).id);
 
   if (error) {
     console.error("[DELETE /api/admin/blog/[id]]", error);

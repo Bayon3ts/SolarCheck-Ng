@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { Button } from "@/components/ui/button";
@@ -28,8 +28,9 @@ const MarkdownPreview = ({ content }: { content: string }) => {
   );
 };
 
-export default function EditPostPage({ params }: { params: { id: string } }) {
-  const isNew = params.id === "new";
+export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const isNew = id === "new";
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [category, setCategory] = useState("Solar Basics");
@@ -52,7 +53,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         const { data } = await supabase
           .from("blog_posts")
           .select("*")
-          .eq("id", params.id)
+          .eq("id", id)
           .single();
         if (data) {
           setTitle(data.title);
@@ -67,7 +68,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
       };
       fetchPost();
     }
-  }, [params.id, isNew, supabase]);
+  }, [id, isNew, supabase]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -99,7 +100,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         return;
       }
     } else {
-      const { error } = await supabase.from("blog_posts").update(postData).eq("id", params.id);
+      const { error } = await supabase.from("blog_posts").update(postData).eq("id", id);
       if (error) {
         console.error("[BlogSave] Error updating post:", error);
         alert(`Failed to update post: ${error.message}`);

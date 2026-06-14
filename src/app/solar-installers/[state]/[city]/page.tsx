@@ -44,10 +44,10 @@ function unslugify(slug: string) {
 export async function generateMetadata({
   params,
 }: {
-  params: { state: string; city: string };
+  params: Promise<{state: string; city: string}>;
 }): Promise<Metadata> {
-  const state = unslugify(params.state);
-  const city = unslugify(params.city);
+  const state = unslugify((await params).state);
+  const city = unslugify((await params).city);
 
   return {
     title: `Best Solar Installers in ${city}, ${state} | SolarCheck Nigeria`,
@@ -58,12 +58,12 @@ export async function generateMetadata({
 export default async function LocationPage({
   params,
 }: {
-  params: { state: string; city: string };
+  params: Promise<{state: string; city: string}>;
 }) {
-  const state = unslugify(params.state);
-  const city = unslugify(params.city);
+  const state = unslugify((await params).state);
+  const city = unslugify((await params).city);
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   // Fetch installers in this city/state
   const { data: installers } = await supabase
@@ -115,7 +115,7 @@ export default async function LocationPage({
             <ChevronRight className="h-4 w-4" />
             <Link href="/solar-installers" className="hover:text-primary">Installers</Link>
             <ChevronRight className="h-4 w-4" />
-            <Link href={`/solar-installers/${params.state}`} className="hover:text-primary">{state}</Link>
+            <Link href={`/solar-installers/${(await params).state}`} className="hover:text-primary">{state}</Link>
             <ChevronRight className="h-4 w-4" />
             <span className="text-text-primary font-medium">{city}</span>
           </nav>

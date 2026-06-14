@@ -1,7 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 
 export default async function AdminWebhooksPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: logs } = await supabase
     .from("webhook_logs")
     .select("*, installers(company_name)")

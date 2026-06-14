@@ -1,0 +1,8 @@
+﻿src/app/admin/blog/edit/[id]/page.tsx(32,18): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+src/app/admin/blog/edit/[id]/page.tsx(70,8): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+src/app/solar-batteries/[slug]/page.tsx(20,59): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+src/app/solar-batteries/[slug]/page.tsx(36,59): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+src/app/solar-inverters/[slug]/page.tsx(20,55): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+src/app/solar-inverters/[slug]/page.tsx(36,55): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+src/app/solar-panels/[slug]/page.tsx(20,54): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+src/app/solar-panels/[slug]/page.tsx(36,54): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.

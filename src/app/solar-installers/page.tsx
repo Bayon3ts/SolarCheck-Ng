@@ -26,7 +26,7 @@ export default async function DirectoryPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   // Extract filters from searchParams
   const stateFilter = searchParams.state || "";

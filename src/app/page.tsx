@@ -55,7 +55,7 @@ export default function HomePage() {
                 className="group relative overflow-hidden rounded-3xl bg-primary/5 border border-primary/10 p-8 text-center hover:bg-primary hover:border-primary transition-all duration-300 cursor-pointer"
               >
                 <div className="w-48 h-48 mx-auto mb-6 relative rounded-2xl overflow-hidden">
-                  <Image src="/equipment/solar-panel.jpg" alt="Solar Panels" fill className="object-contain mix-blend-multiply" />
+                  <Image src="/equipment/solar-panel.jpg" alt="Solar Panels" fill className="object-contain mix-blend-multiply" sizes="(max-width: 768px) 100vw, 33vw" />
                 </div>
                 <h3 className="text-xl font-bold text-text-primary group-hover:text-white mb-2">
                   Solar Panels
@@ -74,7 +74,7 @@ export default function HomePage() {
                 className="group relative overflow-hidden rounded-3xl bg-accent/10 border border-accent/20 p-8 text-center hover:bg-accent hover:border-accent transition-all duration-300 cursor-pointer"
               >
                 <div className="w-48 h-48 mx-auto mb-6 relative rounded-2xl overflow-hidden">
-                  <Image src="/equipment/battery.png" alt="Solar Batteries" fill className="object-contain mix-blend-multiply" />
+                  <Image src="/equipment/battery.png" alt="Solar Batteries" fill className="object-contain mix-blend-multiply" sizes="(max-width: 768px) 100vw, 33vw" />
                 </div>
                 <h3 className="text-xl font-bold text-text-primary group-hover:text-gray-900 mb-2">
                   Solar Batteries
@@ -93,7 +93,7 @@ export default function HomePage() {
                 className="group relative overflow-hidden rounded-3xl bg-blue-50 border border-blue-100 p-8 text-center hover:bg-blue-600 hover:border-blue-600 transition-all duration-300 cursor-pointer"
               >
                 <div className="w-48 h-48 mx-auto mb-6 relative rounded-2xl overflow-hidden">
-                  <Image src="/equipment/inverter.png" alt="Solar Inverters" fill className="object-contain mix-blend-multiply" />
+                  <Image src="/equipment/inverter.png" alt="Solar Inverters" fill className="object-contain mix-blend-multiply" sizes="(max-width: 768px) 100vw, 33vw" />
                 </div>
                 <h3 className="text-xl font-bold text-text-primary group-hover:text-white mb-2">
                   Solar Inverters

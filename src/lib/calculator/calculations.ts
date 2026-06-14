@@ -3,7 +3,7 @@
 /* Market rates — Updated May 2026               */
 /* ═══════════════════════════════════════════════════ */
 
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase/client';
 import { CalculatorInputs, CalculatorResults } from './types';
 import { MONTHLY_PSH, DEFAULT_MONTHLY_PSH } from './irradiance';
 
@@ -25,10 +25,8 @@ export async function getFuelPrice(): Promise<{
   source: string;
 }> {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    // Using the imported singleton client instead of creating a new one
+
 
     const { data } = await supabase
       .from('site_settings')
@@ -1040,87 +1038,131 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // System efficiency default ~0.75 (reduced from 0.80 to be more realistic)
   const systemEfficiency = 0.75 * directionFactor * pitchFactor * shadeFactor;
 
-  // kWp = Daily Energy / (PSH × system_efficiency)
+  // ── FIX 4: PV SIZING — use actual minimum monthly PSH ────────────────────
+  // ENGINEERING NOTE: The old code used avgPSH × 0.6 for rainy season, which
+  // implied a PSH of 2.25 hrs for Lagos. The actual Lagos July minimum is 3.0 hrs.
+  // Using 0.6× causes the array to be ~67% oversized. We now use the real
+  // minimum month from the irradiance data for the user's state.
+  const minPSH = Math.min(...pshArray); // e.g. Lagos July = 3.0 hrs
+  const rainyMinPSH = minPSH * 0.9;    // 10% extra buffer for unusually bad rainy days
+
+  // Annual average requirement
   const annualReq = targetDailyGenerationKwh / (avgPSH * systemEfficiency);
-  const rainyReq = targetDailyGenerationKwh / (avgPSH * 0.6 * systemEfficiency);
+  // Worst-month (rainy season) requirement — size for this, not avg×0.6
+  const rainyReq  = targetDailyGenerationKwh / (rainyMinPSH * systemEfficiency);
   const pvKwp = Math.max(annualReq, rainyReq);
 
-  // STEP 4 — BATTERY SIZING LOGIC
+  // FINALISE ARRAY SIZE
+  const panelSizeWatts = 550;
+  const panelsNeeded = Math.ceil((pvKwp * 1000) / panelSizeWatts);
+  const actualPvKwp  = (panelsNeeded * panelSizeWatts) / 1000;
+
+  // ── FIX 5: BATTERY SIZING — real-world Nigerian floors ───────────────────
+  // ENGINEERING NOTE: Battery must cover actual night load with margin.
+  // We apply Nigerian-specific minimum floors:
+  //   • Any AC present  → min 4.8 kWh  (1× 48V 100Ah LFP)
+  //   • Water pump      → min 4.8 kWh
+  //   • Standard home   → min 2.4 kWh  (½× 48V 100Ah LFP)
   let requiredBatteryUsableKwh = 0;
   let batterySufficiency: 'insufficient' | 'limited' | 'adequate' | 'strong' | 'full' = 'adequate';
 
   if (systemMode === 'grid-tied') {
-    requiredBatteryUsableKwh = 0; // minimal backup
+    requiredBatteryUsableKwh = 0;
   } else if (systemMode === 'off-grid') {
     requiredBatteryUsableKwh = dailyLoadKwh * 1.2;
   } else {
-    // Hybrid mode (default)
-    // We want ADEQUATE to hit >= 1.4, so ensure sizing hits it if they selected >=1
-    requiredBatteryUsableKwh = nightLoadKwh * Math.max(autonomyDays || 1, 1.4);
+    // Hybrid (default): size battery to cover nighttime load × 1.4 safety
+    const autonomyFactor = Math.max(autonomyDays || 1, 1.4);
+    requiredBatteryUsableKwh = nightLoadKwh * autonomyFactor;
   }
 
-  // DoD for LFP is 0.8, System Loss is 0.85
-  let batteryKwh = requiredBatteryUsableKwh > 0 ? requiredBatteryUsableKwh / (0.8 * 0.85) : 0;
-  
+  // Convert usable kWh → actual kWh (LFP DoD=80%, system loss=85%)
+  let batteryKwh = requiredBatteryUsableKwh > 0
+    ? requiredBatteryUsableKwh / (0.8 * 0.85)
+    : 0;
+
   if (batteryKwh > 0) {
-    batteryKwh = Math.max(2.4, Math.ceil(batteryKwh / 1.2) * 1.2);
+    // Round up to nearest LFP unit size (1.2 kWh steps, min 2.4)
+    batteryKwh = Math.ceil(batteryKwh / 1.2) * 1.2;
     batteryKwh = Math.round(batteryKwh * 10) / 10;
+
+    // Nigerian engineering minimum floors
+    const minBattery = hasAC || hasWaterPump ? 4.8 : 2.4;
+    batteryKwh = Math.max(batteryKwh, minBattery);
   }
 
+  // Autonomy calculation
   let autonomyHours = 0;
   if (batteryKwh > 0 && nightLoadKwh > 0) {
     autonomyHours = (batteryKwh * 0.8 * 0.85) / (nightLoadKwh / 12);
   } else if (batteryKwh > 0 && dailyLoadKwh > 0) {
     autonomyHours = (batteryKwh * 0.8 * 0.85) / (dailyLoadKwh / 24);
   }
-  
+
+  // Battery sufficiency rating
   const usableBattery = batteryKwh * 0.8 * 0.85;
   if (systemMode === 'grid-tied') {
     batterySufficiency = 'insufficient';
+  } else if (nightLoadKwh <= 0) {
+    batterySufficiency = 'full';
   } else {
-    if (usableBattery < nightLoadKwh * 1.1) {
-      batterySufficiency = 'insufficient';
-    } else if (usableBattery < nightLoadKwh * 1.4) {
-      batterySufficiency = 'limited';
-    } else if (usableBattery < nightLoadKwh * 1.8) {
-      batterySufficiency = 'adequate';
-    } else {
-      batterySufficiency = 'strong';
-    }
-    
-    if (autonomyHours >= 24) {
-      batterySufficiency = 'full';
-    }
+    const ratio = usableBattery / nightLoadKwh;
+    if      (ratio < 1.1) batterySufficiency = 'insufficient';
+    else if (ratio < 1.4) batterySufficiency = 'limited';
+    else if (ratio < 1.8) batterySufficiency = 'adequate';
+    else if (ratio < 2.5) batterySufficiency = 'strong';
+    else                  batterySufficiency = 'full';
   }
 
-  // STEP 5 — INVERTER SIZING
+  // ── FIX 6: INVERTER SIZING — load-based, not PV-based ────────────────────
+  // ENGINEERING NOTE: Inverter kVA must match AC output demand, NOT solar input.
+  // The old code used pvKwp × 1.1 which oversizes inverter when PV is oversized.
+  // Correct method:
+  //   1. Sum all simultaneous watts (continuous rating)
+  //   2. Add the startup surge of the SINGLE heaviest motor (not all at once)
+  //   3. Apply 25% safety margin
+  //   4. Nigerian floor: any AC present → min 5kVA
   const inverterSizes = [3, 5, 8, 10, 15, 20, 30];
-  const requiredInverterKva = Math.max(peakSurgeKw * 1.25, pvKwp * 1.1);
+
+  // Heaviest single motor startup additional watts
+  let heaviestStartupAddKw = 0;
+  if (appliances.length > 0) {
+    appliances.forEach(appSelection => {
+      const appDef = APPLIANCES.find(a => a.id === appSelection.id);
+      if (!appDef || appSelection.qty <= 0) return;
+      const continuousKw = (appDef.watts * appSelection.qty) / 1000;
+      const isFan = appDef.id.startsWith('fan_');
+      const isCompressor = !isFan && ['Cooling', 'Refrigeration', 'Water'].includes(appDef.category);
+      const isLaundry = appDef.category === 'Laundry';
+      let mult = 1.0;
+      if (isCompressor) mult = appDef.isInverter ? 1.5 : 2.5;
+      else if (isLaundry) mult = 2.0;
+      else if (isFan) mult = 1.2;
+      const startupAdd = continuousKw * (mult - 1.0); // additional above continuous
+      if (startupAdd > heaviestStartupAddKw) heaviestStartupAddKw = startupAdd;
+    });
+  }
+
+  // Required kVA = (all continuous loads + heaviest startup surge) × 1.25 safety
+  const rawInverterKva = (simultaneousLoadKw + heaviestStartupAddKw) * 1.25;
+
+  // Nigerian engineering floor: 5kVA minimum when AC is present
+  const minInverterKva = hasAC ? 5 : hasWaterPump ? 5 : 3;
+  const requiredInverterKva = Math.max(rawInverterKva, minInverterKva);
   const inverterKva = inverterSizes.find(sz => sz >= requiredInverterKva) ?? 30;
 
-  // FINALISE ARRAY
-  const panelSizeWatts = 550;
-  const panelsNeeded = Math.ceil((pvKwp * 1000) / panelSizeWatts);
-  const actualPvKwp = (panelsNeeded * panelSizeWatts) / 1000;
-
+  // PV classification (vs corrected rainyReq)
   let pvClassification: 'UNDER SIZED' | 'OPTIMAL' | 'OVER SIZED' = 'OPTIMAL';
-  if (actualPvKwp < rainyReq * 0.9) {
-    pvClassification = 'UNDER SIZED';
-  } else if (actualPvKwp <= rainyReq * 1.25) {
-    pvClassification = 'OPTIMAL';
-  } else {
-    pvClassification = 'OVER SIZED';
-  }
+  if (actualPvKwp < rainyReq * 0.9)      pvClassification = 'UNDER SIZED';
+  else if (actualPvKwp <= rainyReq * 1.2) pvClassification = 'OPTIMAL';
+  else                                     pvClassification = 'OVER SIZED';
 
+  // Seasonal risk using actual minPSH
   let seasonalRisk: 'Rainy season stable' | 'Rainy season borderline' | 'Rainy season at risk';
-  const rainyProduction = actualPvKwp * avgPSH * 0.6 * systemEfficiency;
-  if (rainyProduction >= targetDailyGenerationKwh) {
-    seasonalRisk = 'Rainy season stable';
-  } else if (rainyProduction >= targetDailyGenerationKwh * 0.8) {
-    seasonalRisk = 'Rainy season borderline';
-  } else {
-    seasonalRisk = 'Rainy season at risk';
-  }
+  const rainyProduction = actualPvKwp * rainyMinPSH * systemEfficiency;
+  if      (rainyProduction >= targetDailyGenerationKwh)       seasonalRisk = 'Rainy season stable';
+  else if (rainyProduction >= targetDailyGenerationKwh * 0.85) seasonalRisk = 'Rainy season borderline';
+  else                                                          seasonalRisk = 'Rainy season at risk';
 
   // STEP 6 — COST & SAVINGS (Ranges)
   const roofMountingCost = roofType === 'clay_tiles' ? 35000 : 0;
@@ -1256,19 +1298,19 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const qaWarnings: string[] = [];
   const flags = { pvBias: false, savingsBias: false, autonomyBias: false };
   
-  // A. PV Accuracy
-  const pvBase = targetDailyGenerationKwh / (avgPSH * systemEfficiency);
-  const pvRatio = actualPvKwp / pvBase;
+  // A. PV Accuracy — compare against worst-month (rainyReq), not annual avg
+  // A correctly sized array should land within 0–20% of rainyReq
+  const pvRatio = actualPvKwp / rainyReq;
   let pvStatus: 'OPTIMAL' | 'CONSERVATIVE' | 'OVERBUILT' | 'UNDERPOWERED' = 'OPTIMAL';
-  
+
   if (pvRatio >= 1.0 && pvRatio <= 1.2) {
     qaScore += 30;
     pvStatus = 'OPTIMAL';
-  } else if (pvRatio > 1.2 && pvRatio <= 1.5) {
-    qaScore += 15;
+  } else if (pvRatio > 1.2 && pvRatio <= 1.4) {
+    qaScore += 20;
     pvStatus = 'CONSERVATIVE';
-  } else if (pvRatio > 1.5) {
-    qaScore += 0;
+  } else if (pvRatio > 1.4) {
+    qaScore += 5;
     pvStatus = 'OVERBUILT';
     flags.pvBias = true;
   } else {
@@ -1366,6 +1408,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     systemCostMax,
     paybackMonths,
     fiveYearSavings,
+    systemStatus: finalVerdict === 'Marketing-Biased' ? 'FAIL' : 'PASS',
     tenYearSavings,
     monthlyGridSavings,
     monthlyGeneratorSavings,

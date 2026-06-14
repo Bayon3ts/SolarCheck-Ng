@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default async function BlogPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: posts } = await supabase
     .from("blog_posts")
     .select("title, slug, category, created_at, excerpt, cover_image, cover_image_alt")

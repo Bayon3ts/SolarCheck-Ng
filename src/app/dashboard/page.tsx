@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const adminDb = createAdminClient();
 
   // ── 1. Check authentication ────────────────────────

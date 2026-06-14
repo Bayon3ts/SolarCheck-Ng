@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import StarRating from "@/components/ui/star-rating";
 
 export default async function AdminReviewsPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: reviews } = await supabase
     .from("reviews")
     .select("*, installers(company_name)")

@@ -3,7 +3,7 @@ import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function AdminInstallersPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: installers } = await supabase
     .from("installers")
     .select("*")
