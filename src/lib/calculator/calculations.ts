@@ -723,7 +723,7 @@ export function getEffectiveTariff(disco: string, band?: string): number {
 
 // ── Charge Controller ──────────────────────────────────────────
 export type ChargeControllerType = 
-  | 'none'   // hybrid inverter — built in
+  | 'None'   // hybrid inverter — built in
   | 'PWM'    // small off-grid systems
   | 'MPPT'   // larger off-grid systems
 
@@ -755,7 +755,7 @@ export function getChargeControllerSpec(
   if (inverterType === 'hybrid' || 
       inverterType === 'on-grid') {
     return {
-      type: 'none',
+      type: 'None',
       amps: 0,
       reason: 'Hybrid inverter has built-in MPPT charge controller — no separate unit needed.',
       estimatedCost: 0,
@@ -1038,19 +1038,20 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // System efficiency default ~0.75 (reduced from 0.80 to be more realistic)
   const systemEfficiency = 0.75 * directionFactor * pitchFactor * shadeFactor;
 
-  // ── FIX 4: PV SIZING — use actual minimum monthly PSH ────────────────────
-  // ENGINEERING NOTE: The old code used avgPSH × 0.6 for rainy season, which
-  // implied a PSH of 2.25 hrs for Lagos. The actual Lagos July minimum is 3.0 hrs.
-  // Using 0.6× causes the array to be ~67% oversized. We now use the real
-  // minimum month from the irradiance data for the user's state.
+  // ── FIX 4: PV SIZING — annual average is the baseline ───────────────────
+  // ENGINEERING NOTE: Size to annual average PSH. The rainy-season worst-month
+  // (rainyReq) is used only for classification and QA warnings — NOT as a sizing
+  // floor. Forcing pvKwp = Math.max(annual, rainy) causes ~67% oversizing in
+  // Nigerian humid states because Jul/Aug PSH reductions already baked into the
+  // annual average.
   const minPSH = Math.min(...pshArray); // e.g. Lagos July = 3.0 hrs
   const rainyMinPSH = minPSH * 0.9;    // 10% extra buffer for unusually bad rainy days
 
-  // Annual average requirement
+  // Annual average requirement (sizing basis)
   const annualReq = targetDailyGenerationKwh / (avgPSH * systemEfficiency);
-  // Worst-month (rainy season) requirement — size for this, not avg×0.6
+  // Worst-month (rainy season) — used for QA classification only, not as floor
   const rainyReq  = targetDailyGenerationKwh / (rainyMinPSH * systemEfficiency);
-  const pvKwp = Math.max(annualReq, rainyReq);
+  const pvKwp = annualReq; // BUG FIX A: size to annual avg, not rainy-season floor
 
   // FINALISE ARRAY SIZE
   const panelSizeWatts = 550;
@@ -1071,14 +1072,17 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   } else if (systemMode === 'off-grid') {
     requiredBatteryUsableKwh = dailyLoadKwh * 1.2;
   } else {
-    // Hybrid (default): size battery to cover nighttime load × 1.4 safety
-    const autonomyFactor = Math.max(autonomyDays || 1, 1.4);
-    requiredBatteryUsableKwh = nightLoadKwh * autonomyFactor;
+    // Hybrid: size battery to cover nighttime load × user autonomy days,
+    // clamped to [0.5, 2.0] days. No forced 1.4× floor that ignores user input.
+    const autonomyFactor = Math.min(Math.max(autonomyDays || 1, 0.5), 2.0);
+    requiredBatteryUsableKwh = nightLoadKwh * autonomyFactor; // BUG FIX B
   }
 
-  // Convert usable kWh → actual kWh (LFP DoD=80%, system loss=85%)
+  // Convert usable kWh → actual kWh. LFP real-world usable ≈ 85% of nameplate.
+  // (The 0.8 DoD is already the engineer's usable spec; dividing by 0.8 again
+  //  would double-count and over-size by ~18%. Use 0.85 for system losses only.)
   let batteryKwh = requiredBatteryUsableKwh > 0
-    ? requiredBatteryUsableKwh / (0.8 * 0.85)
+    ? requiredBatteryUsableKwh / 0.85 // BUG FIX B: single correction, not ×0.8×0.85
     : 0;
 
   if (batteryKwh > 0) {
@@ -1143,8 +1147,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     });
   }
 
-  // Required kVA = (all continuous loads + heaviest startup surge) × 1.25 safety
-  const rawInverterKva = (simultaneousLoadKw + heaviestStartupAddKw) * 1.25;
+  // Required kVA = (continuous loads × diversity factor + heaviest startup surge) × 1.25
+  // BUG FIX C: 0.7 diversity factor — not all appliances run simultaneously in real life.
+  // The heaviest startup surge is NOT diversified (it IS the simultaneous worst case).
+  const rawInverterKva = (simultaneousLoadKw * 0.7 + heaviestStartupAddKw) * 1.25;
 
   // Nigerian engineering floor: 5kVA minimum when AC is present
   const minInverterKva = hasAC ? 5 : hasWaterPump ? 5 : 3;
