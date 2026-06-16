@@ -109,6 +109,7 @@ export interface CalculatorResults {
   pvKwp: number;
   panelsNeeded: number;
   panelSizeWatts: number;
+  panelTierLabel?: string;  // e.g. "Standard Residential (3–6 kWp range)"
   avgPSH: number;
   pvClassification: 'UNDER SIZED' | 'OPTIMAL' | 'OVER SIZED';
   seasonalRisk: 'Rainy season stable' | 'Rainy season borderline' | 'Rainy season at risk';
@@ -119,8 +120,8 @@ export interface CalculatorResults {
   batteryKwh: number;
   batteryType: string;
   autonomyHours: number;
-  batterySufficiency: 'insufficient' | 'limited' | 'adequate' | 'strong' | 'full';
-
+  autonomyNote?: string;  // Set when autonomy > 24h: explains it's due to low night load
+  batterySufficiency: 'insufficient' | 'limited' | 'adequate' | 'strong' | 'full' | 'daytime-optimized';
   // Cost
   systemCostMin: number;
   systemCostMax: number;

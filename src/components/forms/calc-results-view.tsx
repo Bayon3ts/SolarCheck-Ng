@@ -27,15 +27,16 @@ function fmtM(n: number) {
 
 function SufficiencyBadge({ val }: { val: string }) {
   const map: Record<string, string> = {
-    insufficient: 'bg-red-100 text-red-700',
-    limited:      'bg-orange-100 text-orange-700',
-    adequate:     'bg-blue-100 text-blue-700',
-    strong:       'bg-green-100 text-green-700',
-    full:         'bg-emerald-100 text-emerald-700',
+    insufficient:        'bg-red-100 text-red-700',
+    limited:             'bg-orange-100 text-orange-700',
+    adequate:            'bg-blue-100 text-blue-700',
+    strong:              'bg-green-100 text-green-700',
+    full:                'bg-emerald-100 text-emerald-700',
+    'daytime-optimized': 'bg-cyan-100 text-cyan-700',
   };
   return (
     <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${map[val] ?? 'bg-gray-100 text-gray-600'}`}>
-      {val}
+      {val === 'daytime-optimized' ? '☀️ Daytime Optimized' : val}
     </span>
   );
 }
@@ -156,6 +157,9 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           <div className="text-2xl mb-1">🔆</div>
           <div className="text-2xl font-black text-primary leading-none">{r.pvKwp.toFixed(2)}<span className="text-base font-semibold">kWp</span></div>
           <div className="text-xs text-text-muted mt-1">{r.panelsNeeded} × {r.panelSizeWatts}W panels</div>
+          {r.panelTierLabel && (
+            <div className="text-[10px] text-text-muted mt-0.5 leading-tight">{r.panelTierLabel}</div>
+          )}
           <div className="mt-2">
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
               r.pvClassification === 'OPTIMAL'     ? 'bg-green-100 text-green-700' :
@@ -197,6 +201,11 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
                                       'bg-red-100 text-red-700'
             }`}>{r.autonomyHours >= 12 ? 'All night' : r.autonomyHours >= 8 ? 'Most night' : 'Limited'}</span>
           </div>
+          {r.autonomyNote && (
+            <div className="mt-2 text-[10px] text-slate-500 leading-tight italic">
+              Low night load → extends battery life
+            </div>
+          )}
         </div>
       </div>
 
@@ -330,6 +339,9 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
             <div className="space-y-0 divide-y divide-gray-100 mb-4">
               <Row label="Array size" value={`${r.pvKwp.toFixed(2)} kWp`} accent />
               <Row label="Panels" value={`${r.panelsNeeded} × ${r.panelSizeWatts}W`} />
+              {r.panelTierLabel && (
+                <Row label="Panel tier" value={<span className="text-xs text-text-muted">{r.panelTierLabel}</span>} />
+              )}
               <Row label="Classification" value={
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                   r.pvClassification === 'OPTIMAL' ? 'bg-green-100 text-green-700' :
@@ -352,6 +364,12 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               <Row label="System mode" value={<span className="capitalize">{inputs.systemMode}</span>} />
               <Row label="Load daily (kWh)" value={r.dailyLoadKwh.toFixed(2)} />
             </div>
+            {r.autonomyNote && (
+              <div className="mt-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-3 leading-relaxed">
+                <span className="font-semibold">ℹ️ Why {r.autonomyHours.toFixed(1)} hours?</span><br />
+                {r.autonomyNote}
+              </div>
+            )}
           </div>
         </div>
       </Section>

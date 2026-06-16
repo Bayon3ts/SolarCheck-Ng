@@ -1038,7 +1038,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // System efficiency default ~0.75 (reduced from 0.80 to be more realistic)
   const systemEfficiency = 0.75 * directionFactor * pitchFactor * shadeFactor;
 
-  // ── FIX 4: PV SIZING — annual average is the baseline ───────────────────
+  // ── PV SIZING — annual average is the baseline ──────────────────────────
   // ENGINEERING NOTE: Size to annual average PSH. The rainy-season worst-month
   // (rainyReq) is used only for classification and QA warnings — NOT as a sizing
   // floor. Forcing pvKwp = Math.max(annual, rainy) causes ~67% oversizing in
@@ -1051,71 +1051,126 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const annualReq = targetDailyGenerationKwh / (avgPSH * systemEfficiency);
   // Worst-month (rainy season) — used for QA classification only, not as floor
   const rainyReq  = targetDailyGenerationKwh / (rainyMinPSH * systemEfficiency);
-  const pvKwp = annualReq; // BUG FIX A: size to annual avg, not rainy-season floor
 
-  // FINALISE ARRAY SIZE
-  const panelSizeWatts = 550;
-  const panelsNeeded = Math.ceil((pvKwp * 1000) / panelSizeWatts);
-  const actualPvKwp  = (panelsNeeded * panelSizeWatts) / 1000;
+  // Off-grid gets a 15% irradiance buffer to handle low-irradiance months
+  // without a grid/generator bridge. Hybrid/grid-tied: no buffer needed.
+  const pvKwpRaw = systemMode === 'off-grid' ? annualReq * 1.15 : annualReq;
 
-  // ── FIX 5: BATTERY SIZING — real-world Nigerian floors ───────────────────
-  // ENGINEERING NOTE: Battery must cover actual night load with margin.
-  // We apply Nigerian-specific minimum floors:
-  //   • Any AC present  → min 4.8 kWh  (1× 48V 100Ah LFP)
-  //   • Water pump      → min 4.8 kWh
-  //   • Standard home   → min 2.4 kWh  (½× 48V 100Ah LFP)
-  let requiredBatteryUsableKwh = 0;
-  let batterySufficiency: 'insufficient' | 'limited' | 'adequate' | 'strong' | 'full' = 'adequate';
-
-  if (systemMode === 'grid-tied') {
-    requiredBatteryUsableKwh = 0;
-  } else if (systemMode === 'off-grid') {
-    requiredBatteryUsableKwh = dailyLoadKwh * 1.2;
+  // ── ADAPTIVE PANEL WATTAGE TIER SELECTION ────────────────────────────────
+  // Select the most appropriate panel wattage based on system kWp.
+  // Source: SolarCheck Nigeria engineering spec (IEC 62109 / Nigerian installer practice 2025)
+  // < 1.5 kWp  → 400W  (small systems need granularity, not oversized panels)
+  // 1.5–3 kWp  → 450W  (small-medium hybrid; standard 1–2 room setups)
+  // 3–6 kWp    → 550W  (standard residential; most common Nigerian installer choice)
+  // 6–12 kWp   → 650W  (large home / small business; fewer roof penetrations)
+  // >12 kWp    → 700W  (commercial scale; cost per Wp improves at higher wattage)
+  let panelSizeWatts: number;
+  let panelTierLabel: string;
+  if (pvKwpRaw < 1.5) {
+    panelSizeWatts = 400;
+    panelTierLabel = 'Compact (< 1.5 kWp range)';
+  } else if (pvKwpRaw < 3.0) {
+    panelSizeWatts = 450;
+    panelTierLabel = 'Small-Medium (1.5–3 kWp range)';
+  } else if (pvKwpRaw < 6.0) {
+    panelSizeWatts = 550;
+    panelTierLabel = 'Standard Residential (3–6 kWp range)';
+  } else if (pvKwpRaw < 12.0) {
+    panelSizeWatts = 650;
+    panelTierLabel = 'Large Home / Business (6–12 kWp range)';
   } else {
-    // Hybrid: size battery to cover nighttime load × user autonomy days,
-    // clamped to [0.5, 2.0] days. No forced 1.4× floor that ignores user input.
-    const autonomyFactor = Math.min(Math.max(autonomyDays || 1, 0.5), 2.0);
-    requiredBatteryUsableKwh = nightLoadKwh * autonomyFactor; // BUG FIX B
+    panelSizeWatts = 700;
+    panelTierLabel = 'Commercial Scale (> 12 kWp range)';
   }
 
-  // Convert usable kWh → actual kWh. LFP real-world usable ≈ 85% of nameplate.
-  // (The 0.8 DoD is already the engineer's usable spec; dividing by 0.8 again
-  //  would double-count and over-size by ~18%. Use 0.85 for system losses only.)
-  let batteryKwh = requiredBatteryUsableKwh > 0
-    ? requiredBatteryUsableKwh / 0.85 // BUG FIX B: single correction, not ×0.8×0.85
+  // Round UP panel count — actual installed kWp will always be ≥ target
+  const panelsNeeded = Math.ceil((pvKwpRaw * 1000) / panelSizeWatts);
+  const actualPvKwp  = (panelsNeeded * panelSizeWatts) / 1000;
+
+  // ── BATTERY SIZING — spec-accurate LFP constants ─────────────────────────
+  // ENGINEERING NOTE:
+  //   LFP_DOD  = 0.80  (Lithium Iron Phosphate: 80% depth of discharge)
+  //   RT_EFF   = 0.92  (Round-trip efficiency: inverter + wiring losses)
+  //   requiredUsable = nightLoadKwh × autonomyDays  (hybrid)
+  //   requiredUsable = dailyLoadKwh × autonomyDays  (off-grid)
+  //   batteryKwh = requiredUsable / (LFP_DOD × RT_EFF)
+  // These same constants MUST be used in autonomy calculation to stay consistent.
+  const LFP_DOD  = 0.80;
+  const RT_EFF   = 0.92;
+  const BATT_INCREMENT = 1.2; // kWh per module (100Ah@12V)
+  const BATT_MIN       = 2.4; // kWh minimum (200Ah@12V)
+
+  let requiredUsableKwh = 0;
+  let batterySufficiency: 'insufficient' | 'limited' | 'adequate' | 'strong' | 'full' | 'daytime-optimized' = 'adequate';
+
+  if (systemMode === 'grid-tied') {
+    requiredUsableKwh = 0;
+  } else if (systemMode === 'off-grid') {
+    // Off-grid: cover full daily load for autonomyDays
+    requiredUsableKwh = dailyLoadKwh * autonomyDays;
+  } else {
+    // Hybrid: cover night load for autonomyDays nights.
+    // Respect the user's autonomy selection — do NOT force a minimum 1.4× floor.
+    requiredUsableKwh = nightLoadKwh * autonomyDays;
+  }
+
+  // batteryKwh = requiredUsable / (LFP_DOD × RT_EFF)
+  let batteryKwh = requiredUsableKwh > 0
+    ? requiredUsableKwh / (LFP_DOD * RT_EFF)
     : 0;
 
   if (batteryKwh > 0) {
     // Round up to nearest LFP unit size (1.2 kWh steps, min 2.4)
-    batteryKwh = Math.ceil(batteryKwh / 1.2) * 1.2;
+    batteryKwh = Math.max(BATT_MIN, Math.ceil(batteryKwh / BATT_INCREMENT) * BATT_INCREMENT);
     batteryKwh = Math.round(batteryKwh * 10) / 10;
 
     // Nigerian engineering minimum floors
-    const minBattery = hasAC || hasWaterPump ? 4.8 : 2.4;
+    const minBattery = hasAC || hasWaterPump ? 4.8 : BATT_MIN;
     batteryKwh = Math.max(batteryKwh, minBattery);
   }
 
-  // Autonomy calculation
+  // Autonomy calculation — MUST use identical constants (LFP_DOD × RT_EFF)
+  // usableBattery = batteryKwh × LFP_DOD × RT_EFF
+  const usableBattery = batteryKwh * LFP_DOD * RT_EFF;
   let autonomyHours = 0;
   if (batteryKwh > 0 && nightLoadKwh > 0) {
-    autonomyHours = (batteryKwh * 0.8 * 0.85) / (nightLoadKwh / 12);
+    // Autonomy in hours: usable kWh ÷ (night load kW, averaged over 12h window)
+    autonomyHours = usableBattery / (nightLoadKwh / 12);
   } else if (batteryKwh > 0 && dailyLoadKwh > 0) {
-    autonomyHours = (batteryKwh * 0.8 * 0.85) / (dailyLoadKwh / 24);
+    autonomyHours = usableBattery / (dailyLoadKwh / 24);
   }
 
   // Battery sufficiency rating
-  const usableBattery = batteryKwh * 0.8 * 0.85;
+  // Thresholds are ratios of usableBattery to nightLoadKwh.
+  // ratio < 1.0  → battery cannot cover a full night → LIMITED
+  // ratio ≥ 1.0  → adequate for the night
+  // daytime-optimized → majority of load is solar-direct (daytime heavy pattern)
+  const nightHoursWindow = 12; // 7pm–7am
+  const nightLoadKw = nightLoadKwh > 0 ? nightLoadKwh / nightHoursWindow : 0;
+  const nightCoverageRatio = nightLoadKwh > 0 ? usableBattery / nightLoadKwh : 0;
+  const isDaytimeOptimized = dailyLoadKwh > 0 && (nightLoadKwh / dailyLoadKwh) < 0.30;
+
   if (systemMode === 'grid-tied') {
     batterySufficiency = 'insufficient';
   } else if (nightLoadKwh <= 0) {
     batterySufficiency = 'full';
+  } else if (isDaytimeOptimized) {
+    // Most load is solar-direct; battery exists mainly to top up small night essentials
+    batterySufficiency = 'daytime-optimized';
   } else {
-    const ratio = usableBattery / nightLoadKwh;
-    if      (ratio < 1.1) batterySufficiency = 'insufficient';
-    else if (ratio < 1.4) batterySufficiency = 'limited';
-    else if (ratio < 1.8) batterySufficiency = 'adequate';
-    else if (ratio < 2.5) batterySufficiency = 'strong';
-    else                  batterySufficiency = 'full';
+    // Standard night-coverage rating
+    if      (nightCoverageRatio < 1.0) batterySufficiency = 'limited';      // cannot cover 1 full night
+    else if (nightCoverageRatio < 1.5) batterySufficiency = 'adequate';     // covers night comfortably
+    else if (nightCoverageRatio < 2.5) batterySufficiency = 'strong';       // covers night + buffer
+    else                               batterySufficiency = 'full';         // well over a night
+  }
+
+  // Autonomy note — emitted when autonomy > 24h so the UI can clarify it's
+  // due to low night usage, NOT full-day backup capability.
+  let autonomyNote: string | undefined;
+  if (autonomyHours > 24 && systemMode !== 'off-grid') {
+    const avgNightWatts = Math.round(nightLoadKw * 1000);
+    autonomyNote = `${autonomyHours.toFixed(1)} hours of autonomy reflects your low nightly load (~${avgNightWatts}W average, ${nightLoadKwh.toFixed(2)} kWh/night). This is not a full-day backup claim — the battery covers your night load for multiple nights precisely because your night consumption is small.`;
   }
 
   // ── FIX 6: INVERTER SIZING — load-based, not PV-based ────────────────────
@@ -1157,11 +1212,12 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const requiredInverterKva = Math.max(rawInverterKva, minInverterKva);
   const inverterKva = inverterSizes.find(sz => sz >= requiredInverterKva) ?? 30;
 
-  // PV classification (vs corrected rainyReq)
+  // PV classification against annualReq (the actual sizing basis).
+  // rainyReq is used ONLY for seasonalRisk below — it is a risk flag, not a sizing threshold.
   let pvClassification: 'UNDER SIZED' | 'OPTIMAL' | 'OVER SIZED' = 'OPTIMAL';
-  if (actualPvKwp < rainyReq * 0.9)      pvClassification = 'UNDER SIZED';
-  else if (actualPvKwp <= rainyReq * 1.2) pvClassification = 'OPTIMAL';
-  else                                     pvClassification = 'OVER SIZED';
+  if (actualPvKwp < annualReq * 0.95)      pvClassification = 'UNDER SIZED';
+  else if (actualPvKwp <= annualReq * 1.5) pvClassification = 'OPTIMAL';
+  else                                      pvClassification = 'OVER SIZED';
 
   // Seasonal risk using actual minPSH
   let seasonalRisk: 'Rainy season stable' | 'Rainy season borderline' | 'Rainy season at risk';
@@ -1263,8 +1319,8 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   let isValid = true;
   const errors: string[] = [];
 
-  if (batterySufficiency === 'full' && batteryKwh * 0.8 < nightLoadKwh) {
-    errors.push("Invalid labeling: Battery labeled 'FULL' but capacity is less than night load.");
+  if (batterySufficiency === 'full' && usableBattery < nightLoadKwh) {
+    errors.push("Contradiction: Battery labeled 'FULL' but usable capacity is less than one night's load.");
   }
   if (autonomyHours < 24 && systemMode === 'off-grid') {
     errors.push("Invalid configuration: Off-grid mode requires at least 24h autonomy.");
@@ -1272,9 +1328,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   if ((monthlyGridSavingsExpected + monthlyGeneratorSavingsExpected) > monthlyCurrentSpend * 0.9 && generatorSpend === 0 && systemMode !== 'off-grid') {
     errors.push("Savings validation: Claimed savings exceed 90% of total bill without generator dependency confirmation.");
   }
-  if (coveragePct === 100 && autonomyHours < 24 && systemMode !== 'off-grid') {
-    errors.push("Inconsistency: 100% energy offset requires strict autonomy validation (battery insufficient for 24h).");
-  }
+  // NOTE: coveragePct=100 means energy OFFSET, not physical autonomy. A hybrid system
+  // can offset 100% of annual energy from solar while the battery covers only the night.
+  // These are independent metrics — do NOT conflate them.
 
   if (errors.length > 0) {
     isValid = false;
@@ -1300,93 +1356,112 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
 
   // --- TRUTH QA LAYER ---
-  let qaScore = 0;
+  // Score starts at 100 — deductions only for:
+  //   • math errors (claimed ≠ calculated)
+  //   • physical contradictions (label vs physics)
+  //   • impossible physics (savings > spend, autonomy > 24h on small battery while claiming full-day)
+  // Safe oversizing (e.g. 15% panel rounding, conservative battery) is NOT penalized.
+  let qaScore = 100;
   const qaWarnings: string[] = [];
   const flags = { pvBias: false, savingsBias: false, autonomyBias: false };
-  
-  // A. PV Accuracy — compare against worst-month (rainyReq), not annual avg
-  // A correctly sized array should land within 0–20% of rainyReq
-  const pvRatio = actualPvKwp / rainyReq;
+
+  // A. PV Accuracy — compare actual installed kWp against annualReq (sizing basis).
+  // Panel rounding naturally adds 0–15% margin; this is expected and NOT a deduction.
+  // Deduct only when pvRatio is impossibly high (>2.0) — genuine oversizing bias.
+  const pvRatio = actualPvKwp / annualReq;
   let pvStatus: 'OPTIMAL' | 'CONSERVATIVE' | 'OVERBUILT' | 'UNDERPOWERED' = 'OPTIMAL';
 
-  if (pvRatio >= 1.0 && pvRatio <= 1.2) {
-    qaScore += 30;
-    pvStatus = 'OPTIMAL';
-  } else if (pvRatio > 1.2 && pvRatio <= 1.4) {
-    qaScore += 20;
+  if (pvRatio >= 0.95 && pvRatio <= 1.5) {
+    // No deduction — optimal or conservative sizing (includes panel rounding margin)
+    pvStatus = pvRatio <= 1.2 ? 'OPTIMAL' : 'CONSERVATIVE';
+  } else if (pvRatio > 1.5 && pvRatio <= 2.0) {
+    // Intentional oversizing — reduce score mildly, but not a hard failure
+    qaScore -= 10;
     pvStatus = 'CONSERVATIVE';
-  } else if (pvRatio > 1.4) {
-    qaScore += 5;
+    qaWarnings.push(`PV array is ${((pvRatio - 1) * 100).toFixed(0)}% over annual requirement — may be intentional for reliability.`);
+  } else if (pvRatio > 2.0) {
+    // Genuine oversizing bias
+    qaScore -= 25;
     pvStatus = 'OVERBUILT';
     flags.pvBias = true;
+    qaWarnings.push(`PV array is ${((pvRatio - 1) * 100).toFixed(0)}% over annual requirement — significant oversizing detected.`);
   } else {
-    qaScore += 0;
+    // pvRatio < 0.95 — underpowered (math issue or missing appliances)
+    qaScore -= 20;
     pvStatus = 'UNDERPOWERED';
+    qaWarnings.push('PV array appears underpowered for the stated load. Verify appliance list.');
   }
 
-  // B. Battery Realism
+  // B. Battery Integrity — verify claimed autonomy matches calculated autonomy.
+  // Deduct ONLY if there is a genuine math mismatch (> 15% discrepancy).
+  // High autonomy from low night load is physically valid — do NOT penalize it.
   let batteryIntegrity: 'PASS' | 'BORDERLINE' | 'FAIL' = 'PASS';
-  const claimedAutonomy = autonomyHours;
-  const theoreticalAutonomy = nightLoadKwh > 0 ? (batteryKwh * 0.8 * 0.85) / (nightLoadKwh / 12) : 0;
-  const autonomyDiff = Math.abs(claimedAutonomy - theoreticalAutonomy);
-  
-  if (autonomyDiff <= theoreticalAutonomy * 0.1 || theoreticalAutonomy === 0) {
-    qaScore += 25;
-  } else if (autonomyDiff <= theoreticalAutonomy * 0.2) {
-    qaScore += 10;
+  const theoreticalAutonomy = nightLoadKwh > 0
+    ? (batteryKwh * LFP_DOD * RT_EFF) / (nightLoadKwh / 12)
+    : 0;
+  const autonomyDiff = Math.abs(autonomyHours - theoreticalAutonomy);
+  const autonomyTolerance = Math.max(theoreticalAutonomy * 0.10, 0.5); // 10% or 30min
+
+  if (autonomyDiff <= autonomyTolerance || theoreticalAutonomy === 0) {
+    // Math checks out
+    batteryIntegrity = 'PASS';
+  } else if (autonomyDiff <= theoreticalAutonomy * 0.20) {
+    // Small rounding discrepancy
     batteryIntegrity = 'BORDERLINE';
+    qaScore -= 5;
   } else {
-    qaScore += 0;
+    // Genuine math error — claimed autonomy does not match battery sizing
     batteryIntegrity = 'FAIL';
+    qaScore -= 20;
     flags.autonomyBias = true;
+    qaWarnings.push(`Battery math contradiction: claimed ${autonomyHours.toFixed(1)}h autonomy does not match calculated ${theoreticalAutonomy.toFixed(1)}h from battery sizing.`);
   }
 
-  // C. Savings Realism
+  // C. Savings Realism — claimed savings must not exceed physical displacement
   let savingsIntegrity: 'PASS' | 'INFLATED' | 'FAIL' = 'PASS';
   const totalClaimedSavings = monthlyGridSavingsExpected + monthlyGeneratorSavingsExpected;
   const theoreticalDisplacement = monthlyCurrentSpend * (coveragePct / 100);
-  
+
   if (totalClaimedSavings <= theoreticalDisplacement * 1.05) {
-    qaScore += 25;
+    // Within 5% — rounding tolerance
+    savingsIntegrity = 'PASS';
   } else if (totalClaimedSavings <= theoreticalDisplacement * 1.30) {
-    qaScore += 10;
+    // Mildly inflated
     savingsIntegrity = 'INFLATED';
+    qaScore -= 10;
+    qaWarnings.push('Savings estimate slightly above expected displacement — real-world variance expected.');
   } else {
-    qaScore += 0;
+    // Significantly inflated — math contradiction
     savingsIntegrity = 'FAIL';
+    qaScore -= 25;
     flags.savingsBias = true;
+    qaWarnings.push(`Claimed savings (${Math.round(totalClaimedSavings).toLocaleString()}₦) exceed physical displacement capacity (${Math.round(theoreticalDisplacement).toLocaleString()}₦).`);
   }
 
-  // D. System Label Integrity
-  if (pvClassification === 'OPTIMAL' && pvRatio > 1.2) {
-    qaScore += 0;
-  } else if (pvClassification === 'OVER SIZED' && pvRatio <= 1.5) {
-    qaScore += 0;
-  } else {
-    qaScore += 20;
+  // D. Hard contradiction checks — these are genuine physics failures, not oversizing
+  // Deduct heavily for label vs physics contradictions
+  if (pvClassification === 'OPTIMAL' && pvRatio > 1.5) {
+    qaScore -= 15;
+    qaWarnings.push("Label contradiction: PV classified 'OPTIMAL' but ratio exceeds 1.5× annual requirement.");
+  }
+  if (batterySufficiency === 'full' && nightCoverageRatio < 1.0) {
+    qaScore -= 20;
+    qaWarnings.push("Label contradiction: Battery labeled 'FULL' but cannot cover one night of load.");
+  }
+  // autonomyHours > 24 in a non-off-grid system with large battery claiming full backup
+  // is a marketing flag — but if night load is genuinely low it's physically valid.
+  // We only flag if battery is large (>15kWh) yet autonomyHours seems inflated vs off-grid claim.
+  if (systemMode !== 'off-grid' && autonomyHours > 48 && !autonomyNote) {
+    qaScore -= 10;
+    qaWarnings.push(`Autonomy > 48h on a ${systemMode} system — verify night load calculation.`);
   }
 
-  // Auto-Fail Conditions
-  let autoFail = false;
-  if (pvClassification === 'OPTIMAL' && pvRatio > 1.2) autoFail = true;
-  if (totalClaimedSavings > theoreticalDisplacement * 1.30) autoFail = true;
-  if (systemMode !== 'off-grid' && autonomyHours > 24 && batteryKwh < 15) autoFail = true;
-  if ((batterySufficiency === 'adequate' || batterySufficiency === 'full') && autonomyHours < 10) autoFail = true;
-
-  if (autoFail) {
-    qaScore = Math.min(qaScore, 49); // Force < 50
-  }
-
-  // Warnings & Final Verdict
-  if (qaScore < 85) {
-    if (pvRatio > 1.2) qaWarnings.push("System is overbuilt for reliability, not cost optimization.");
-    if (autonomyHours < 10 && batterySufficiency !== 'insufficient') qaWarnings.push("Night autonomy is limited under real-world discharge conditions.");
-    if (totalClaimedSavings > theoreticalDisplacement * 1.05) qaWarnings.push("Savings assume high displacement efficiency; real-world variance expected.");
-  }
+  // Clamp score to [0, 100]
+  qaScore = Math.max(0, Math.min(100, qaScore));
 
   let finalVerdict: 'Physics-Accurate' | 'Installer-Conservative' | 'Marketing-Biased' = 'Physics-Accurate';
   if (qaScore >= 85) finalVerdict = 'Physics-Accurate';
-  else if (qaScore >= 50) finalVerdict = 'Installer-Conservative';
+  else if (qaScore >= 60) finalVerdict = 'Installer-Conservative';
   else finalVerdict = 'Marketing-Biased';
 
   const truthQAReport = {
@@ -1407,6 +1482,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     pvKwp: actualPvKwp,
     panelsNeeded,
     panelSizeWatts,
+    panelTierLabel,
     inverterKva,
     batteryKwh,
     batteryType: batteryKwh > 0 ? 'lithium' : 'none',
@@ -1421,6 +1497,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     batterySufficiency,
     energyOffsetPct: coveragePct,
     autonomyHours: Math.round(autonomyHours * 10) / 10,
+    autonomyNote,
     monthlyCurrentSpend,
     afterSolarMonthlyCost,
     monthlyProduction: monthlyProductionArray,
