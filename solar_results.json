@@ -1,0 +1,215 @@
+{
+  "isValid": true,
+  "peakLoadKw": 1.1,
+  "dailyLoadKwh": 4.4,
+  "pvKwp": 1.8,
+  "panelsNeeded": 4,
+  "panelSizeWatts": 450,
+  "panelTierLabel": "Small-Medium (1.5–3 kWp range)",
+  "inverterKva": 5,
+  "batteryKwh": 4.8,
+  "batteryType": "lithium",
+  "systemCostMin": 1809000,
+  "systemCostMax": 2187000,
+  "paybackMonths": null,
+  "fiveYearSavings": {
+    "conservative": -2153,
+    "expected": -2692,
+    "stressCase": -1346
+  },
+  "systemStatus": "PASS",
+  "tenYearSavings": {
+    "conservative": -3019,
+    "expected": -3773,
+    "stressCase": -1887
+  },
+  "monthlyGridSavings": {
+    "conservative": 0,
+    "expected": 0,
+    "stressCase": 0
+  },
+  "monthlyGeneratorSavings": {
+    "conservative": 0,
+    "expected": 0,
+    "stressCase": 0
+  },
+  "batterySufficiency": "full",
+  "energyOffsetPct": 100,
+  "autonomyHours": 19.3,
+  "monthlyCurrentSpend": 0,
+  "afterSolarMonthlyCost": 75,
+  "monthlyProduction": [
+    157.38337843200003,
+    168.62504832000002,
+    161.13060172800002,
+    149.88893184,
+    134.90003865600002,
+    119.91114547200002,
+    112.41669888,
+    116.16392217600001,
+    123.658368768,
+    138.647261952,
+    149.88893184,
+    153.636155136
+  ],
+  "discoName": "IKEDC / EKEDC",
+  "discoTariff": 62.48,
+  "selectedBand": null,
+  "avgPSH": 3.7500000000000004,
+  "co2SavedKgPerYear": 725.0877077760001,
+  "treesEquivalent": 35,
+  "pvClassification": "OPTIMAL",
+  "seasonalRisk": "Rainy season at risk",
+  "chargeController": {
+    "type": "None",
+    "amps": 0,
+    "reason": "Hybrid inverter has built-in MPPT charge controller — no separate unit needed.",
+    "estimatedCost": 0
+  },
+  "daytimeAnalysis": {
+    "isDaytimeHeavy": true,
+    "daytimeLoadKw": 0.55,
+    "nighttimeLoadKw": 0,
+    "daytimeRatio": 1,
+    "recommendedPanelKw": 0.8,
+    "recommendedNightBatteryKwh": 0,
+    "requiresMultipleMppt": false,
+    "mpptInputsNeeded": 1,
+    "recommendedInverterNote": "Your load is mostly daytime — a standard hybrid inverter with 1 MPPT input handles your 0.8kW array. The small battery bank (0kWh) covers your nighttime essentials only."
+  },
+  "truthQAReport": {
+    "score": 80,
+    "pvStatus": "OPTIMAL",
+    "batteryIntegrity": "PASS",
+    "savingsIntegrity": "PASS",
+    "flags": {
+      "pvBias": false,
+      "savingsBias": false,
+      "autonomyBias": false
+    },
+    "finalVerdict": "Installer-Conservative",
+    "warnings": [
+      "Label contradiction: Battery labeled 'FULL' but cannot cover one night of load."
+    ]
+  },
+  "efficiencyBreakdown": {
+    "panelLosses": 0.9,
+    "inverterEfficiency": 0.96,
+    "batteryRoundtrip": 0.9,
+    "wiringLosses": 0.97,
+    "directionFactor": 1,
+    "pitchFactor": 0.92,
+    "shadeFactor": 1,
+    "totalEfficiency": 0.69393024
+  },
+  "energyFlow": {
+    "daytimeLoadKwh": 4.4,
+    "nightLoadKwh": 0,
+    "solarUsedDirectKwh": 4.4,
+    "excessSolarKwh": 0.28402912000000047,
+    "batteryChargedKwh": 0.2556262080000004,
+    "nightSupplyFromBatteryKwh": 0,
+    "unmetLoadKwh": 0,
+    "directSolarPct": 100,
+    "batteryPct": 0,
+    "unmetPct": 0,
+    "batteryInsufficientFlag": false
+  },
+  "surgeAnalysis": {
+    "steadyPeakKw": 0,
+    "surgePeakKw": 1.1,
+    "inverterRequired": 5,
+    "inverterProvided": 5,
+    "surgeMarginPct": 0,
+    "assessment": "risky",
+    "assessmentLabel": "Inverter undersized — startup failure risk",
+    "undersizedWarning": "Inverter 5 kVA < surge requirement 5.0 kVA — motor startup may trip inverter"
+  },
+  "degradationModel": {
+    "degradationRatePerYear": 0.006,
+    "year1ProductionKwh": 1686,
+    "year10ProductionKwh": 1597,
+    "percentDropYear10": 5.3,
+    "averageOutputFactor": 0.926,
+    "systemLifetimeYears": 25
+  },
+  "batteryDodModel": {
+    "theoreticalUsableKwh": 4.32,
+    "conservativeUsableKwh": 3.84,
+    "autonomyTheoreticalNights": 4.3,
+    "autonomyConservativeNights": 3.8
+  },
+  "rainySeasonAnalysis": {
+    "worstMonthProductionKwh": 3.37,
+    "requiredWithMarginKwh": 5.06,
+    "safetyRatio": 0.77,
+    "status": "at-risk",
+    "statusLabel": "At-Risk (<1.15× margin)"
+  },
+  "engineeringTruthCheck": {
+    "systemSizingRatio": 1.06,
+    "systemSizingLabel": "undersized",
+    "batteryNightsRatio": 3.53,
+    "batteryAssessment": "comfortable",
+    "inverterSurgeMarginPct": 0,
+    "inverterAssessment": "risky",
+    "warnings": [
+      "System undersized: solar production < 1.1× daily load target",
+      "Inverter 5 kVA < surge requirement 5.0 kVA — motor startup may trip inverter",
+      "Rainy season production below 1.15× safety margin"
+    ],
+    "passed": false
+  },
+  "truthEnforcement": {
+    "realCoverage": 0.75,
+    "correctedMonthlyCost": 2061.8399999999997,
+    "correctedMonthlySavings": 0,
+    "correctedGridSavings": {
+      "conservative": 0,
+      "expected": 0,
+      "stressCase": 0
+    },
+    "correctedGeneratorSavings": {
+      "conservative": 0,
+      "expected": 0,
+      "stressCase": 0
+    },
+    "batteryReality": "~19.3 hours of backup at night load (0.00 kWh/night)",
+    "systemTruthFlags": [
+      {
+        "code": "PARTIAL_COVERAGE_SEASONAL",
+        "severity": "WARNING",
+        "rule": 1,
+        "message": "5 month(s) have solar production below daily load target. Coverage cannot be 100% — system will require grid/generator in deficit months. Worst daily deficit: 0.77 kWh."
+      },
+      {
+        "code": "COVERAGE_CAPPED",
+        "severity": "INFO",
+        "rule": 2,
+        "message": "Annual solar production suggests 100% coverage, but seasonal deficits cap effective coverage at 75%. Annual average does not guarantee monthly adequacy."
+      },
+      {
+        "code": "COST_FLOOR_APPLIED",
+        "severity": "WARNING",
+        "rule": 3,
+        "message": "Calculated afterSolarCost (₦75) is below physics minimum (₦2,062). Clamped to physics floor — you still pay for unmet grid energy."
+      },
+      {
+        "code": "SAVINGS_100PCT_IMPOSSIBLE",
+        "severity": "CRITICAL",
+        "rule": 8,
+        "message": "100% savings claimed but seasonal deficit exists — grid/generator costs remain unavoidable in deficit months. Savings cannot be 100%."
+      },
+      {
+        "code": "RAINY_SEASON_RELIANCE",
+        "severity": "WARNING",
+        "rule": 9,
+        "message": "⚠️ Rainy season grid/generator reliance required. 4 rainy season month(s) have insufficient solar production. Reduce savings confidence and flag grid dependency for Jun–Sep."
+      }
+    ],
+    "confidence": "MEDIUM",
+    "hasSeasonalDeficit": true,
+    "worstMonthDeficitKwh": 0.77,
+    "correctedOffsetLabel": "75% (seasonal deficit)"
+  }
+}

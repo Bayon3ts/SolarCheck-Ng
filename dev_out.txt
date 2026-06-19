@@ -1,0 +1,14 @@
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3002
+- Network:       http://192.168.0.2:3002
+- Environments: .env.local
+✓ Ready in 561ms
+⨯ Another next dev server is already running.
+
+- Local:        http://localhost:3000
+- PID:          17092
+- Dir:          c:\Users\Bayonet\SolarCheck\solarcheck-ng
+- Log:          .next\dev\logs\next-development.log
+
+Run taskkill /PID 17092 /F to stop it.
+[?25h

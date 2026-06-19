@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronDown, Minus, Plus } from "lucide-react";
 import { CalculatorInputs, OwnershipStatus, RoofType, RoofDirection, RoofPitch, PropertyType } from "@/lib/calculator/types";
 import { NIGERIAN_STATES } from "@/lib/validations";
-import { DISCO_BY_STATE, APPLIANCES, IKEDC_BANDS, getEffectiveTariff, getFuelPrice, updateFuelPriceCache } from "@/lib/calculator/calculations";
+import { DISCO_BY_STATE, APPLIANCES, IKEDC_BANDS, getEffectiveTariff, getFuelPrice, updateFuelPriceCache, getApplianceKwh } from "@/lib/calculator/calculations";
 
 // ── NairaInput ───────────────────────────────────────────────────
 interface NairaInputProps {
@@ -182,19 +182,21 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   const updateApplianceDaytimeHours = (id: string, hours: number) => {
     const existingIdx = inputs.appliances.findIndex(a => a.id === id);
     if (existingIdx !== -1) {
-      const newApps = [...inputs.appliances] as Array<{ id: string, qty: number, daytimeHours?: number }>;
+      const newApps = [...inputs.appliances];
       const appDef = APPLIANCES.find(a => a.id === id);
       const maxHours = appDef?.typicalHours || 24;
       const validHours = hours < 0 ? 0 : hours > maxHours ? maxHours : hours;
       newApps[existingIdx] = { ...newApps[existingIdx], daytimeHours: validHours };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onChange({ appliances: newApps as any });
+      onChange({ appliances: newApps });
     }
   };
 
+  // Bug fix: use live W×h÷1000 formula, NOT static catalog kwhPerDay which is a single default
   const totalApplianceKwh = inputs.appliances.reduce((sum, app) => {
     const def = APPLIANCES.find(a => a.id === app.id);
-    return sum + (def ? def.kwhPerDay * app.qty : 0);
+    if (!def) return sum;
+    const dayHrs = app.daytimeHours ?? Math.min(def.typicalHours, 8);
+    return sum + getApplianceKwh(def, dayHrs, 0) * app.qty;
   }, 0);
 
   const totalApplianceCount = inputs.appliances.reduce((sum, app) => sum + app.qty, 0);
@@ -263,7 +265,9 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                                     )}
                                   </p>
                                   <p className="text-xs text-text-muted">
-                                    {supported ? `${app.kwhPerDay} kWh/day • ${app.watts}W` : `⬆ Needs ${upgradeTo}`}
+                                    {supported
+                                      ? `${getApplianceKwh(app, daytimeHours, 0).toFixed(2)} kWh/day • ${app.watts}W`
+                                      : `⬆ Needs ${upgradeTo}`}
                                   </p>
                                   {qty > 0 && supported && (
                                     <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">

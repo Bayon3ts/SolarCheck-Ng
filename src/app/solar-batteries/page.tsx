@@ -5,6 +5,8 @@ import EquipmentHero from '@/components/equipment/EquipmentHero'
 import EquipmentCard from '@/components/equipment/EquipmentCard'
 import { SOLAR_BATTERIES } from '@/data/solar-batteries'
 import Link from 'next/link'
+import { detectBatteryFraud } from '@/lib/battery-fraud/detector'
+import { BatteryFraudBadge } from '@/components/battery/fraud-badge'
 
 export const metadata: Metadata = {
   title: 'Best Solar Batteries in Nigeria 2026 — LFP Reviews & Prices | SolarCheck',
@@ -82,11 +84,20 @@ export default function SolarBatteriesPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {SOLAR_BATTERIES.map((battery) => (
-                <div key={battery.slug} id={battery.brand.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}>
-                  <EquipmentCard product={battery} rating={0} reviewCount={0} />
-                </div>
-              ))}
+              {SOLAR_BATTERIES.map((battery) => {
+                const fraudReport = detectBatteryFraud({
+                  chemistry: battery.chemistry,
+                  capacityKwh: battery.capacityKwh,
+                  claimedUsableKwh: battery.usableKwh,
+                  claimedDod: battery.dod,
+                });
+                return (
+                  <div key={battery.slug} id={battery.brand.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')} className="flex flex-col gap-3">
+                    <EquipmentCard product={battery} rating={0} reviewCount={0} />
+                    <BatteryFraudBadge report={fraudReport} />
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>

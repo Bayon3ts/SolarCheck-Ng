@@ -319,6 +319,7 @@ export default function Navbar() {
                     { label: 'Solar Panels', href: '/solar-panels', desc: 'Jinko, LONGi, Canadian & more' },
                     { label: 'Solar Inverters', href: '/solar-inverters', desc: 'Growatt, Deye, Victron & more' },
                     { label: 'Solar Batteries', href: '/solar-batteries', desc: 'LFP vs Lead-Acid compared' },
+                    { label: 'Charge Controllers', href: '/solar-charge-controllers', desc: 'Check MPPT/PWM Authenticity' },
                   ].map(item => (
                     <Link key={item.href} href={item.href}
                       onClick={() => setMegaMenuOpen(false)}
@@ -514,6 +515,7 @@ export default function Navbar() {
                                     { label: 'Solar Panels', href: '/solar-panels' },
                                     { label: 'Solar Inverters', href: '/solar-inverters' },
                                     { label: 'Solar Batteries', href: '/solar-batteries' },
+                                    { label: 'Charge Controllers', href: '/solar-charge-controllers' },
                                   ].map(item => (
                                     <Link key={item.href} href={item.href} onClick={() => setIsMobileOpen(false)} className="text-sm text-text-muted py-1 hover:text-primary">
                                       {item.label}

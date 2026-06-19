@@ -218,10 +218,6 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               {fmtM(r.systemCostMin)} – {fmtM(r.systemCostMax)}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-white/70 text-sm">Payback</p>
-            <p className="text-2xl font-black">{r.paybackMonths} <span className="text-base font-semibold">mo</span></p>
-          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -254,12 +250,6 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           </div>
           <div className="flex-shrink-0 text-2xl text-text-muted font-light">→</div>
           <div className="text-center flex-1">
-            <p className="text-xs text-text-muted mb-1">After Solar</p>
-            <p className="text-2xl font-black text-primary">{fmt(r.afterSolarMonthlyCost)}</p>
-            <p className="text-xs text-text-muted">per month</p>
-          </div>
-          <div className="flex-shrink-0 text-2xl text-text-muted font-light">→</div>
-          <div className="text-center flex-1">
             <p className="text-xs text-text-muted mb-1">You Save</p>
             <p className="text-2xl font-black text-emerald-600">{beforeVsAfter}%</p>
             <p className="text-xs font-semibold text-emerald-600">{fmt(monthlySavings)}/mo</p>
@@ -273,9 +263,9 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
             <span className="text-xs text-text-muted">Before</span>
           </div>
           <div className="flex-1 flex flex-col items-center gap-1">
-            <div className="w-full rounded-t-xl bg-primary"
-              style={{ height: `${r.monthlyCurrentSpend > 0 ? (r.afterSolarMonthlyCost / r.monthlyCurrentSpend) * 100 : 30}%` }} />
-            <span className="text-xs text-text-muted">After</span>
+            <div className="w-full rounded-t-xl bg-emerald-400"
+              style={{ height: `${r.monthlyCurrentSpend > 0 ? (monthlySavings / r.monthlyCurrentSpend) * 100 : 30}%` }} />
+            <span className="text-xs text-text-muted">Savings</span>
           </div>
         </div>
 
@@ -285,7 +275,6 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           <Row label="Conservative total saving" value={fmt((r.monthlyGridSavings?.conservative ?? 0) + (r.monthlyGeneratorSavings?.conservative ?? 0))} />
           <Row label="Stress-case saving" value={fmt((r.monthlyGridSavings?.stressCase ?? 0) + (r.monthlyGeneratorSavings?.stressCase ?? 0))} />
           <Row label="Current monthly spend" value={fmt(r.monthlyCurrentSpend)} />
-          <Row label="Estimated after solar" value={fmt(r.afterSolarMonthlyCost)} />
           {r.discoName && <Row label="DISCO" value={r.discoName} />}
           {r.discoTariff > 0 && <Row label="Grid tariff" value={`₦${r.discoTariff}/kWh`} />}
           {r.selectedBand && <Row label="Lagos band" value={`Band ${r.selectedBand}`} />}

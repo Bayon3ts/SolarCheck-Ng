@@ -63,7 +63,7 @@ export default function CalculatorDashboard() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedInputs(inputs);
-      if (hasCalculated && inputs.state && inputs.monthlyBill > 0) {
+      if (hasCalculated && inputs.state && inputs.appliances.length > 0) {
         showToast("Results updated");
       }
     }, 500);
@@ -76,7 +76,9 @@ export default function CalculatorDashboard() {
   }
 
   const results = useMemo(() => {
-    if (!debouncedInputs.state || debouncedInputs.monthlyBill === 0) return null;
+    // Require state + at least one appliance — bill can be 0 (generator-only users)
+    if (!debouncedInputs.state) return null;
+    if (debouncedInputs.appliances.length === 0) return null;
     if (debouncedInputs.state === "Lagos" && !debouncedInputs.lagosElectricityBand) return null;
     return calculateSolarSystem(debouncedInputs);
   }, [debouncedInputs]);

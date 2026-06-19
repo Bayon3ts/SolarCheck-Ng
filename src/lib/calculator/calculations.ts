@@ -6,6 +6,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { CalculatorInputs, CalculatorResults } from './types';
 import { MONTHLY_PSH, DEFAULT_MONTHLY_PSH } from './irradiance';
+import { enforceTruth } from './truth-engine';
 
 // ── Live fuel price (fetched from Supabase, falls back to constant) ────────
 let _fuelPriceCache: number = 1000; // updated by getFuelPrice()
@@ -75,6 +76,7 @@ export const APPLIANCES = [
     typicalHours: 8,
     isInverter: true,
     watts: 550,
+    dutyCycle: 1,
   },
   {
     id: 'ac_1hp_std',
@@ -85,6 +87,7 @@ export const APPLIANCES = [
     typicalHours: 8,
     isInverter: false,
     watts: 750,
+    dutyCycle: 1,
   },
   {
     id: 'ac_1_5hp_inv',
@@ -95,6 +98,7 @@ export const APPLIANCES = [
     typicalHours: 8,
     isInverter: true,
     watts: 750,
+    dutyCycle: 1,
   },
   {
     id: 'ac_1_5hp_std',
@@ -105,6 +109,7 @@ export const APPLIANCES = [
     typicalHours: 8,
     isInverter: false,
     watts: 1100,
+    dutyCycle: 1,
   },
   {
     id: 'ac_2hp_inv',
@@ -115,6 +120,7 @@ export const APPLIANCES = [
     typicalHours: 8,
     isInverter: true,
     watts: 1000,
+    dutyCycle: 1,
   },
   {
     id: 'ac_2hp_std',
@@ -125,6 +131,7 @@ export const APPLIANCES = [
     typicalHours: 8,
     isInverter: false,
     watts: 1500,
+    dutyCycle: 1,
   },
   {
     id: 'fan_ceiling',
@@ -135,6 +142,7 @@ export const APPLIANCES = [
     typicalHours: 12,
     isInverter: false,
     watts: 40,
+    dutyCycle: 1,
   },
   {
     id: 'fan_standing',
@@ -145,6 +153,7 @@ export const APPLIANCES = [
     typicalHours: 12,
     isInverter: false,
     watts: 30,
+    dutyCycle: 1,
   },
   {
     id: 'fan_exhaust',
@@ -155,6 +164,7 @@ export const APPLIANCES = [
     typicalHours: 6,
     isInverter: false,
     watts: 30,
+    dutyCycle: 1,
   },
 
   // ═══ REFRIGERATION ═══
@@ -167,6 +177,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: true,
     watts: 60,
+    dutyCycle: 0.28,
   },
   {
     id: 'fridge_std',
@@ -178,6 +189,7 @@ export const APPLIANCES = [
     isInverter: false,
     watts: 150,
     note: 'Compressor cycles on/off',
+    dutyCycle: 0.42,
   },
   {
     id: 'fridge_large_std',
@@ -188,6 +200,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: false,
     watts: 250,
+    dutyCycle: 0.42,
   },
   {
     id: 'freezer_chest',
@@ -198,6 +211,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: false,
     watts: 120,
+    dutyCycle: 0.42,
   },
   {
     id: 'freezer_upright',
@@ -208,6 +222,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: false,
     watts: 180,
+    dutyCycle: 0.42,
   },
 
   // ═══ LIGHTING ═══
@@ -220,6 +235,7 @@ export const APPLIANCES = [
     typicalHours: 6,
     isInverter: false,
     watts: 9,
+    dutyCycle: 1,
   },
   {
     id: 'light_led_15w',
@@ -230,6 +246,7 @@ export const APPLIANCES = [
     typicalHours: 6,
     isInverter: false,
     watts: 15,
+    dutyCycle: 1,
   },
   {
     id: 'light_fluorescent',
@@ -241,6 +258,7 @@ export const APPLIANCES = [
     isInverter: false,
     watts: 40,
     note: 'Consider upgrading to LED',
+    dutyCycle: 1,
   },
   {
     id: 'light_security',
@@ -251,6 +269,7 @@ export const APPLIANCES = [
     typicalHours: 6,
     isInverter: false,
     watts: 100,
+    dutyCycle: 1,
   },
 
   // ═══ TV & ENTERTAINMENT ═══
@@ -263,6 +282,7 @@ export const APPLIANCES = [
     typicalHours: 6,
     isInverter: false,
     watts: 50,
+    dutyCycle: 1,
   },
   {
     id: 'tv_43_led',
@@ -273,6 +293,7 @@ export const APPLIANCES = [
     typicalHours: 6,
     isInverter: false,
     watts: 80,
+    dutyCycle: 1.04,
   },
   {
     id: 'tv_55_led',
@@ -283,6 +304,7 @@ export const APPLIANCES = [
     typicalHours: 6,
     isInverter: false,
     watts: 130,
+    dutyCycle: 1.03,
   },
   {
     id: 'decoder_dstv',
@@ -293,6 +315,7 @@ export const APPLIANCES = [
     typicalHours: 6,
     isInverter: false,
     watts: 20,
+    dutyCycle: 1,
   },
   {
     id: 'home_theatre',
@@ -303,6 +326,7 @@ export const APPLIANCES = [
     typicalHours: 3,
     isInverter: false,
     watts: 120,
+    dutyCycle: 1,
   },
 
   // ═══ COMPUTING ═══
@@ -315,6 +339,7 @@ export const APPLIANCES = [
     typicalHours: 6,
     isInverter: false,
     watts: 50,
+    dutyCycle: 1,
   },
   {
     id: 'desktop_pc',
@@ -325,6 +350,7 @@ export const APPLIANCES = [
     typicalHours: 6,
     isInverter: false,
     watts: 100,
+    dutyCycle: 1,
   },
   {
     id: 'wifi_router',
@@ -335,6 +361,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: false,
     watts: 5,
+    dutyCycle: 1,
   },
   {
     id: 'phone_charge',
@@ -345,6 +372,7 @@ export const APPLIANCES = [
     typicalHours: 3,
     isInverter: false,
     watts: 20,
+    dutyCycle: 1,
   },
   {
     id: 'printer',
@@ -355,6 +383,7 @@ export const APPLIANCES = [
     typicalHours: 1,
     isInverter: false,
     watts: 40,
+    dutyCycle: 3,
   },
 
   // ═══ WATER ═══
@@ -368,6 +397,7 @@ export const APPLIANCES = [
     isInverter: false,
     watts: 746,
     note: '3hrs pumping/day typical',
+    dutyCycle: 0.98,
   },
   {
     id: 'borehole_2hp',
@@ -378,6 +408,7 @@ export const APPLIANCES = [
     typicalHours: 3,
     isInverter: false,
     watts: 1492,
+    dutyCycle: 0.89,
   },
   {
     id: 'water_heater_instant',
@@ -389,6 +420,7 @@ export const APPLIANCES = [
     isInverter: false,
     watts: 3000,
     note: 'Very high wattage — runs briefly',
+    dutyCycle: 1,
   },
   {
     id: 'water_dispenser',
@@ -399,6 +431,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: false,
     watts: 90,
+    dutyCycle: 0.46,
   },
 
   // ═══ KITCHEN ═══
@@ -411,6 +444,7 @@ export const APPLIANCES = [
     typicalHours: 1,
     isInverter: false,
     watts: 1000,
+    dutyCycle: 1,
   },
   {
     id: 'electric_kettle',
@@ -421,6 +455,7 @@ export const APPLIANCES = [
     typicalHours: 0.5,
     isInverter: false,
     watts: 1500,
+    dutyCycle: 1,
   },
   {
     id: 'toaster',
@@ -431,6 +466,7 @@ export const APPLIANCES = [
     typicalHours: 0.25,
     isInverter: false,
     watts: 1000,
+    dutyCycle: 1,
   },
   {
     id: 'blender',
@@ -441,6 +477,7 @@ export const APPLIANCES = [
     typicalHours: 0.25,
     isInverter: false,
     watts: 600,
+    dutyCycle: 1,
   },
   {
     id: 'electric_cooker',
@@ -452,6 +489,7 @@ export const APPLIANCES = [
     isInverter: false,
     watts: 1500,
     note: 'High load — confirm with installer',
+    dutyCycle: 1,
   },
   {
     id: 'rice_cooker',
@@ -462,6 +500,7 @@ export const APPLIANCES = [
     typicalHours: 1,
     isInverter: false,
     watts: 400,
+    dutyCycle: 1,
   },
 
   // ═══ LAUNDRY ═══
@@ -475,6 +514,7 @@ export const APPLIANCES = [
     isInverter: false,
     watts: 500,
     note: '0.5 wash/day average',
+    dutyCycle: 0.5,
   },
   {
     id: 'washing_machine_top',
@@ -485,6 +525,7 @@ export const APPLIANCES = [
     typicalHours: 1,
     isInverter: false,
     watts: 500,
+    dutyCycle: 1,
   },
   {
     id: 'iron_steam',
@@ -495,6 +536,7 @@ export const APPLIANCES = [
     typicalHours: 0.5,
     isInverter: false,
     watts: 1000,
+    dutyCycle: 1,
   },
 
   // ═══ SECURITY ═══
@@ -507,6 +549,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: false,
     watts: 40,
+    dutyCycle: 1,
   },
   {
     id: 'cctv_8cam',
@@ -517,6 +560,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: false,
     watts: 70,
+    dutyCycle: 1,
   },
   {
     id: 'electric_fence',
@@ -527,6 +571,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: false,
     watts: 10,
+    dutyCycle: 1,
   },
   {
     id: 'intercom',
@@ -537,6 +582,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: false,
     watts: 5,
+    dutyCycle: 1,
   },
 
   // ═══ BUSINESS EQUIPMENT ═══
@@ -549,6 +595,7 @@ export const APPLIANCES = [
     typicalHours: 8,
     isInverter: false,
     watts: 8,
+    dutyCycle: 0.94,
   },
   {
     id: 'cash_register',
@@ -559,6 +606,7 @@ export const APPLIANCES = [
     typicalHours: 8,
     isInverter: false,
     watts: 10,
+    dutyCycle: 1,
   },
   {
     id: 'photocopier',
@@ -569,6 +617,7 @@ export const APPLIANCES = [
     typicalHours: 4,
     isInverter: false,
     watts: 200,
+    dutyCycle: 1,
   },
   {
     id: 'hair_dryer',
@@ -580,6 +629,7 @@ export const APPLIANCES = [
     isInverter: false,
     watts: 1800,
     note: 'Very high wattage',
+    dutyCycle: 0.42,
   },
   {
     id: 'shop_fridge',
@@ -590,6 +640,7 @@ export const APPLIANCES = [
     typicalHours: 24,
     isInverter: false,
     watts: 200,
+    dutyCycle: 0.63,
   },
 
   // ═══ MEDICAL ═══
@@ -602,6 +653,7 @@ export const APPLIANCES = [
     typicalHours: 8,
     isInverter: false,
     watts: 40,
+    dutyCycle: 0.94,
   },
   {
     id: 'oxygen_concentrator',
@@ -613,6 +665,7 @@ export const APPLIANCES = [
     isInverter: false,
     watts: 100,
     note: 'Critical load — size battery for this',
+    dutyCycle: 1,
   },
   {
     id: 'dialysis_machine',
@@ -624,6 +677,7 @@ export const APPLIANCES = [
     isInverter: false,
     watts: 750,
     note: 'Critical load — contact installer',
+    dutyCycle: 1,
   },
 ];
 
@@ -675,15 +729,15 @@ export const DISCO_BY_STATE: Record<string, string> = {
 
 export const DISCO_TARIFF: Record<string, number> = {
   'IBEDC': 58,
-  'EEDC':  52,
+  'EEDC': 52,
   'PHEDC': 55,
-  'BEDC':  50,
-  'AEDC':  62,
-  'JEDC':  48,
-  'KEDC':  45,
-  'YEDC':  48,
+  'BEDC': 50,
+  'AEDC': 62,
+  'JEDC': 48,
+  'KEDC': 45,
+  'YEDC': 48,
   'KAEDCO': 43,
-  'GEDC':  42,
+  'GEDC': 42,
   'KEDCO': 40,
 };
 
@@ -691,12 +745,12 @@ export const PETROL_PRICE_PER_LITRE = 1000;  // ₦/L — update monthly
 
 // ── IKEDC / EKEDC Band Tariffs (NERC ORDER/NERC/2025/050) ─────────────
 export const IKEDC_BANDS = [
-  { id: 'band_a', label: '20+ hours (Band A)',       tariff: 209.50 },
-  { id: 'band_b', label: '16–20 hours (Band B)',     tariff: 62.48  },
-  { id: 'band_c', label: '12–16 hours (Band C)',     tariff: 45.80  },
-  { id: 'band_d', label: '8–12 hours (Band D)',      tariff: 31.24  },
-  { id: 'band_e', label: 'Under 8 hours (Band E)',   tariff: 31.24  },
-  { id: 'none',   label: 'Almost no supply',         tariff: 31.24  },
+  { id: 'band_a', label: '20+ hours (Band A)', tariff: 209.50 },
+  { id: 'band_b', label: '16–20 hours (Band B)', tariff: 62.48 },
+  { id: 'band_c', label: '12–16 hours (Band C)', tariff: 45.80 },
+  { id: 'band_d', label: '8–12 hours (Band D)', tariff: 31.24 },
+  { id: 'band_e', label: 'Under 8 hours (Band E)', tariff: 31.24 },
+  { id: 'none', label: 'Almost no supply', tariff: 31.24 },
 ] as const;
 
 /**
@@ -722,7 +776,7 @@ export function getEffectiveTariff(disco: string, band?: string): number {
 }
 
 // ── Charge Controller ──────────────────────────────────────────
-export type ChargeControllerType = 
+export type ChargeControllerType =
   | 'None'   // hybrid inverter — built in
   | 'PWM'    // small off-grid systems
   | 'MPPT'   // larger off-grid systems
@@ -745,15 +799,15 @@ export interface ChargeControllerSpec {
  * the panels and the battery bank.
  */
 export function getChargeControllerSpec(
-  inverterType: 'hybrid' | 'off-grid' | 
-                'pcu' | 'on-grid',
+  inverterType: 'hybrid' | 'off-grid' |
+    'pcu' | 'on-grid',
   totalPanelWatts: number,
   batteryVoltage: 12 | 24 | 48
 ): ChargeControllerSpec {
 
   // Hybrid inverters have built-in MPPT
-  if (inverterType === 'hybrid' || 
-      inverterType === 'on-grid') {
+  if (inverterType === 'hybrid' ||
+    inverterType === 'on-grid') {
     return {
       type: 'None',
       amps: 0,
@@ -770,20 +824,20 @@ export function getChargeControllerSpec(
 
   // PWM for small 12V systems only
   // (PWM wastes power on 24V/48V systems)
-  const usePWM = 
-    batteryVoltage === 12 && 
+  const usePWM =
+    batteryVoltage === 12 &&
     totalPanelWatts <= 300
 
   if (usePWM) {
     // Round up to nearest standard PWM size
     const pwmSize = requiredAmps <= 10 ? 10
       : requiredAmps <= 20 ? 20
-      : 30
+        : 30
 
     // Nigerian market pricing for PWM
     const pwmCost = pwmSize <= 10 ? 15000
       : pwmSize <= 20 ? 22000
-      : 35000
+        : 35000
 
     return {
       type: 'PWM',
@@ -795,23 +849,23 @@ export function getChargeControllerSpec(
 
   // MPPT for all other off-grid systems
   // Round up to nearest standard MPPT size
-  const mpptSize = 
+  const mpptSize =
     requiredAmps <= 20 ? 20
-    : requiredAmps <= 30 ? 30
-    : requiredAmps <= 40 ? 40
-    : requiredAmps <= 60 ? 60
-    : requiredAmps <= 80 ? 80
-    : 100
+      : requiredAmps <= 30 ? 30
+        : requiredAmps <= 40 ? 40
+          : requiredAmps <= 60 ? 60
+            : requiredAmps <= 80 ? 80
+              : 100
 
   // Nigerian market pricing for MPPT
   // (Victron, EPever, Renogy are common brands)
-  const mpptCost = 
+  const mpptCost =
     mpptSize <= 20 ? 45000
-    : mpptSize <= 30 ? 65000
-    : mpptSize <= 40 ? 95000
-    : mpptSize <= 60 ? 175000
-    : mpptSize <= 80 ? 250000
-    : 350000
+      : mpptSize <= 30 ? 65000
+        : mpptSize <= 40 ? 95000
+          : mpptSize <= 60 ? 175000
+            : mpptSize <= 80 ? 250000
+              : 350000
 
   return {
     type: 'MPPT',
@@ -903,9 +957,9 @@ export function analyzeDaytimeLoad(
 
   let recommendedInverterNote = ''
   if (isDaytimeHeavy && requiresMultipleMppt) {
-    recommendedInverterNote = `Your panel array (${(panelWatts/1000).toFixed(1)}kW) exceeds what a single MPPT input can handle (${(singleMpptMaxW/1000).toFixed(1)}kW). You need an inverter with ${mpptInputsNeeded} MPPT inputs — such as the Deye SUN-8K (2 MPPT, 10.4kW PV) or Growatt MIN 6000 (2 MPPT, 8kW PV). Panels split: ${panelStringSplit}.`
+    recommendedInverterNote = `Your panel array (${(panelWatts / 1000).toFixed(1)}kW) exceeds what a single MPPT input can handle (${(singleMpptMaxW / 1000).toFixed(1)}kW). You need an inverter with ${mpptInputsNeeded} MPPT inputs — such as the Deye SUN-8K (2 MPPT, 10.4kW PV) or Growatt MIN 6000 (2 MPPT, 8kW PV). Panels split: ${panelStringSplit}.`
   } else if (isDaytimeHeavy) {
-    recommendedInverterNote = `Your load is mostly daytime — a standard hybrid inverter with 1 MPPT input handles your ${(panelWatts/1000).toFixed(1)}kW array. The small battery bank (${recommendedNightBatteryKwh}kWh) covers your nighttime essentials only.`
+    recommendedInverterNote = `Your load is mostly daytime — a standard hybrid inverter with 1 MPPT input handles your ${(panelWatts / 1000).toFixed(1)}kW array. The small battery bank (${recommendedNightBatteryKwh}kWh) covers your nighttime essentials only.`
   }
 
   return {
@@ -922,6 +976,10 @@ export function analyzeDaytimeLoad(
   }
 }
 
+export function getApplianceKwh(appDef: typeof APPLIANCES[0], dayHrs: number, nightHrs: number): number {
+  return ((appDef.watts * (dayHrs + nightHrs) * (appDef.dutyCycle || 1)) / 1000);
+}
+
 export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResults & { chargeController: ChargeControllerSpec; daytimeAnalysis: DaytimeHeavyAnalysis } {
   const {
     state, monthlyBill, generatorSpend,
@@ -935,14 +993,11 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
   // STEP 1 & 2 — LOAD CALCULATION & DAY/NIGHT CLASSIFICATION
   // ─────────────────────────────────────────────────────────
-  // ENGINEERING NOTE: We use kwhPerDay × qty (not watts × typicalHours).
-  // kwhPerDay already accounts for real-world duty cycles:
-  //   • Fridge compressor cycles on ~40% of the time → 1.5 kWh/day not 3.6
-  //   • Washing machine used 0.5×/day average → 0.25 kWh not 0.5
-  //   • This matches what a trained solar engineer would enter in a load sheet.
   let dailyLoadKwh = 0;
   let nightLoadKwh = 0;
   let peakSurgeKw = 0;
+  let dayActiveKw = 0;
+  let nightActiveKw = 0;
   let simultaneousLoadKw = 0; // for inverter sizing
   let hasAC = false;
   let hasWaterPump = false;
@@ -955,46 +1010,47 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       const qty = appSelection.qty;
       if (qty <= 0) return;
 
-      const typicalHours = appDef.typicalHours || 1;
+      const dayHrs = (appSelection as any).dayHours ?? (appSelection as any).daytimeHours ?? Math.min(appDef.typicalHours || 0, 12);
+      const nightHrs = (appSelection as any).nightHours ?? Math.max(0, (appDef.typicalHours || 0) - dayHrs);
+console.log('APP CALC', appDef.id, {qty, dayHrs, nightHrs}, 'DAY KWH', getApplianceKwh(appDef, dayHrs, 0) * qty);
 
-      // ── FIX 1: Use kwhPerDay × qty (duty-cycle-aware) ──────────────────
-      const appDayKwh = appDef.kwhPerDay * qty;
+      // ── FIX 2: Strict Night Load separation ────────────────────────────────
+      // We no longer rely on typicalHours static split. 
+      // If daytime load exists, it calculates exactly. If night, exactly night.
+      const appDayKwh = getApplianceKwh(appDef, dayHrs, 0) * qty;
       dailyLoadKwh += appDayKwh;
 
-      // ── FIX 2: Night load — proportional split using actual hours ────────
-      let nightKwh = 0;
-      if (typicalHours === 24) {
-        // 24h appliances (fridge, router, CCTV, etc.) split 50/50 day/night
-        nightKwh = appDayKwh * 0.5;
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const dayHrs = Math.min((appSelection as any).daytimeHours ?? Math.min(typicalHours, 8), typicalHours);
-        const nightHrs = Math.max(0, typicalHours - dayHrs);
-        nightKwh = typicalHours > 0 ? appDayKwh * (nightHrs / typicalHours) : 0;
-      }
+      const nightKwh = getApplianceKwh(appDef, 0, nightHrs) * qty;
       nightLoadKwh += nightKwh;
+      dailyLoadKwh += nightKwh; // Day+Night = Total daily load
 
-      // ── FIX 3: Correct surge factors ────────────────────────────────────
-      // Fans are NOT compressors — they don't have 2.5× startup surge.
-      // Only compressors (AC, fridge, water pump) need high surge factors.
       const continuousKw = (appDef.watts * qty) / 1000;
-      simultaneousLoadKw += continuousKw;
 
+      // ── PEAK LOAD (MAX OVERLAP DAY VS NIGHT) ─────────────────────────────
+      // Replaces flat-sum simultaneous load logic with realistic day/night partitioning
+      if (dayHrs > 0) dayActiveKw += continuousKw;
+      if (nightHrs > 0) nightActiveKw += continuousKw;
+
+      // ── #12 SURGE FACTORS — Per installer-grade spec ──────────────────────
       const isFan = appDef.id.startsWith('fan_');
-      const isAC  = appDef.id.startsWith('ac_');
-      const isCompressor = !isFan && ['Cooling', 'Refrigeration', 'Water'].includes(appDef.category);
-      const isWaterPump  = appDef.id.startsWith('borehole_');
+      const isAC = appDef.id.startsWith('ac_');
+      const isWaterPump = appDef.id.startsWith('borehole_');
+      const isFridge = appDef.category === 'Refrigeration';
 
-      if (isAC)  hasAC = true;
+      if (isAC) hasAC = true;
       if (isWaterPump) hasWaterPump = true;
 
       let surgeMult = 1.0;
       if (isFan) {
-        surgeMult = 1.2;  // Small startup inrush — NOT compressor-level
-      } else if (isCompressor) {
-        surgeMult = appDef.isInverter ? 1.5 : 2.5;
+        surgeMult = 1.2;                          // small inrush only
+      } else if (isWaterPump) {
+        surgeMult = 5.0;                          // 4–6× per spec — use 5× (mid)
+      } else if (isAC) {
+        surgeMult = appDef.isInverter ? 2.0 : 3.5; // inverter AC: 2×; standard: 3.5×
+      } else if (isFridge) {
+        surgeMult = appDef.isInverter ? 1.5 : 3.0; // DC fridge: 1.5×; compressor: 3×
       } else if (appDef.category === 'Laundry') {
-        surgeMult = 2.0;  // Motor startup
+        surgeMult = 2.0;                          // washing machine motor startup
       }
       peakSurgeKw += continuousKw * surgeMult;
     });
@@ -1008,7 +1064,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
     dailyLoadKwh = (monthlyKwhFromNepa + monthlyKwhFromGenerator) / 30;
     nightLoadKwh = dailyLoadKwh * 0.45; // 45% at night (typical Nigerian home)
-    peakSurgeKw  = dailyLoadKwh * 0.2;  // rough estimate
+    peakSurgeKw = dailyLoadKwh * 0.2;  // rough estimate
     simultaneousLoadKw = dailyLoadKwh * 0.15;
   }
 
@@ -1034,9 +1090,17 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   else if (roofPitch === 'Steep (35-45°)') pitchFactor = 0.97;
 
   const shadeFactor = 1 - (shadeObstruction / 100);
-  
-  // System efficiency default ~0.75 (reduced from 0.80 to be more realistic)
-  const systemEfficiency = 0.75 * directionFactor * pitchFactor * shadeFactor;
+
+  // ── #14 COMPONENT EFFICIENCY BREAKDOWN ────────────────────────────────────
+  // Each loss factor derived from IEC 61724 / PVsyst component loss model
+  const panelLosses = 0.90; // temperature derating + dust accumulation (Nigeria climate)
+  const inverterEff = 0.96; // modern MPPT hybrid inverter conversion efficiency
+  const batteryRoundtrip = (inputs.systemMode !== 'grid-tied') ? 0.90 : 1.00; // LFP round-trip
+  const wiringLosses = 0.97; // DC cable ohmic losses + junction losses
+  // Spatial factors from roof geometry
+  const totalEfficiency = panelLosses * inverterEff * batteryRoundtrip * wiringLosses
+    * directionFactor * pitchFactor * shadeFactor;
+  const systemEfficiency = totalEfficiency;
 
   // ── PV SIZING — annual average is the baseline ──────────────────────────
   // ENGINEERING NOTE: Size to annual average PSH. The rainy-season worst-month
@@ -1050,7 +1114,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // Annual average requirement (sizing basis)
   const annualReq = targetDailyGenerationKwh / (avgPSH * systemEfficiency);
   // Worst-month (rainy season) — used for QA classification only, not as floor
-  const rainyReq  = targetDailyGenerationKwh / (rainyMinPSH * systemEfficiency);
+  const rainyReq = targetDailyGenerationKwh / (rainyMinPSH * systemEfficiency);
 
   // Off-grid gets a 15% irradiance buffer to handle low-irradiance months
   // without a grid/generator bridge. Hybrid/grid-tied: no buffer needed.
@@ -1085,7 +1149,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
   // Round UP panel count — actual installed kWp will always be ≥ target
   const panelsNeeded = Math.ceil((pvKwpRaw * 1000) / panelSizeWatts);
-  const actualPvKwp  = (panelsNeeded * panelSizeWatts) / 1000;
+  const actualPvKwp = (panelsNeeded * panelSizeWatts) / 1000;
 
   // ── BATTERY SIZING — spec-accurate LFP constants ─────────────────────────
   // ENGINEERING NOTE:
@@ -1095,10 +1159,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   //   requiredUsable = dailyLoadKwh × autonomyDays  (off-grid)
   //   batteryKwh = requiredUsable / (LFP_DOD × RT_EFF)
   // These same constants MUST be used in autonomy calculation to stay consistent.
-  const LFP_DOD  = 0.80;
-  const RT_EFF   = 0.92;
+  const LFP_DOD = 0.80;
+  const RT_EFF = 0.92;
   const BATT_INCREMENT = 1.2; // kWh per module (100Ah@12V)
-  const BATT_MIN       = 2.4; // kWh minimum (200Ah@12V)
+  const BATT_MIN = 2.4; // kWh minimum (200Ah@12V)
 
   let requiredUsableKwh = 0;
   let batterySufficiency: 'insufficient' | 'limited' | 'adequate' | 'strong' | 'full' | 'daytime-optimized' = 'adequate';
@@ -1119,14 +1183,19 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     ? requiredUsableKwh / (LFP_DOD * RT_EFF)
     : 0;
 
-  if (batteryKwh > 0) {
-    // Round up to nearest LFP unit size (1.2 kWh steps, min 2.4)
-    batteryKwh = Math.max(BATT_MIN, Math.ceil(batteryKwh / BATT_INCREMENT) * BATT_INCREMENT);
-    batteryKwh = Math.round(batteryKwh * 10) / 10;
+  if (systemMode !== 'grid-tied') {
+    if (batteryKwh > 0) {
+      // Round up to nearest LFP unit size (1.2 kWh steps)
+      batteryKwh = Math.ceil(batteryKwh / BATT_INCREMENT) * BATT_INCREMENT;
+    }
 
-    // Nigerian engineering minimum floors
+    // Nigerian engineering minimum floors:
+    // A hybrid/off-grid system requires a battery to operate, even if
+    // mathematically 0 (e.g. user set all loads to run strictly in daytime).
     const minBattery = hasAC || hasWaterPump ? 4.8 : BATT_MIN;
     batteryKwh = Math.max(batteryKwh, minBattery);
+
+    batteryKwh = Math.round(batteryKwh * 10) / 10;
   }
 
   // Autonomy calculation — MUST use identical constants (LFP_DOD × RT_EFF)
@@ -1159,10 +1228,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     batterySufficiency = 'daytime-optimized';
   } else {
     // Standard night-coverage rating
-    if      (nightCoverageRatio < 1.0) batterySufficiency = 'limited';      // cannot cover 1 full night
+    if (nightCoverageRatio < 1.0) batterySufficiency = 'limited';      // cannot cover 1 full night
     else if (nightCoverageRatio < 1.5) batterySufficiency = 'adequate';     // covers night comfortably
     else if (nightCoverageRatio < 2.5) batterySufficiency = 'strong';       // covers night + buffer
-    else                               batterySufficiency = 'full';         // well over a night
+    else batterySufficiency = 'full';         // well over a night
   }
 
   // Autonomy note — emitted when autonomy > 24h so the UI can clarify it's
@@ -1183,31 +1252,37 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   //   4. Nigerian floor: any AC present → min 5kVA
   const inverterSizes = [3, 5, 8, 10, 15, 20, 30];
 
-  // Heaviest single motor startup additional watts
+  // #12 INVERTER SIZING — surge-aware per spec
+  // inverter_capacity >= max(peak_load * 1.25, peak_surge_load)
+  // Uses same surge multipliers as the load loop above.
   let heaviestStartupAddKw = 0;
   if (appliances.length > 0) {
     appliances.forEach(appSelection => {
       const appDef = APPLIANCES.find(a => a.id === appSelection.id);
       if (!appDef || appSelection.qty <= 0) return;
-      const continuousKw = (appDef.watts * appSelection.qty) / 1000;
-      const isFan = appDef.id.startsWith('fan_');
-      const isCompressor = !isFan && ['Cooling', 'Refrigeration', 'Water'].includes(appDef.category);
-      const isLaundry = appDef.category === 'Laundry';
-      let mult = 1.0;
-      if (isCompressor) mult = appDef.isInverter ? 1.5 : 2.5;
-      else if (isLaundry) mult = 2.0;
-      else if (isFan) mult = 1.2;
-      const startupAdd = continuousKw * (mult - 1.0); // additional above continuous
+      const contKw = (appDef.watts * appSelection.qty) / 1000;
+      const isFanA = appDef.id.startsWith('fan_');
+      const isACA = appDef.id.startsWith('ac_');
+      const isWaterPumpA = appDef.id.startsWith('borehole_');
+      const isFridgeA = appDef.category === 'Refrigeration';
+      let m = 1.0;
+      if (isFanA) m = 1.2;
+      else if (isWaterPumpA) m = 5.0;
+      else if (isACA) m = appDef.isInverter ? 2.0 : 3.5;
+      else if (isFridgeA) m = appDef.isInverter ? 1.5 : 3.0;
+      else if (appDef.category === 'Laundry') m = 2.0;
+      const startupAdd = contKw * (m - 1.0);
       if (startupAdd > heaviestStartupAddKw) heaviestStartupAddKw = startupAdd;
     });
   }
 
-  // Required kVA = (continuous loads × diversity factor + heaviest startup surge) × 1.25
-  // BUG FIX C: 0.7 diversity factor — not all appliances run simultaneously in real life.
-  // The heaviest startup surge is NOT diversified (it IS the simultaneous worst case).
-  const rawInverterKva = (simultaneousLoadKw * 0.7 + heaviestStartupAddKw) * 1.25;
-
-  // Nigerian engineering floor: 5kVA minimum when AC is present
+  // Steady peak (continuous) with 25% margin
+  const steadyPeakKw = simultaneousLoadKw;
+  const steadyRequired = steadyPeakKw * 1.25;
+  // Surge peak = all loads running simultaneously at surge current
+  const surgeRequired = peakSurgeKw;
+  // Inverter must satisfy both constraints
+  const rawInverterKva = Math.max(steadyRequired, surgeRequired);
   const minInverterKva = hasAC ? 5 : hasWaterPump ? 5 : 3;
   const requiredInverterKva = Math.max(rawInverterKva, minInverterKva);
   const inverterKva = inverterSizes.find(sz => sz >= requiredInverterKva) ?? 30;
@@ -1215,16 +1290,19 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // PV classification against annualReq (the actual sizing basis).
   // rainyReq is used ONLY for seasonalRisk below — it is a risk flag, not a sizing threshold.
   let pvClassification: 'UNDER SIZED' | 'OPTIMAL' | 'OVER SIZED' = 'OPTIMAL';
-  if (actualPvKwp < annualReq * 0.95)      pvClassification = 'UNDER SIZED';
+  if (actualPvKwp < annualReq * 0.95) pvClassification = 'UNDER SIZED';
   else if (actualPvKwp <= annualReq * 1.5) pvClassification = 'OPTIMAL';
-  else                                      pvClassification = 'OVER SIZED';
+  else pvClassification = 'OVER SIZED';
 
-  // Seasonal risk using actual minPSH
+  // #16 RAINY SEASON — 1.15× safety margin required
+  // Classification: ratio = worst_month_output / daily_load
+  //   >=1.25 → safe  |  1.15–1.25 → borderline  |  <1.15 → at-risk
   let seasonalRisk: 'Rainy season stable' | 'Rainy season borderline' | 'Rainy season at risk';
   const rainyProduction = actualPvKwp * rainyMinPSH * systemEfficiency;
-  if      (rainyProduction >= targetDailyGenerationKwh)       seasonalRisk = 'Rainy season stable';
-  else if (rainyProduction >= targetDailyGenerationKwh * 0.85) seasonalRisk = 'Rainy season borderline';
-  else                                                          seasonalRisk = 'Rainy season at risk';
+  const rainyToLoadRatio = targetDailyGenerationKwh > 0 ? rainyProduction / targetDailyGenerationKwh : 0;
+  if (rainyToLoadRatio >= 1.25) seasonalRisk = 'Rainy season stable';
+  else if (rainyToLoadRatio >= 1.15) seasonalRisk = 'Rainy season borderline';
+  else seasonalRisk = 'Rainy season at risk';
 
   // STEP 6 — COST & SAVINGS (Ranges)
   const roofMountingCost = roofType === 'clay_tiles' ? 35000 : 0;
@@ -1235,43 +1313,60 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
   const batteryUnitCost = 180000;
   const totalBatteryCost = batteryKwh * batteryUnitCost;
-  
+
   let systemCostMin = baseSystemCostMin + totalBatteryCost + roofMountingCost;
   let systemCostMax = baseSystemCostMax + totalBatteryCost + roofMountingCost;
 
   const totalPanelWatts = actualPvKwp * 1000;
   const batteryVoltage: 12 | 24 | 48 = (actualPvKwp < 1 ? 12 : actualPvKwp < 3 ? 24 : 48);
   const selectedInverterType: 'hybrid' | 'off-grid' | 'pcu' | 'on-grid' = systemMode === 'grid-tied' ? 'on-grid' : (systemMode === 'off-grid' ? 'off-grid' : 'hybrid');
-  
+
   const chargeController = getChargeControllerSpec(selectedInverterType, totalPanelWatts, batteryVoltage);
   systemCostMin += chargeController.estimatedCost;
   systemCostMax += chargeController.estimatedCost;
 
   const monthlyCurrentSpend = monthlyBill + generatorSpend;
-  
+
   let monthlyGridSavingsExpected = 0;
   let monthlyGeneratorSavingsExpected = 0;
+
+  // #11 TOU ENERGY FLOW — formalized model
+  const daytimeLoadKwh = dailyLoadKwh - nightLoadKwh;
+  const dailySolarProduction = actualPvKwp * avgPSH * systemEfficiency;
+  const solarUsedDirect = Math.min(daytimeLoadKwh, dailySolarProduction);
+  const excessSolar = Math.max(0, dailySolarProduction - solarUsedDirect);
+  const batteryEff = batteryRoundtrip; // already defined in efficiency breakdown
+  const batteryCapRemaining = usableBattery;
+  const batteryCharged = Math.min(excessSolar * batteryEff, batteryCapRemaining);
+  const nightSupply = Math.min(batteryCharged, nightLoadKwh);
+  const unmetLoad = Math.max(0, (daytimeLoadKwh - solarUsedDirect) + (nightLoadKwh - nightSupply));
+  const totalLoad = dailyLoadKwh > 0 ? dailyLoadKwh : 1;
+  const directSolarPct = Math.round((solarUsedDirect / totalLoad) * 100);
+  const batteryPct = Math.round((nightSupply / totalLoad) * 100);
+  const unmetPct = Math.max(0, 100 - directSolarPct - batteryPct);
+  const batteryInsufficientFlag = nightLoadKwh > usableBattery;
+
+  // #17 BACKUP FRACTION — derived from unmet energy, no hardcoded probabilities
+  const backupFraction = totalLoad > 0 ? unmetLoad / totalLoad : 0;
 
   if (systemMode === 'off-grid') {
     monthlyGridSavingsExpected = monthlyBill;
     monthlyGeneratorSavingsExpected = generatorSpend;
   } else {
-    const potentialSavings = monthlyCurrentSpend * (coveragePct / 100);
-    monthlyGridSavingsExpected = Math.min(potentialSavings, monthlyBill);
-    const remainingSavings = potentialSavings - monthlyGridSavingsExpected;
-    
-    if (generatorSpend > 0 && remainingSavings > 0) {
-      monthlyGeneratorSavingsExpected = Math.min(remainingSavings, generatorSpend);
-    } else {
-      monthlyGeneratorSavingsExpected = 0;
+    // Grid savings: proportional to solar direct usage
+    monthlyGridSavingsExpected = Math.min(monthlyBill * (coveragePct / 100), monthlyBill);
+    // Generator savings: proportional to (1 - backup_fraction) of generator spend
+    // backupFraction = fraction of load still needing backup → savings = 1 - backupFraction
+    if (generatorSpend > 0) {
+      monthlyGeneratorSavingsExpected = generatorSpend * (1 - backupFraction);
     }
-
-    if (monthlyGridSavingsExpected >= monthlyBill * 0.99 && monthlyGeneratorSavingsExpected >= generatorSpend * 0.99) {
-      // Prevent 100% dual savings if not off-grid
-      monthlyGeneratorSavingsExpected = generatorSpend * 0.8;
-    }
-    if (systemMode === 'hybrid') {
-      monthlyGeneratorSavingsExpected *= 0.5; // 50% probability factor
+    // Cap: total savings cannot exceed total spend
+    const totalSavingsCap = monthlyCurrentSpend * (coveragePct / 100);
+    const totalSavings = monthlyGridSavingsExpected + monthlyGeneratorSavingsExpected;
+    if (totalSavings > totalSavingsCap) {
+      const scale = totalSavingsCap / totalSavings;
+      monthlyGridSavingsExpected *= scale;
+      monthlyGeneratorSavingsExpected *= scale;
     }
   }
 
@@ -1284,6 +1379,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const monthlyGridSavings = calculateRange(monthlyGridSavingsExpected);
   const monthlyGeneratorSavings = calculateRange(monthlyGeneratorSavingsExpected);
 
+  // #13 Degradation constants — used in NPV loop and model object below
+  const DEGRADATION_RATE = 0.006;  // 0.6%/yr per IEC 61215
+  const SYSTEM_LIFE_YEARS = 25;
+
   const calculateNPVSavings = (years: number) => {
     const fInf = fuelInflation / 100;
     const tInf = nepaInflation / 100;
@@ -1292,8 +1391,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
     let totalSavingsExpected = 0;
     for (let year = 1; year <= years; year++) {
-      const nepaSaving = monthlyGridSavingsExpected * Math.pow(1 + tInf, year);
-      const generatorSaving = monthlyGeneratorSavingsExpected * Math.pow(1 + fInf, year);
+      // Apply panel degradation factor — year 1 = (1-0.006)^1, etc.
+      const yearDegradFactor = Math.pow(1 - DEGRADATION_RATE, year);
+      const nepaSaving = monthlyGridSavingsExpected * yearDegradFactor * Math.pow(1 + tInf, year);
+      const generatorSaving = monthlyGeneratorSavingsExpected * yearDegradFactor * Math.pow(1 + fInf, year);
       const yearSaving = ((nepaSaving + generatorSaving) - monthlyMaintenance) * 12;
       totalSavingsExpected += yearSaving / Math.pow(1 + dRate, year);
     }
@@ -1303,7 +1404,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const fiveYearSavings = calculateNPVSavings(5);
   const tenYearSavings = calculateNPVSavings(10);
 
-  const firstYearMonthlySavingExpected = (monthlyGridSavingsExpected * (1 + (nepaInflation/100)/2)) + (monthlyGeneratorSavingsExpected * (1 + (fuelInflation/100)/2));
+  const firstYearMonthlySavingExpected = (monthlyGridSavingsExpected * (1 + (nepaInflation / 100) / 2)) + (monthlyGeneratorSavingsExpected * (1 + (fuelInflation / 100) / 2));
   const newSystemCostMid = (systemCostMin + systemCostMax) / 2;
   const paybackMonths = Math.round(newSystemCostMid / firstYearMonthlySavingExpected);
 
@@ -1313,6 +1414,16 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const monthlyProductionArray = pshArray.map(h => actualPvKwp * h * 30 * systemEfficiency);
   const co2SavedKgPerYear = monthlyProductionArray.reduce((a, b) => a + b, 0) * 0.43;
   const treesEquivalent = Math.round(co2SavedKgPerYear / 21);
+
+  // #13 DEGRADATION MODEL — 0.6%/yr per IEC 61215 LeTID-free LFP modules
+  let degradationSum = 0;
+  for (let y = 1; y <= SYSTEM_LIFE_YEARS; y++) {
+    degradationSum += Math.pow(1 - DEGRADATION_RATE, y);
+  }
+  const avgDegradationFactor = degradationSum / SYSTEM_LIFE_YEARS; // ~0.924
+  const year1ProductionKwh = monthlyProductionArray.reduce((a, b) => a + b, 0);
+  const year10ProductionKwh = year1ProductionKwh * Math.pow(1 - DEGRADATION_RATE, 9);
+  const percentDropYear10 = (1 - Math.pow(1 - DEGRADATION_RATE, 9)) * 100;
 
   // STEP 7 — VALIDATION LAYER
   let validationError: string | undefined;
@@ -1338,19 +1449,23 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   }
 
   // DAYTIME ANALYSIS
+  // There is no night-hours UI field — the user's slider sets ONLY daytime hours.
+  // Therefore: totalHoursPerDay === daytimeHours, nighttimeHours === 0.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const appliancesWithDaytimeHours = inputs.appliances.map(appSelection => {
     const appDef = APPLIANCES.find(a => a.id === appSelection.id);
     const watts = appDef?.watts || 0;
-    const hoursPerDay = appDef?.typicalHours || 1;
-    let daytimeHours = 0;
-    if (hoursPerDay === 24) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let daytimeHours: number;
+    if ((appDef?.typicalHours || 0) === 24) {
+      // 24h appliances (CCTV, router, fridge): 12h day / 12h night
       daytimeHours = 12;
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      daytimeHours = (appSelection as any).daytimeHours ?? Math.min(hoursPerDay, 8);
+      daytimeHours = (appSelection as any).daytimeHours ?? Math.min(appDef?.typicalHours || 8, 8);
     }
-    return { name: appDef?.name || appSelection.id, watts, quantity: appSelection.qty, hoursPerDay, daytimeHours };
+    // hoursPerDay = daytimeHours (no separate night field exists in the UI)
+    return { name: appDef?.name || appSelection.id, watts, quantity: appSelection.qty, hoursPerDay: daytimeHours, daytimeHours };
   });
   const daytimeAnalysis = analyzeDaytimeLoad(appliancesWithDaytimeHours, totalPanelWatts, 5500);
 
@@ -1474,10 +1589,163 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     warnings: qaWarnings
   };
 
+  // ── #14 EFFICIENCY BREAKDOWN OBJECT ──────────────────────────────────────
+  const efficiencyBreakdown = {
+    panelLosses,
+    inverterEfficiency: inverterEff,
+    batteryRoundtrip,
+    wiringLosses,
+    directionFactor,
+    pitchFactor,
+    shadeFactor,
+    totalEfficiency,
+  };
+
+  // ── #11 ENERGY FLOW MODEL OBJECT ─────────────────────────────────────────
+  const energyFlow = {
+    daytimeLoadKwh,
+    nightLoadKwh,
+    solarUsedDirectKwh: solarUsedDirect,
+    excessSolarKwh: excessSolar,
+    batteryChargedKwh: batteryCharged,
+    nightSupplyFromBatteryKwh: nightSupply,
+    unmetLoadKwh: unmetLoad,
+    directSolarPct,
+    batteryPct,
+    unmetPct,
+    batteryInsufficientFlag,
+    batteryInsufficientWarning: batteryInsufficientFlag
+      ? `Battery insufficient for night usage: night load ${nightLoadKwh.toFixed(2)} kWh > usable capacity ${usableBattery.toFixed(2)} kWh`
+      : undefined,
+  };
+
+  // ── #12 SURGE ANALYSIS OBJECT ────────────────────────────────────────────
+  const inverterSurgeMarginPct = requiredInverterKva > 0
+    ? ((inverterKva - requiredInverterKva) / requiredInverterKva) * 100
+    : 0;
+  let inverterAssessment: 'risky' | 'acceptable' | 'oversized';
+  if (inverterSurgeMarginPct < 10) inverterAssessment = 'risky';
+  else if (inverterSurgeMarginPct <= 25) inverterAssessment = 'acceptable';
+  else inverterAssessment = 'oversized';
+
+  const surgeAnalysis = {
+    steadyPeakKw,
+    surgePeakKw: peakSurgeKw,
+    inverterRequired: requiredInverterKva,
+    inverterProvided: inverterKva,
+    surgeMarginPct: Math.round(inverterSurgeMarginPct),
+    assessment: inverterAssessment,
+    assessmentLabel:
+      inverterAssessment === 'risky' ? 'Inverter undersized — startup failure risk' :
+        inverterAssessment === 'acceptable' ? 'Acceptable surge margin' :
+          'Inverter oversized — consider downsizing',
+    undersizedWarning: inverterAssessment === 'risky'
+      ? `Inverter ${inverterKva} kVA < surge requirement ${requiredInverterKva.toFixed(1)} kVA — motor startup may trip inverter`
+      : undefined,
+  };
+
+  // ── #13 DEGRADATION MODEL OBJECT ─────────────────────────────────────────
+  const degradationModel = {
+    degradationRatePerYear: DEGRADATION_RATE,
+    year1ProductionKwh: Math.round(year1ProductionKwh),
+    year10ProductionKwh: Math.round(year10ProductionKwh),
+    percentDropYear10: Math.round(percentDropYear10 * 10) / 10,
+    averageOutputFactor: Math.round(avgDegradationFactor * 1000) / 1000,
+    systemLifetimeYears: SYSTEM_LIFE_YEARS,
+  };
+
+  // ── #15 BATTERY DoD DUAL MODEL ────────────────────────────────────────────
+  const theoreticalUsableKwh = batteryKwh * 0.90;
+  const conservativeUsableKwh = batteryKwh * 0.80;
+  const nightLoadNonZero = nightLoadKwh > 0 ? nightLoadKwh : 1;
+  const batteryDodModel = {
+    theoreticalUsableKwh: Math.round(theoreticalUsableKwh * 100) / 100,
+    conservativeUsableKwh: Math.round(conservativeUsableKwh * 100) / 100,
+    autonomyTheoreticalNights: Math.round((theoreticalUsableKwh / nightLoadNonZero) * 10) / 10,
+    autonomyConservativeNights: Math.round((conservativeUsableKwh / nightLoadNonZero) * 10) / 10,
+  };
+
+  // ── #16 RAINY SEASON ANALYSIS OBJECT ────────────────────────────────────
+  let rainySeasonStatus: 'safe' | 'borderline' | 'at-risk';
+  let rainySeasonStatusLabel: string;
+  if (rainyToLoadRatio >= 1.25) { rainySeasonStatus = 'safe'; rainySeasonStatusLabel = 'Safe (≥1.25× margin)'; }
+  else if (rainyToLoadRatio >= 1.15) { rainySeasonStatus = 'borderline'; rainySeasonStatusLabel = 'Borderline (1.15–1.25× margin)'; }
+  else { rainySeasonStatus = 'at-risk'; rainySeasonStatusLabel = 'At-Risk (<1.15× margin)'; }
+
+  const rainySeasonAnalysis = {
+    worstMonthProductionKwh: Math.round(rainyProduction * 100) / 100,
+    requiredWithMarginKwh: Math.round(targetDailyGenerationKwh * 1.15 * 100) / 100,
+    safetyRatio: Math.round(rainyToLoadRatio * 100) / 100,
+    status: rainySeasonStatus,
+    statusLabel: rainySeasonStatusLabel,
+  };
+
+  // ── #18 ENGINEERING TRUTH CHECK — all rule-based ─────────────────────────
+  const sizingRatio = targetDailyGenerationKwh > 0 ? dailySolarProduction / targetDailyGenerationKwh : 0;
+  let systemSizingLabel: 'undersized' | 'balanced' | 'oversized';
+  if (sizingRatio < 1.1) systemSizingLabel = 'undersized';
+  else if (sizingRatio <= 1.3) systemSizingLabel = 'balanced';
+  else systemSizingLabel = 'oversized';
+
+  const batteryNightsRatio = nightLoadNonZero > 0 ? usableBattery / nightLoadNonZero : 0;
+  let batteryAssessmentLabel: 'insufficient' | 'minimal' | 'comfortable';
+  if (batteryNightsRatio < 1) batteryAssessmentLabel = 'insufficient';
+  else if (batteryNightsRatio < 2) batteryAssessmentLabel = 'minimal';
+  else batteryAssessmentLabel = 'comfortable';
+
+  const truthWarnings: string[] = [];
+  if (systemSizingLabel === 'undersized') truthWarnings.push('System undersized: solar production < 1.1× daily load target');
+  if (batteryAssessmentLabel === 'insufficient') truthWarnings.push('Battery cannot cover one full night of load');
+  if (inverterAssessment === 'risky') truthWarnings.push(surgeAnalysis.undersizedWarning ?? 'Inverter undersized for surge');
+  if (rainySeasonStatus === 'at-risk') truthWarnings.push('Rainy season production below 1.15× safety margin');
+  if (batteryInsufficientFlag) truthWarnings.push(energyFlow.batteryInsufficientWarning ?? 'Battery insufficient for night usage');
+
+  const engineeringTruthCheck = {
+    systemSizingRatio: Math.round(sizingRatio * 100) / 100,
+    systemSizingLabel,
+    batteryNightsRatio: Math.round(batteryNightsRatio * 100) / 100,
+    batteryAssessment: batteryAssessmentLabel,
+    inverterSurgeMarginPct: Math.round(inverterSurgeMarginPct),
+    inverterAssessment,
+    warnings: truthWarnings,
+    passed: truthWarnings.length === 0,
+  };
+
+  // ═─ TRUTH ENFORCEMENT ENGINE ─═══════════════════════════════════
+  // Runs AFTER all calculations are complete. Passes a flat inputs
+  // bundle through the hard-clamp validation layer. The corrected
+  // values are attached as `truthEnforcement` and should be preferred
+  // by the UI over raw values when they differ.
+  // Honest simultaneous peak = max(all-day appliances, all-night appliances) nameplate watts
+  // Surge stays internal to inverter sizing — NOT exposed to users.
+  const simultaneousPeakKw = Math.max(dayActiveKw, nightActiveKw);
+  const truthEnforcement = enforceTruth({
+    dailyLoadKwh,
+    peakLoadKw: simultaneousPeakKw,
+    pvKwp: actualPvKwp,
+    batteryKwh,
+    inverterKva,
+    avgPSH,
+    systemEfficiency: totalEfficiency,
+    monthlyGenerationKwh: monthlyProductionArray,
+    monthlyGridCost: monthlyBill,
+    monthlyGeneratorCost: generatorSpend,
+    tariffPerKwh: discoTariff,
+    nightLoadKwh,
+    coveragePct,
+    systemMode,
+    // Pre-computed values the engine needs
+    afterSolarMonthlyCost,
+    monthlyGridSavings,
+    monthlyGeneratorSavings,
+    autonomyHours: Math.round(autonomyHours * 10) / 10,
+    autonomyNote,
+  });
+
   return {
     isValid,
     validationError,
-    peakLoadKw: peakSurgeKw,
+    peakLoadKw: simultaneousPeakKw,
     dailyLoadKwh,
     pvKwp: actualPvKwp,
     panelsNeeded,
@@ -1514,15 +1782,24 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     chargeController,
     daytimeAnalysis,
     truthQAReport,
+    // ── New installer-grade outputs ──
+    efficiencyBreakdown,
+    energyFlow,
+    surgeAnalysis,
+    degradationModel,
+    batteryDodModel,
+    rainySeasonAnalysis,
+    engineeringTruthCheck,
+    truthEnforcement,
   };
 }
 
 export function getInverterSize(kva: number): string {
   if (kva <= 1.5) return '1.5KVA';
-  if (kva <= 2)   return '2KVA';
-  if (kva <= 3)   return '3KVA';
-  if (kva <= 5)   return '5KVA';
-  if (kva <= 10)  return '10KVA';
+  if (kva <= 2) return '2KVA';
+  if (kva <= 3) return '3KVA';
+  if (kva <= 5) return '5KVA';
+  if (kva <= 10) return '10KVA';
   return '15KVA';
 }
 
@@ -1534,6 +1811,6 @@ export function fmt(n: number): string {
 /** Format naira in millions (e.g. ₦1.65M) */
 export function fmtM(n: number): string {
   if (n >= 1_000_000) return `₦${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000)     return `₦${(n / 1_000).toFixed(0)}K`;
+  if (n >= 1_000) return `₦${(n / 1_000).toFixed(0)}K`;
   return fmt(n);
 }
