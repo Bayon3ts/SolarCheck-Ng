@@ -1012,7 +1012,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
       const dayHrs = (appSelection as any).dayHours ?? (appSelection as any).daytimeHours ?? Math.min(appDef.typicalHours || 0, 12);
       const nightHrs = (appSelection as any).nightHours ?? Math.max(0, (appDef.typicalHours || 0) - dayHrs);
-console.log('APP CALC', appDef.id, {qty, dayHrs, nightHrs}, 'DAY KWH', getApplianceKwh(appDef, dayHrs, 0) * qty);
+      console.log('APP CALC', appDef.id, { qty, dayHrs, nightHrs }, 'DAY KWH', getApplianceKwh(appDef, dayHrs, 0) * qty);
 
       // ── FIX 2: Strict Night Load separation ────────────────────────────────
       // We no longer rely on typicalHours static split. 

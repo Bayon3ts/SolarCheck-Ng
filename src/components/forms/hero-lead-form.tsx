@@ -106,7 +106,7 @@ export default function HeroLeadForm() {
         </Button>
 
         <p className="text-center text-xs text-white/50 font-medium">
-          ₦0 cost • No obligation • 3 verified installers
+          ₦0 cost • No obligation • Verified installers
         </p>
       </form>
     </motion.div>

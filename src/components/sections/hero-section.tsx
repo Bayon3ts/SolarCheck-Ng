@@ -30,7 +30,7 @@ export default function HeroSection() {
 
   return (
     <section className="relative flex min-h-screen flex-col justify-center overflow-hidden">
-      
+
       {/* VIDEO LAYER */}
       <video
         autoPlay
@@ -44,13 +44,13 @@ export default function HeroSection() {
       </video>
 
       {/* MOBILE POSTER LAYER */}
-      <div 
+      <div
         className="md:hidden absolute inset-0 bg-cover bg-center"
-        style={{backgroundImage: 'url(/images/hero-poster.jpg)'}}
+        style={{ backgroundImage: 'url(/images/hero-poster.jpg)' }}
       />
 
       {/* GRADIENT OVERLAY LAYER */}
-      <div 
+      <div
         className="absolute inset-0"
         style={{
           background: `linear-gradient(
@@ -63,7 +63,7 @@ export default function HeroSection() {
       />
 
       {/* MOBILE OVERLAY (Top to bottom) */}
-      <div 
+      <div
         className="md:hidden absolute inset-0"
         style={{
           background: `linear-gradient(
@@ -121,8 +121,8 @@ export default function HeroSection() {
                         visible: {
                           opacity: 1,
                           y: 0,
-                          transition: { 
-                            duration: 0.5, 
+                          transition: {
+                            duration: 0.5,
                             ease: "easeOut",
                             delay: 0.2 + (line1Words.length * 0.08) // Starts 0.2s after Line 1 sequence begins
                           },
@@ -141,15 +141,15 @@ export default function HeroSection() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.8 }}
               >
-                Based on your location and monthly bill we show you exactly 
-                what solar costs and how much you save vs your generator. 
+                Based on your location and monthly bill we show you exactly
+                what solar costs and how much you save vs your generator.
                 Free. No obligation. Results in 60 seconds.
               </motion.p>
             </div>
 
             {/* CTA Buttons */}
             <div className="space-y-4">
-              <motion.div 
+              <motion.div
                 className="flex flex-col md:flex-row items-center gap-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -186,7 +186,7 @@ export default function HeroSection() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 1.2 }}
               >
-                ⚡ Free Load Analysis included · 500+ verified installers · ₦0 cost to homeowners
+                ⚡ Free Load Analysis included · Verified installers · ₦0 cost to homeowners
               </motion.p>
             </div>
           </div>
