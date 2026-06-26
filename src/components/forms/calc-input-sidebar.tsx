@@ -317,7 +317,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                                   <p className="text-sm font-semibold text-text-primary leading-tight truncate">
                                     {app.name}
                                     {app.isInverter && (
-                                      <span className="ml-2 text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase">Inverter</span>
+                                      <span className="ml-2 text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase">⚡ Inverter Tech</span>
                                     )}
                                   </p>
                                   <p className="text-xs text-text-muted">

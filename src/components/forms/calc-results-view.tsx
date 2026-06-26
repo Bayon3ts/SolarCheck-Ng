@@ -209,6 +209,39 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
         </div>
       </div>
 
+      {/* ── FRAGILE BATTERY WARNING ─────────────────────────────────────────── */}
+      {r.isFragileBatteryWarning && (
+        <div className="border-l-4 border-amber-500 bg-amber-50/50 p-6 my-6 rounded-r-lg">
+          <h3 className="text-lg font-bold text-amber-800 flex items-center gap-2">
+            ⚠️ Real-World Battery Limitation Warning
+          </h3>
+          <p className="mt-2 text-sm text-gray-700">
+            <strong>The Mirage:</strong> The system includes a {r.batteryKwh.toFixed(1)} kWh battery bank. While this sounds substantial on paper, it represents a highly restricted, minimal storage pool.
+          </p>
+          <p className="text-sm text-gray-700 mt-1">
+            <strong>The Hardware Reality:</strong> To prevent rapid cell degradation, the system enforces an 80% Depth of Discharge (DoD) buffer. Your true usable nighttime energy is only <strong>{(r.batteryKwh * 0.8).toFixed(2)} kWh</strong>.
+          </p>
+          
+          <hr className="my-4 border-amber-200" />
+          
+          <h4 className="font-semibold text-gray-900 text-sm">🚫 System Operational Boundaries (Hard Limits)</h4>
+          <p className="text-xs text-gray-600 mb-2">This configuration operates smoothly only because your current night usage is exceptionally low ({r.nightLoadKwh.toFixed(2)} kWh). Changing your evening routine will break this balance:</p>
+          <ul className="space-y-2 text-sm text-gray-700">
+            <li><strong>Add AC at Night ❌</strong> | A standard 1HP Inverter AC running on eco-mode draws roughly 350W–450W. Running it overnight will completely deplete your usable pool in less than 8 hours, leaving zero reserve for morning essentials.</li>
+            <li><strong>Add a Freezer/Fridge ❌</strong> | A standard refrigerator or chest freezer cycling over a 12-hour dark period draws 1.2 kWh to 2.0 kWh, instantly devouring up to 50% of your total usable storage.</li>
+            <li><strong>Lifestyle Spikes ❌</strong> | Increasing evening entertainment loads (home theaters, multiple desktop rigs, heavy security illumination) will quickly cross your voltage safety threshold and trigger a low-voltage cutoff before sunrise.</li>
+          </ul>
+
+          <hr className="my-4 border-amber-200" />
+
+          <h4 className="font-semibold text-gray-900 text-sm mb-2">💡 Strategic Engineering Paths</h4>
+          <ul className="space-y-1 text-sm text-gray-700 list-disc pl-4">
+            <li><strong>Option A (Budget Layout):</strong> Maintain the current hardware footprint. Enforce strict behavioral management: zero high-inductive cooling loads after 6:00 PM.</li>
+            <li><strong>Option B (Storage Expansion Upgrade):</strong> Scale the battery bank footprint from {r.batteryKwh.toFixed(1)} kWh up to 7.5 kWh – 10 kWh to transition the system from a fragile daytime-offset layout into a true, resilient nocturnal home-comfort setup.</li>
+          </ul>
+        </div>
+      )}
+
       {/* ── 2. COST & SAVINGS HERO ──────────────────────────────────────────── */}
       {r.efficiencyRecommendations && r.efficiencyRecommendations.length > 0 && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
@@ -329,6 +362,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
         <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
           <span className={`font-semibold ${r.seasonalRisk === 'Rainy season stable' ? 'text-green-600' : r.seasonalRisk === 'Rainy season borderline' ? 'text-amber-600' : 'text-red-600'}`}>
             {r.seasonalRisk === 'Rainy season stable' ? '✅' : r.seasonalRisk === 'Rainy season borderline' ? '⚠️' : '❌'} {r.seasonalRisk}
+            {r.rainySeasonCoverageLabel && r.seasonalRisk !== 'Rainy season stable' && ` — ${r.rainySeasonCoverageLabel}`}
           </span>
           <span>Max monthly: {Math.round(maxProduction).toLocaleString()} kWh</span>
           <span>Min monthly: {Math.round(Math.min(...(r.monthlyProduction ?? [0]))).toLocaleString()} kWh</span>
@@ -357,7 +391,11 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
                 label="Required roof space" 
                 value={<span title="Includes a 25% safety buffer for structural paths and panel spacing.">{r.totalRequiredAreaSqM} m²</span>} 
               />
-              <Row label="Coverage target" value={`${r.energyOffsetPct}%`} />
+              <Row label="Coverage target" value={
+                <span className={r.coverageLabel?.includes('Realistic') ? 'text-amber-600 font-bold' : ''}>
+                  {r.coverageLabel ?? `${r.energyOffsetPct}%`}
+                </span>
+              } />
               <Row label="Daily load" value={`${r.dailyLoadKwh?.toFixed(2)} kWh`} />
               <Row label="Peak load" value={`${r.peakLoadKw?.toFixed(2)} kW`} />
             </div>
@@ -406,7 +444,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
         <Section title="Daytime-Heavy Load Detected" icon="🌤️">
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
             <p className="text-sm font-semibold text-amber-800 mb-1">
-              {(dt.daytimeRatio * 100).toFixed(0)}% of your load runs during daylight hours
+              {dt.loadProfileLabel ?? `${(dt.daytimeRatio * 100).toFixed(0)}% of your load runs during daylight hours`}
             </p>
             <p className="text-sm text-amber-700">
               Recommended panel array: <strong>{dt.recommendedPanelKw.toFixed(1)} kWp</strong> for direct daytime use,

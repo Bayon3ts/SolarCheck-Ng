@@ -96,6 +96,8 @@ export interface DaytimeHeavyAnalysis {
   mpptInputsNeeded: number;
   recommendedInverterNote: string;
   panelStringSplit?: string;
+  /** Three-tier load profile label driven by nightLoadRatio thresholds */
+  loadProfileLabel?: string;
 }
 
 /* ── #14: Component Efficiency Breakdown ─────────────────────── */
@@ -196,6 +198,7 @@ export interface CalculatorResults {
 
   // Load
   dailyLoadKwh: number;
+  nightLoadKwh: number;
   peakLoadKw: number;
 
   // PV Array
@@ -207,13 +210,25 @@ export interface CalculatorResults {
   pvClassification: 'UNDER SIZED' | 'OPTIMAL' | 'OVER SIZED';
   seasonalRisk: 'Rainy season stable' | 'Rainy season borderline' | 'Rainy season at risk';
   energyOffsetPct: number;
+  /** Physics-honest coverage label — claims 100% only when usable generation > load × 1.15 */
+  coverageLabel: string;
+  /** Custom warning label for rainy season coverage */
+  rainySeasonCoverageLabel?: string;
+  /** Tiered load profile classification: Day-Dominant / Mixed / Night-Heavy */
+  loadProfileLabel: string;
 
   // Inverter & Battery
   inverterKva: number;
   batteryKwh: number;
   batteryType: string;
+  realUsableBattery: number;
+  batteryCoverageRatio: number;
+  batteryRiskLevel: 'safe' | 'moderate' | 'fragile' | 'critical';
   autonomyHours: number;
   autonomyNote?: string;  // Set when autonomy > 24h: explains it's due to low night load
+  isFragileBatteryWarning: boolean;
+  surgeFailureWarning?: string;
+  dynamicApplianceInsights: string[];
   batterySufficiency: 'insufficient' | 'limited' | 'adequate' | 'strong' | 'full' | 'daytime-optimized';
   // Cost
   systemCostMin: number;

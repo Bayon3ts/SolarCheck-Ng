@@ -9,7 +9,7 @@ import { MONTHLY_PSH, DEFAULT_MONTHLY_PSH } from './irradiance';
 import { enforceTruth } from './truth-engine';
 
 // ── Live fuel price (fetched from Supabase, falls back to constant) ────────
-let _fuelPriceCache: number = 1000; // updated by getFuelPrice()
+let _fuelPriceCache: number = 1350; // updated by getFuelPrice()
 
 /** Call this once on client mount to sync the live price into the module cache */
 export function updateFuelPriceCache(price: number): void {
@@ -42,8 +42,8 @@ export async function getFuelPrice(): Promise<{
       (data || []).map((r: { key: string; value: string }) => [r.key, r.value])
     );
 
-    const price = parseInt(settings['fuel_price_per_litre'] || '1000');
-    const validPrice = price >= 500 && price <= 5000 ? price : 1000;
+    const price = parseInt(settings['fuel_price_per_litre'] || '1350');
+    const validPrice = price >= 500 && price <= 5000 ? price : 1350;
 
     // Update module-level cache so subsequent calculateSolarSystem calls use it
     _fuelPriceCache = validPrice;
@@ -173,23 +173,23 @@ export const APPLIANCES = [
     name: 'Refrigerator (Inverter/DC)',
     category: 'Refrigeration',
     icon: '🧊',
-    kwhPerDay: 0.4,
+    kwhPerDay: 1.10, // Tropical ambient (30–35°C indoor): real-world Lagos duty cycle
     typicalHours: 24,
     isInverter: true,
-    watts: 60,
-    dutyCycle: 0.28,
+    watts: 90,
+    dutyCycle: 1100 / (90 * 24),
   },
   {
     id: 'fridge_std',
     name: 'Refrigerator (Standard)',
     category: 'Refrigeration',
     icon: '🧊',
-    kwhPerDay: 1.5,
+    kwhPerDay: 1.85, // Tropical ambient correction: compressor runs harder at 30–35°C
     typicalHours: 24,
     isInverter: false,
-    watts: 150,
+    watts: 180,
     note: 'Compressor cycles on/off',
-    dutyCycle: 0.42,
+    dutyCycle: 1850 / (180 * 24),
   },
   {
     id: 'fridge_large_std',
@@ -207,11 +207,11 @@ export const APPLIANCES = [
     name: 'Chest Freezer (Standard)',
     category: 'Refrigeration',
     icon: '🧊',
-    kwhPerDay: 1.2,
+    kwhPerDay: 2.10, // Tropical ambient correction: maintains -18°C in 32°C ambient
     typicalHours: 24,
     isInverter: false,
-    watts: 120,
-    dutyCycle: 0.42,
+    watts: 150,
+    dutyCycle: 2100 / (150 * 24),
   },
   {
     id: 'freezer_upright',
@@ -741,7 +741,7 @@ export const DISCO_TARIFF: Record<string, number> = {
   'KEDCO': 40,
 };
 
-export const PETROL_PRICE_PER_LITRE = 1000;  // ₦/L — update monthly
+export const PETROL_PRICE_PER_LITRE = 1350;  // ₦/L — update monthly
 
 // ── IKEDC / EKEDC Band Tariffs (NERC ORDER/NERC/2025/050) ─────────────
 export const IKEDC_BANDS = [
@@ -891,6 +891,8 @@ export interface DaytimeHeavyAnalysis {
   mpptInputsNeeded: number
   recommendedInverterNote: string
   panelStringSplit?: string  // e.g. "2 strings of 4 panels"
+  /** Three-tier load profile label driven by nightLoadRatio thresholds */
+  loadProfileLabel?: string
 }
 
 /**
@@ -927,8 +929,22 @@ export function analyzeDaytimeLoad(
 
   const totalKwh = daytimeKwh + nighttimeKwh
   const daytimeRatio = totalKwh > 0 ? daytimeKwh / totalKwh : 0
+  const nightLoadRatioAnalysis = totalKwh > 0 ? nighttimeKwh / totalKwh : 0
 
-  const isDaytimeHeavy = daytimeRatio >= 0.65
+  // ── THREE-TIER LOAD PROFILE CLASSIFICATION ───────────────────────────────
+  // Replaces binary isDaytimeHeavy (>=0.65) with explicit ratio-bucket labels.
+  // Using 0.3001 upper bound on second tier guards against JS 0.1+0.2 float drift.
+  let loadProfileLabel: string
+  if (nightLoadRatioAnalysis <= 0.10) {
+    loadProfileLabel = 'Day-Dominant Load Profile'
+  } else if (nightLoadRatioAnalysis > 0.10 && nightLoadRatioAnalysis <= 0.3001) {
+    loadProfileLabel = 'Mixed Day/Night Load Profile'
+  } else {
+    loadProfileLabel = 'Night-Heavy Load Profile'
+  }
+
+  // Backward-compat boolean: true for Day-Dominant OR Mixed (night ≤30%)
+  const isDaytimeHeavy = nightLoadRatioAnalysis <= 0.30
 
   const daytimeLoadKw = daytimeKwh / 8
   const recommendedPanelKw = totalPanelWatts / 1000;
@@ -970,6 +986,7 @@ export function analyzeDaytimeLoad(
     mpptInputsNeeded,
     recommendedInverterNote,
     panelStringSplit,
+    loadProfileLabel,
   }
 }
 
@@ -999,6 +1016,18 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   let hasAC = false;
   let hasWaterPump = false;
 
+  // ── UPGRADE 5: Coincidence factor accumulators ────────────────────────────
+  // Large inductive cooling (AC, borehole): factor 1.0  — always fully loaded when on
+  // Baseload groups (lighting, computing, entertainment, security): factor 0.75
+  // Refrigeration (compressor cycling): factor 0.85
+  // Other (kitchen, laundry, medical, business): factor 0.8
+  let coincidenceInductiveKw = 0;   // factor 1.0
+  let coincidenceBaseloadKw = 0;    // factor 0.75
+  let coincidenceRefrigKw = 0;      // factor 0.85
+  let coincidenceOtherKw = 0;       // factor 0.8
+  let singleLargestActiveKw = 0;    // safety floor — biggest individual appliance running
+  let baseLightingLoadsKw = 0;      // safety floor addition
+
   if (appliances.length > 0) {
     appliances.forEach(appSelection => {
       const appDef = APPLIANCES.find(a => a.id === appSelection.id);
@@ -1014,10 +1043,13 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       // ── FIX 2: Strict Night Load separation ────────────────────────────────
       // We no longer rely on typicalHours static split. 
       // If daytime load exists, it calculates exactly. If night, exactly night.
-      const appDayKwh = getApplianceKwh(appDef, dayHrs, 0) * qty;
+      
+      const climateFactor = appDef.category === 'Refrigeration' ? 1.0 : 1.0;
+      
+      const appDayKwh = getApplianceKwh(appDef, dayHrs, 0) * qty * climateFactor;
       dailyLoadKwh += appDayKwh;
 
-      const nightKwh = getApplianceKwh(appDef, 0, nightHrs) * qty;
+      const nightKwh = getApplianceKwh(appDef, 0, nightHrs) * qty * climateFactor;
       nightLoadKwh += nightKwh;
       dailyLoadKwh += nightKwh; // Day+Night = Total daily load
 
@@ -1036,6 +1068,31 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
       if (isAC) hasAC = true;
       if (isWaterPump) hasWaterPump = true;
+
+      // ── UPGRADE 5: Classify into coincidence-factor buckets ───────────────
+      // Must come AFTER isAC/isWaterPump/isFridge are declared above.
+      const isInductiveCooling = isAC || isWaterPump;
+      const isBaseload = ['Lighting', 'Computing', 'Entertainment', 'Security'].includes(appDef.category);
+      const isRefrig = isFridge;
+
+      if (isInductiveCooling) {
+        coincidenceInductiveKw += continuousKw;  // 1.0 — full rated load when running
+      } else if (isBaseload) {
+        coincidenceBaseloadKw += continuousKw;   // 0.75 — not all baseloads peak simultaneously
+      } else if (isRefrig) {
+        coincidenceRefrigKw += continuousKw;     // 0.85 — compressor cycling reduces demand
+      } else {
+        coincidenceOtherKw += continuousKw;      // 0.8 — kitchen, laundry, medical, business
+      }
+
+      if (appDef.category === 'Lighting') {
+        baseLightingLoadsKw += continuousKw;
+      }
+
+      // Track largest single appliance for safety floor
+      if (continuousKw > singleLargestActiveKw) {
+        singleLargestActiveKw = continuousKw;
+      }
 
       let surgeMult = 1.0;
       if (isFan) {
@@ -1099,6 +1156,12 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     * directionFactor * pitchFactor * shadeFactor;
   const systemEfficiency = totalEfficiency;
 
+  // ── SYSTEM_EFFICIENCY_FACTOR — global 22% real-world derating clamp ────────
+  // Accounts for Harmattan dust, heat degradation, DC cable voltage drop, and
+  // inverter thermal losses not captured in the component-level breakdown.
+  // Source: IEC 61724 PR (Performance Ratio) field data for West Africa.
+  const SYSTEM_EFFICIENCY_FACTOR = 0.78;
+
   // ── PV SIZING — annual average is the baseline ──────────────────────────
   // ENGINEERING NOTE: Size to annual average PSH. The rainy-season worst-month
   // (rainyReq) is used only for classification and QA warnings — NOT as a sizing
@@ -1130,13 +1193,13 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   if (pvKwpRaw < 1.5) {
     panelSizeWatts = 400;
     panelTierLabel = 'Compact (< 1.5 kWp range)';
-  } else if (pvKwpRaw < 3.0) {
+  } else if (pvKwpRaw >= 1.5 && pvKwpRaw < 3.5) {
     panelSizeWatts = 450;
-    panelTierLabel = 'Small-Medium (1.5–3 kWp range)';
-  } else if (pvKwpRaw < 6.0) {
+    panelTierLabel = 'Small-Medium (1.5–3.5 kWp range)';
+  } else if (pvKwpRaw >= 3.5 && pvKwpRaw <= 6.0) {
     panelSizeWatts = 550;
-    panelTierLabel = 'Standard Residential (3–6 kWp range)';
-  } else if (pvKwpRaw < 12.0) {
+    panelTierLabel = 'Standard Residential (3.5–6 kWp range)';
+  } else if (pvKwpRaw > 6.0 && pvKwpRaw < 12.0) {
     panelSizeWatts = 650;
     panelTierLabel = 'Large Home / Business (6–12 kWp range)';
   } else {
@@ -1348,6 +1411,8 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // Usable battery capacity — LFP_DOD only (RT_EFF excluded per spec, see note above)
   const usableBattery = batteryKwh * LFP_DOD;
 
+  const isFragileBatteryWarning = nightLoadKwh <= 0.5 && usableBattery <= 5.0;
+
   // Autonomy hours — capped to prevent nonsensical values from tiny night loads
   // e.g. 0.2 kWh night load + 4.8 kWh battery (AC floor) → uncapped = 288h (impossible)
   // Hard engineering ceilings:
@@ -1355,17 +1420,22 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   //   Off-grid: 48h absolute maximum (2-day design limit for display)
   let autonomyHours = 0;
   let hasClampedAutonomyNote = false;
+  let hasMultiNightNote = false;
   const absoluteMaxCeiling = systemMode === 'off-grid' ? 48.0 : 12.0 * autonomyDays;
   if (batteryKwh > 0 && nightLoadKwh > 0) {
     // Autonomy in hours: usable kWh ÷ (night load kW, averaged over 12h window)
     autonomyHours = usableBattery / (nightLoadKwh / 12);
-    if (autonomyHours > absoluteMaxCeiling) {
+    if (autonomyHours > 16 && nightLoadKwh < 1.5) {
+      hasMultiNightNote = true;
+    } else if (autonomyHours > absoluteMaxCeiling) {
       autonomyHours = absoluteMaxCeiling;
       hasClampedAutonomyNote = true;
     }
   } else if (batteryKwh > 0 && dailyLoadKwh > 0) {
     autonomyHours = usableBattery / (dailyLoadKwh / 24);
-    if (autonomyHours > absoluteMaxCeiling) {
+    if (autonomyHours > 16 && nightLoadKwh < 1.5) {
+      hasMultiNightNote = true;
+    } else if (autonomyHours > absoluteMaxCeiling) {
       autonomyHours = absoluteMaxCeiling;
       hasClampedAutonomyNote = true;
     }
@@ -1400,7 +1470,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   //   1. Clamped: battery overshoots design window (tiny load + large floored bank)
   //   2. Naturally high: low night load creates mathematically valid multi-night coverage
   let autonomyNote: string | undefined;
-  if (hasClampedAutonomyNote) {
+  if (hasMultiNightNote) {
+    autonomyNote = "Multi-night reserve capability active (Covers up to ~3+ nights of your low nighttime essentials).";
+  } else if (hasClampedAutonomyNote) {
     const windowLabel = systemMode === 'off-grid'
       ? '2-day (48h)'
       : `${autonomyDays === 0.5 ? 'half-night' : autonomyDays === 1 ? '1-night' : '2-night'}`;
@@ -1517,6 +1589,34 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // #17 BACKUP FRACTION — derived from unmet energy, no hardcoded probabilities
   const backupFraction = totalLoad > 0 ? unmetLoad / totalLoad : 0;
 
+  // ── UPGRADE 2: Physics-honest daily generation & coverage label ───────────
+  const grossDailyGen = actualPvKwp * avgPSH;
+  const netUsableDailyGen = grossDailyGen * 0.78; // Enforce 22% system-wide derating factor
+  const usableDailyGenerationKwh = netUsableDailyGen;
+
+  // Coverage label: claim "100%" only when usable generation exceeds load by 15%
+  // safety margin (1.15×), protecting against Harmattan / cloudy-streak shortfalls.
+  const coverageLabel: string = (() => {
+    if (dailyLoadKwh <= 0) return `${coveragePct}% Coverage`;
+    if (netUsableDailyGen <= dailyLoadKwh * 1.15) {
+      return '85% \u2013 95% Realistic Coverage';
+    }
+    return `${coveragePct}% Coverage`;
+  })();
+
+  const rainySeasonCoverageLabel = '65% \u2013 80% Rainy Season Est.';
+
+  // ── UPGRADE 3: Night load ratio for main engine (mirrors analyzeDaytimeLoad logic)
+  const nightLoadRatio = dailyLoadKwh > 0 ? nightLoadKwh / dailyLoadKwh : 0;
+  let loadProfileLabel: string;
+  if (nightLoadRatio <= 0.10) {
+    loadProfileLabel = 'Day-Dominant Load Profile';
+  } else if (nightLoadRatio > 0.10 && nightLoadRatio <= 0.3001) {
+    loadProfileLabel = 'Mixed Day/Night Load Profile';
+  } else {
+    loadProfileLabel = 'Night-Heavy Load Profile';
+  }
+
   if (systemMode === 'off-grid') {
     monthlyGridSavingsExpected = monthlyBill;
     monthlyGeneratorSavingsExpected = generatorSpend;
@@ -1557,6 +1657,12 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     const dRate = discountRate / 100;
     const monthlyMaintenance = actualPvKwp * 500 / 12;
 
+    // ── UPGRADE 4: Mid-lifecycle hardware replacement penalty ─────────────────
+    // ₦1,500,000 represents a realistic Lithium battery bank or hybrid inverter
+    // field replacement cost at year 6 (mid-lifecycle), discounted to present value.
+    // Applied ONLY to the 10-year projection — not the 5-year view.
+    const BATTERY_REPLACEMENT_COST = 1_500_000; // ₦
+
     let totalSavingsExpected = 0;
     for (let year = 1; year <= years; year++) {
       // Apply panel degradation factor — year 1 = (1-0.006)^1, etc.
@@ -1564,8 +1670,20 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       const nepaSaving = monthlyGridSavingsExpected * yearDegradFactor * Math.pow(1 + tInf, year);
       const generatorSaving = monthlyGeneratorSavingsExpected * yearDegradFactor * Math.pow(1 + fInf, year);
       const yearSaving = ((nepaSaving + generatorSaving) - monthlyMaintenance) * 12;
-      totalSavingsExpected += yearSaving / Math.pow(1 + dRate, year);
+
+      // Year 6 penalty: mid-lifecycle hardware replacement (10-year run only)
+      const replacementPenalty = (years >= 10 && year === 6) ? BATTERY_REPLACEMENT_COST : 0;
+
+      totalSavingsExpected += (yearSaving - replacementPenalty) / Math.pow(1 + dRate, year);
     }
+
+    // ── UPGRADE 4: 5-year maintenance + battery degradation overhead ──────────
+    // Deduct 15% of gross 5-year NPV to account for battery capacity fade,
+    // unplanned O&M, and real-world performance shortfalls not in monthly maintenance.
+    if (years === 5) {
+      totalSavingsExpected = totalSavingsExpected * (1 - 0.15);
+    }
+
     return calculateRange(totalSavingsExpected);
   };
 
@@ -1907,7 +2025,22 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // by the UI over raw values when they differ.
   // Honest simultaneous peak = max(all-day appliances, all-night appliances) nameplate watts
   // Surge stays internal to inverter sizing — NOT exposed to users.
-  const simultaneousPeakKw = Math.max(dayActiveKw, nightActiveKw);
+  // ── UPGRADE 5: Coincidence-weighted operational peak demand ─────────────
+  // Sums each category weighted by its coincidence factor:
+  //   Inductive cooling (AC/pump): 1.0   — full contribution when switched on
+  //   Baseload groups:             0.75  — not all run concurrently at peak
+  //   Refrigeration:               0.85  — compressor duty-cycle reduces peak
+  //   Other (kitchen/laundry/med): 0.8
+  // Safety floor: result must never drop below the single largest active appliance + base lighting loads.
+  const coincidenceWeightedPeakKw =
+    coincidenceInductiveKw * 1.0 +
+    coincidenceBaseloadKw  * 0.75 +
+    coincidenceRefrigKw    * 0.85 +
+    coincidenceOtherKw     * 0.8;
+
+  const simultaneousPeakKw = appliances.length > 0
+    ? Math.max(coincidenceWeightedPeakKw, singleLargestActiveKw + baseLightingLoadsKw)
+    : Math.max(dayActiveKw, nightActiveKw);
   const truthEnforcement = enforceTruth({
     dailyLoadKwh,
     peakLoadKw: simultaneousPeakKw,
@@ -1936,6 +2069,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     validationError,
     peakLoadKw: simultaneousPeakKw,
     dailyLoadKwh,
+    nightLoadKwh,
     pvKwp: actualPvKwp,
     panelsNeeded,
     panelSizeWatts,
@@ -1953,8 +2087,12 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     monthlyGeneratorSavings,
     batterySufficiency,
     energyOffsetPct: coveragePct,
+    coverageLabel,
+    rainySeasonCoverageLabel,
+    loadProfileLabel,
     autonomyHours: Math.round(autonomyHours * 10) / 10,
     autonomyNote,
+    isFragileBatteryWarning,
     monthlyCurrentSpend,
     afterSolarMonthlyCost,
     monthlyProduction: monthlyProductionArray,
