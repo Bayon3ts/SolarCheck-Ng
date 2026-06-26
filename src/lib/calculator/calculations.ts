@@ -909,6 +909,7 @@ export function analyzeDaytimeLoad(
     daytimeHours: number
   }>,
   totalPanelWatts: number,
+  actualBatteryKwh: number, // <--- New parameter
   singleMpptMaxW: number = 5500
 ): DaytimeHeavyAnalysis {
 
@@ -930,15 +931,11 @@ export function analyzeDaytimeLoad(
   const isDaytimeHeavy = daytimeRatio >= 0.65
 
   const daytimeLoadKw = daytimeKwh / 8
-  const recommendedPanelKw = isDaytimeHeavy
-    ? Math.ceil((daytimeLoadKw + (nighttimeKwh / 8)) * 1.3 * 10) / 10
-    : totalPanelWatts / 1000
+  const recommendedPanelKw = totalPanelWatts / 1000;
 
-  const rawNightBatteryKwh = isDaytimeHeavy
-    ? Math.ceil(nighttimeKwh * 1.2 * 10) / 10
-    : 0
-  const batteryFloor = 0;
-  const recommendedNightBatteryKwh = Math.max(rawNightBatteryKwh, batteryFloor)
+  // Bind the dynamic engineering text block explicitly to the final validated state variable
+  // instead of computing a disjoint battery floor.
+  const recommendedNightBatteryKwh = actualBatteryKwh;
 
   const panelWatts = recommendedPanelKw * 1000
   const requiresMultipleMppt = panelWatts > singleMpptMaxW
@@ -1147,9 +1144,26 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     panelTierLabel = 'Commercial Scale (> 12 kWp range)';
   }
 
-  // Round UP panel count — actual installed kWp will always be ≥ target
-  const panelsNeeded = Math.ceil((pvKwpRaw * 1000) / panelSizeWatts);
-  const actualPvKwp = (panelsNeeded * panelSizeWatts) / 1000;
+  // ── FIX: EVEN PANEL COUNT CONSTRAINT ────────────────────────────────────────
+  // Standard hybrid inverters require balanced PV strings (e.g., 2S2P, 2S3P).
+  // Total panel count must ALWAYS be an even number.
+  let panelsNeeded = Math.ceil((pvKwpRaw * 1000) / panelSizeWatts);
+  
+  if (panelsNeeded % 2 !== 0) {
+    // Test if rounding DOWN still meets the requested daily generation
+    const capacityIfRoundedDown = ((panelsNeeded - 1) * panelSizeWatts) / 1000;
+    const generationIfRoundedDown = capacityIfRoundedDown * avgPSH * systemEfficiency;
+    
+    // Round DOWN if it's already significantly over-generating (or within a tiny 2% tolerance)
+    // Otherwise, round UP to ensure strict 100% target coverage is met safely.
+    if (panelsNeeded > 1 && generationIfRoundedDown >= targetDailyGenerationKwh * 0.98) {
+      panelsNeeded -= 1;
+    } else {
+      panelsNeeded += 1;
+    }
+  }
+  
+  let actualPvKwp = (panelsNeeded * panelSizeWatts) / 1000;
 
   // ── BATTERY SIZING — spec-accurate LFP constants ─────────────────────────
   // ENGINEERING NOTE:
@@ -1157,8 +1171,12 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   //   RT_EFF   = 0.92  (Round-trip efficiency: inverter + wiring losses)
   //   requiredUsable = nightLoadKwh × autonomyDays  (hybrid)
   //   requiredUsable = dailyLoadKwh × autonomyDays  (off-grid)
-  //   batteryKwh = requiredUsable / (LFP_DOD × RT_EFF)
-  // These same constants MUST be used in autonomy calculation to stay consistent.
+  //   batteryKwh = requiredUsable / LFP_DOD   ← RT_EFF intentionally excluded:
+  //     RT_EFF is a per-cycle thermodynamic loss; it belongs in the solar
+  //     production chain (systemEfficiency), NOT in nameplate battery sizing.
+  //     Including it double-counts losses and forces clients to buy ~13%
+  //     more physical battery modules than engineering spec requires.
+  // usableBattery = batteryKwh × LFP_DOD  (same formula — no RT_EFF).
   const LFP_DOD = 0.80;
   const RT_EFF = 0.92;
   const BATT_INCREMENT = 1.2; // kWh per module (100Ah@12V)
@@ -1178,9 +1196,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     requiredUsableKwh = nightLoadKwh * autonomyDays;
   }
 
-  // batteryKwh = requiredUsable / (LFP_DOD × RT_EFF)
+  // batteryKwh = requiredUsable / LFP_DOD  (RT_EFF excluded — see note above)
   let batteryKwh = requiredUsableKwh > 0
-    ? requiredUsableKwh / (LFP_DOD * RT_EFF)
+    ? requiredUsableKwh / LFP_DOD
     : 0;
 
   if (systemMode !== 'grid-tied') {
@@ -1189,24 +1207,42 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       batteryKwh = Math.ceil(batteryKwh / BATT_INCREMENT) * BATT_INCREMENT;
     }
 
-    // Nigerian engineering minimum floors:
-    // A hybrid/off-grid system requires a battery to operate, even if
-    // mathematically 0 (e.g. user set all loads to run strictly in daytime).
-    const minBattery = hasAC || hasWaterPump ? 4.8 : BATT_MIN;
+    // Engineering minimum floors — two constraints, take the larger:
+    //   1. Hardware minimum: any hybrid/off-grid system needs a physical bank to operate.
+    //   2. Night-load minimum: battery MUST cover at least 1 full night of load at LFP_DOD.
+    //      Without this, a user drawing 8 kWh overnight could be recommended a 4.8 kWh bank.
+    const nightLoadMinBattery = nightLoadKwh > 0 ? nightLoadKwh / LFP_DOD : 0;
+    const hardwareMin = hasAC || hasWaterPump ? 4.8 : BATT_MIN;
+    const minBattery = Math.max(hardwareMin, nightLoadMinBattery);
     batteryKwh = Math.max(batteryKwh, minBattery);
 
     batteryKwh = Math.round(batteryKwh * 10) / 10;
   }
 
-  // Autonomy calculation — MUST use identical constants (LFP_DOD × RT_EFF)
-  // usableBattery = batteryKwh × LFP_DOD × RT_EFF
-  const usableBattery = batteryKwh * LFP_DOD * RT_EFF;
+  // Usable battery capacity — LFP_DOD only (RT_EFF excluded per spec, see note above)
+  const usableBattery = batteryKwh * LFP_DOD;
+
+  // Autonomy hours — capped to prevent nonsensical values from tiny night loads
+  // e.g. 0.2 kWh night load + 4.8 kWh battery (AC floor) → uncapped = 288h (impossible)
+  // Hard engineering ceilings:
+  //   Hybrid:   12h × autonomyDays  (exact design window — 1 night = 12h, 2 nights = 24h)
+  //   Off-grid: 48h absolute maximum (2-day design limit for display)
   let autonomyHours = 0;
+  let hasClampedAutonomyNote = false;
+  const absoluteMaxCeiling = systemMode === 'off-grid' ? 48.0 : 12.0 * autonomyDays;
   if (batteryKwh > 0 && nightLoadKwh > 0) {
     // Autonomy in hours: usable kWh ÷ (night load kW, averaged over 12h window)
     autonomyHours = usableBattery / (nightLoadKwh / 12);
+    if (autonomyHours > absoluteMaxCeiling) {
+      autonomyHours = absoluteMaxCeiling;
+      hasClampedAutonomyNote = true;
+    }
   } else if (batteryKwh > 0 && dailyLoadKwh > 0) {
     autonomyHours = usableBattery / (dailyLoadKwh / 24);
+    if (autonomyHours > absoluteMaxCeiling) {
+      autonomyHours = absoluteMaxCeiling;
+      hasClampedAutonomyNote = true;
+    }
   }
 
   // Battery sufficiency rating
@@ -1234,58 +1270,69 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     else batterySufficiency = 'full';         // well over a night
   }
 
-  // Autonomy note — emitted when autonomy > 24h so the UI can clarify it's
-  // due to low night usage, NOT full-day backup capability.
+  // Autonomy note — two cases:
+  //   1. Clamped: battery overshoots design window (tiny load + large floored bank)
+  //   2. Naturally high: low night load creates mathematically valid multi-night coverage
   let autonomyNote: string | undefined;
-  if (autonomyHours > 24 && systemMode !== 'off-grid') {
+  if (hasClampedAutonomyNote) {
+    const windowLabel = systemMode === 'off-grid'
+      ? '2-day (48h)'
+      : `${autonomyDays === 0.5 ? 'half-night' : autonomyDays === 1 ? '1-night' : '2-night'}`;
+    autonomyNote = `Battery capacity exceeds your ${windowLabel} autonomy design window. Shown at the ${absoluteMaxCeiling.toFixed(0)}h ceiling — your actual reserve is larger than your typical load requires.`;
+  } else if (autonomyHours > 24 && systemMode !== 'off-grid') {
     const avgNightWatts = Math.round(nightLoadKw * 1000);
     autonomyNote = `${autonomyHours.toFixed(1)} hours of autonomy reflects your low nightly load (~${avgNightWatts}W average, ${nightLoadKwh.toFixed(2)} kWh/night). This is not a full-day backup claim — the battery covers your night load for multiple nights precisely because your night consumption is small.`;
   }
 
   // ── FIX 6: INVERTER SIZING — load-based, not PV-based ────────────────────
-  // ENGINEERING NOTE: Inverter kVA must match AC output demand, NOT solar input.
-  // The old code used pvKwp × 1.1 which oversizes inverter when PV is oversized.
-  // Correct method:
-  //   1. Sum all simultaneous watts (continuous rating)
-  //   2. Add the startup surge of the SINGLE heaviest motor (not all at once)
-  //   3. Apply 25% safety margin
-  //   4. Nigerian floor: any AC present → min 5kVA
-  const inverterSizes = [3, 5, 8, 10, 15, 20, 30];
+  // ENGINEERING NOTE: Inverter capacity should be sized based on Connected Peak Load (Watts)
+  // with a standard safety surge margin of 25%.
+  const steadyPeakKw = simultaneousLoadKw;
+  const peakLoadWatts = steadyPeakKw * 1000;
+  const targetCapacity = peakLoadWatts * 1.25;
 
-  // #12 INVERTER SIZING — surge-aware per spec
-  // inverter_capacity >= max(peak_load * 1.25, peak_surge_load)
-  // Uses same surge multipliers as the load loop above.
-  let heaviestStartupAddKw = 0;
-  if (appliances.length > 0) {
-    appliances.forEach(appSelection => {
-      const appDef = APPLIANCES.find(a => a.id === appSelection.id);
-      if (!appDef || appSelection.qty <= 0) return;
-      const contKw = (appDef.watts * appSelection.qty) / 1000;
-      const isFanA = appDef.id.startsWith('fan_');
-      const isACA = appDef.id.startsWith('ac_');
-      const isWaterPumpA = appDef.id.startsWith('borehole_');
-      const isFridgeA = appDef.category === 'Refrigeration';
-      let m = 1.0;
-      if (isFanA) m = 1.2;
-      else if (isWaterPumpA) m = 5.0;
-      else if (isACA) m = appDef.isInverter ? 2.0 : 3.5;
-      else if (isFridgeA) m = appDef.isInverter ? 1.5 : 3.0;
-      else if (appDef.category === 'Laundry') m = 2.0;
-      const startupAdd = contKw * (m - 1.0);
-      if (startupAdd > heaviestStartupAddKw) heaviestStartupAddKw = startupAdd;
-    });
+  let recommendedInverterKva = 3.0; // Default baseline
+  if (targetCapacity <= 3000) {
+    recommendedInverterKva = 3.0;
+  } else if (targetCapacity <= 5000) {
+    recommendedInverterKva = 5.0;
+  } else if (targetCapacity <= 8000) {
+    recommendedInverterKva = 8.0;
+  } else if (targetCapacity <= 10000) {
+    // 8,055W * 1.25 = 10,068W -> extremely close to 10kVA safety line
+    recommendedInverterKva = 10.0; 
+  } else if (targetCapacity <= 12000) {
+    // Only step up to 15kVA if surge target strictly exceeds 12kW
+    recommendedInverterKva = 12.0;
+  } else if (targetCapacity <= 15000) {
+    recommendedInverterKva = 15.0;
+  } else if (targetCapacity <= 20000) {
+    recommendedInverterKva = 20.0;
+  } else {
+    recommendedInverterKva = 30.0;
   }
 
-  // Steady peak (continuous) with 25% margin
-  const steadyPeakKw = simultaneousLoadKw;
-  const steadyRequired = steadyPeakKw * 1.25;
-  // Surge peak = all loads running simultaneously at surge current
-  const surgeRequired = peakSurgeKw;
-  // Inverter must satisfy both constraints
-  const rawInverterKva = Math.max(steadyRequired, surgeRequired);
+  // Nigerian floor: any AC present -> min 5kVA
   const minInverterKva = hasAC ? 5 : hasWaterPump ? 5 : 3;
-  const requiredInverterKva = Math.max(rawInverterKva, minInverterKva);
-  const inverterKva = inverterSizes.find(sz => sz >= requiredInverterKva) ?? 30;
+  const inverterKva = Math.max(recommendedInverterKva, minInverterKva);
+  
+  // Re-declare variables for the downstream QA layers
+  const requiredInverterKva = Math.max(targetCapacity / 1000, minInverterKva);
+
+  // ========================================================
+  // FIX: Inverter PV Input Cap (DC:AC Ratio Clamp)
+  // ========================================================
+  // Standard hybrid inverters cap max PV input at ~125% of AC capacity
+  const maxAllowedPvKwp = inverterKva * 1.25; 
+
+  if (actualPvKwp > maxAllowedPvKwp) {
+    actualPvKwp = maxAllowedPvKwp;
+    
+    // Re-calculate panel count to remain even and matching the clamped kWp
+    const rawPanelCount = (actualPvKwp * 1000) / panelSizeWatts;
+    panelsNeeded = Math.floor(rawPanelCount / 2) * 2; // Floor to nearest even number
+    actualPvKwp = (panelsNeeded * panelSizeWatts) / 1000;
+  }
 
   // PV classification against annualReq (the actual sizing basis).
   // rainyReq is used ONLY for seasonalRisk below — it is a risk flag, not a sizing threshold.
@@ -1467,7 +1514,8 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     // hoursPerDay = daytimeHours (no separate night field exists in the UI)
     return { name: appDef?.name || appSelection.id, watts, quantity: appSelection.qty, hoursPerDay: daytimeHours, daytimeHours };
   });
-  const daytimeAnalysis = analyzeDaytimeLoad(appliancesWithDaytimeHours, totalPanelWatts, 5500);
+  // Fix 7: Bind daytime text descriptions directly to actualPvKwp and batteryKwh state values
+  const daytimeAnalysis = analyzeDaytimeLoad(appliancesWithDaytimeHours, actualPvKwp * 1000, batteryKwh, 5500);
 
 
   // --- TRUTH QA LAYER ---
@@ -1511,8 +1559,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // Deduct ONLY if there is a genuine math mismatch (> 15% discrepancy).
   // High autonomy from low night load is physically valid — do NOT penalize it.
   let batteryIntegrity: 'PASS' | 'BORDERLINE' | 'FAIL' = 'PASS';
+  // Match usableBattery formula: LFP_DOD only, no RT_EFF double-accounting
   const theoreticalAutonomy = nightLoadKwh > 0
-    ? (batteryKwh * LFP_DOD * RT_EFF) / (nightLoadKwh / 12)
+    ? (batteryKwh * LFP_DOD) / (nightLoadKwh / 12)
     : 0;
   const autonomyDiff = Math.abs(autonomyHours - theoreticalAutonomy);
   const autonomyTolerance = Math.max(theoreticalAutonomy * 0.10, 0.5); // 10% or 30min
@@ -1566,9 +1615,25 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // autonomyHours > 24 in a non-off-grid system with large battery claiming full backup
   // is a marketing flag — but if night load is genuinely low it's physically valid.
   // We only flag if battery is large (>15kWh) yet autonomyHours seems inflated vs off-grid claim.
+  // Autonomy >48h check is now largely redundant (ceiling clamp prevents it),
+  // but keep as a final safety net for edge cases the clamp misses.
   if (systemMode !== 'off-grid' && autonomyHours > 48 && !autonomyNote) {
     qaScore -= 10;
     qaWarnings.push(`Autonomy > 48h on a ${systemMode} system — verify night load calculation.`);
+  }
+
+  // Rule 4: Over-generation guard — daily solar output should not exceed
+  // (dailyLoad + batteryKwh) × 1.20 per engineering spec.
+  // Handled as a soft QA penalty (not a hard constraint) because user autonomy
+  // preferences legitimately drive larger arrays in some configurations.
+  const maxAllowedDailyGeneration = (dailyLoadKwh + batteryKwh) * 1.20;
+  if (dailySolarProduction > maxAllowedDailyGeneration && targetDailyGenerationKwh > 0) {
+    qaScore -= 10;
+    qaWarnings.push(
+      `Over-generation: daily solar output ${dailySolarProduction.toFixed(1)} kWh exceeds ` +
+      `load + battery ceiling of ${maxAllowedDailyGeneration.toFixed(1)} kWh (>20% excess). ` +
+      `Consider reducing array size or increasing battery storage.`
+    );
   }
 
   // Clamp score to [0, 100]

@@ -201,6 +201,34 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
 
   const totalApplianceCount = inputs.appliances.reduce((sum, app) => sum + app.qty, 0);
 
+  // ── Summary: watts (instantaneous) + day/night energy split ──────────────
+  // totalWatts: peak simultaneous draw — what installers size inverters/wiring against
+  // dayKwh:    energy consumed 6am–6pm (mirrors engine's daytimeHours logic)
+  // nightKwh:  remaining load that requires battery backup in a hybrid system
+  const totalWatts = inputs.appliances.reduce((sum, app) => {
+    const def = APPLIANCES.find(a => a.id === app.id);
+    if (!def || app.qty <= 0) return sum;
+    return sum + def.watts * app.qty;
+  }, 0);
+
+  const applianceDayKwh = inputs.appliances.reduce((sum, app) => {
+    const def = APPLIANCES.find(a => a.id === app.id);
+    if (!def || app.qty <= 0) return sum;
+    const dayHrs = app.daytimeHours ?? Math.min(def.typicalHours, 8);
+    return sum + getApplianceKwh(def, dayHrs, 0) * app.qty;
+  }, 0);
+
+  const applianceNightKwh = inputs.appliances.reduce((sum, app) => {
+    const def = APPLIANCES.find(a => a.id === app.id);
+    if (!def || app.qty <= 0) return sum;
+    const dayHrs = app.daytimeHours ?? Math.min(def.typicalHours, 8);
+    const nightHrs = Math.max(0, def.typicalHours - dayHrs);
+    return sum + getApplianceKwh(def, 0, nightHrs) * app.qty;
+  }, 0);
+
+  // True daily total = day + night (totalApplianceKwh only tracks day portion)
+  const applianceTotalKwh = applianceDayKwh + applianceNightKwh;
+
   const CATEGORIES = Array.from(new Set(APPLIANCES.map(a => a.category)));
 
   
@@ -219,9 +247,28 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               Add appliances for a precise system size. Skip to use our standard estimate.
             </p>
             {totalApplianceCount > 0 && (
-              <p className="text-xs text-primary font-semibold mt-1">
-                {totalApplianceCount} selected — {totalApplianceKwh.toFixed(1)} kWh/day
-              </p>
+              <div className="space-y-1.5 mb-1">
+                {/* Top line — count + instantaneous connected load in watts */}
+                <p className="text-sm font-semibold text-primary">
+                  {totalApplianceCount} selected — {totalWatts.toLocaleString()}W connected load
+                </p>
+                {/* Day/night energy breakdown + daily total */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
+                  <span className="flex items-center gap-1">
+                    <span>☀️</span>
+                    Day:{" "}<span className="font-semibold text-text-primary">{applianceDayKwh.toFixed(1)} kWh</span>
+                  </span>
+                  <span className="text-border hidden sm:inline">|</span>
+                  <span className="flex items-center gap-1">
+                    <span>🌙</span>
+                    Night:{" "}<span className="font-semibold text-text-primary">{applianceNightKwh.toFixed(1)} kWh</span>
+                  </span>
+                  <span className="text-border hidden sm:inline">|</span>
+                  <span>
+                    Total:{" "}<span className="font-semibold text-text-primary">{applianceTotalKwh.toFixed(1)} kWh/day</span>
+                  </span>
+                </div>
+              </div>
             )}
           </div>
         </div>
