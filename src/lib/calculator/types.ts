@@ -61,6 +61,14 @@ export interface CalculatorInputs {
 
   // Lagos-specific band selection
   lagosElectricityBand?: string; // e.g. 'band_a', 'band_b', etc.
+
+  /**
+   * System optimisation priority.
+   * 'maximum_protection' (default): strict hardware floors — 5 kVA mandatory when AC present.
+   * 'budget_conscious': allows step-down to 3 kVA / 24V class when total connected
+   *   load is below 2 200 W; UI must display a load-management warning banner.
+   */
+  optimizationMode?: 'maximum_protection' | 'budget_conscious';
 }
 
 export interface CostBand {
@@ -248,6 +256,30 @@ export interface CalculatorResults {
 
   // ── Truth Enforcement Engine output ────────────────────────
   truthEnforcement: import('./truth-engine').TruthEnforcementResult;
+
+  // ── Upgrade Block B: Roof Footprint Spatial Guardrail ────────
+  /**
+   * Total physical roof area (m²) required for the PV array, including a mandatory
+   * 25% buffer for racking spacing, wind-load clearance, and installer access paths.
+   * Formula: ⌈panelsNeeded × panelSurfaceAreaSqM × 1.25⌉
+   */
+  totalRequiredAreaSqM: number;
+
+  // ── Upgrade Block C: Appliance Remediation Engine ─────────────
+  /**
+   * Actionable upgrade tips generated when pvClassification === 'UNDER SIZED'.
+   * Empty array when the system is OPTIMAL or OVER SIZED.
+   * Each string is a ready-to-render UI banner message.
+   */
+  efficiencyRecommendations: string[];
+
+  // ── Upgrade Block A: Budget Mode Signal ──────────────────────
+  /**
+   * True when optimizationMode === 'budget_conscious' AND the AC-present hardware
+   * floor has been relaxed from 5 kVA to 3 kVA due to a sub-2 200 W connected load.
+   * The UI must render a Load Management Alert Banner when this flag is true.
+   */
+  budgetModeActive: boolean;
 }
 
 export interface LeadCaptureData {

@@ -210,6 +210,21 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
       </div>
 
       {/* ── 2. COST & SAVINGS HERO ──────────────────────────────────────────── */}
+      {r.efficiencyRecommendations && r.efficiencyRecommendations.length > 0 && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+          <h4 className="text-emerald-800 font-bold mb-2 flex items-center gap-2">
+            <span>💡</span> Optimization Tips
+          </h4>
+          <ul className="space-y-2">
+            {r.efficiencyRecommendations.map((tip, idx) => (
+              <li key={idx} className="text-sm text-emerald-700 leading-relaxed">
+                {tip}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="bg-gradient-to-br from-primary to-[#0D4A2A] rounded-2xl p-6 text-white">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -338,6 +353,10 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
                 }`}>{r.pvClassification}</span>
               } />
               <Row label="Avg PSH" value={`${r.avgPSH?.toFixed(1)} hrs/day`} />
+              <Row 
+                label="Required roof space" 
+                value={<span title="Includes a 25% safety buffer for structural paths and panel spacing.">{r.totalRequiredAreaSqM} m²</span>} 
+              />
               <Row label="Coverage target" value={`${r.energyOffsetPct}%`} />
               <Row label="Daily load" value={`${r.dailyLoadKwh?.toFixed(2)} kWh`} />
               <Row label="Peak load" value={`${r.peakLoadKw?.toFixed(2)} kW`} />

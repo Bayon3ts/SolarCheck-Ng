@@ -125,9 +125,10 @@ interface Props {
   onChange: (updates: Partial<CalculatorInputs>) => void;
   onCalculate: () => void;
   hasCalculated: boolean;
+  results?: import('@/lib/calculator/types').CalculatorResults | null;
 }
 
-export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCalculated }: Props) {
+export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCalculated, results }: Props) {
   const disco = inputs.state ? DISCO_BY_STATE[inputs.state] : null;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -246,6 +247,14 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
             <p className="text-xs text-text-muted mt-1 mb-4">
               Add appliances for a precise system size. Skip to use our standard estimate.
             </p>
+            {results?.budgetModeActive && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4">
+                <p className="text-xs text-yellow-800 leading-relaxed font-medium">
+                  <span className="font-bold text-sm mr-1">⚠️ Budget Optimization Active:</span>
+                  Using a compact 3kVA system setup. Avoid running heavy water pumps or kitchen appliances simultaneously while your Air Conditioner is running to prevent inverter overload trips.
+                </p>
+              </div>
+            )}
             {totalApplianceCount > 0 && (
               <div className="space-y-1.5 mb-1">
                 {/* Top line — count + instantaneous connected load in watts */}

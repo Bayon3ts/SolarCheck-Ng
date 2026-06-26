@@ -158,6 +158,7 @@ export default function CalculatorDashboard() {
               onChange={updateInputs}
               onCalculate={handleCalculate}
               hasCalculated={hasCalculated}
+              results={hasCalculated ? results : null}
             />
           </div>
 
