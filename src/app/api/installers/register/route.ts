@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     const rawData = {
       company_name: getString("company_name"),
       email: getString("email"),
+      password: getString("password"),
       phone: getString("phone"),
       whatsapp: getString("whatsapp") || undefined,
       state: getString("state"),
@@ -55,21 +56,66 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
     const supabase = createAdminClient();
 
+    // ── Create Supabase Auth account FIRST ──
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { role: 'installer', company_name: data.company_name },
+    });
+
+    if (authError) {
+      console.error("[Registration] Auth user creation failed:", authError);
+
+      if (authError.code === 'email_exists' || authError.status === 422) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: "An account with this email already exists. Try logging in instead, or use a different email to register a new company.",
+            code: 'EMAIL_EXISTS',
+          },
+          { status: 409 }
+        );
+      }
+
+      return NextResponse.json(
+        { success: false, error: "Could not create your account. Please try again." },
+        { status: 500 }
+      );
+    }
+
+    const authUserId = authData.user.id;
+
+    // Remove password and plan from data before inserting to DB
+    const { password: _, plan, ...dbData } = data;
+
     // Generate unique slug
-    const slugBase = data.company_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const slugBase = dbData.company_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     const slugSuffix = Math.floor(Math.random() * 1000).toString();
     const slug = `${slugBase}-${slugSuffix}`;
 
+    // ── Now create the installer row, linked to the auth user ──
     const { data: insertedData, error } = await supabase.from("installers").insert({
       slug,
-      ...data,
+      ...dbData,
+      subscription_tier: plan,
+      user_id: authUserId,
       is_verified: false,
       is_active: false,
     }).select("id").single();
 
     if (error) {
       console.error("[Registration] Error inserting installer:", error);
-      return NextResponse.json({ success: false, error: "Failed to register installer" }, { status: 500 });
+
+      // IMPORTANT: if the installer row fails to insert AFTER the auth user was already 
+      // created, we have an orphaned auth account with no installer profile. Clean it up 
+      // rather than leaving a broken half-state.
+      await supabase.auth.admin.deleteUser(authUserId);
+
+      return NextResponse.json(
+        { success: false, error: "Failed to register installer. Please try again." },
+        { status: 500 }
+      );
     }
 
     const installerId = insertedData.id;

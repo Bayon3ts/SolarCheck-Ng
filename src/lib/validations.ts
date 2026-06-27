@@ -96,6 +96,7 @@ export const installerRegistrationSchema = z.object({
     .min(2, "Company name must be at least 2 characters")
     .max(200),
   email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   phone: z
     .string()
     .min(10, "Enter a valid phone number")

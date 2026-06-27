@@ -44,7 +44,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         .insert({
           company_name: application.company_name,
           slug: slug,
-          contact_name: application.contact_name,
           phone: application.phone,
           whatsapp: application.whatsapp,
           email: application.email,

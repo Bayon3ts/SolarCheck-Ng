@@ -26,6 +26,7 @@ interface Installer {
   subscription_tier: string;
   subscription_expires_at: string | null;
   slug: string;
+  is_approved: boolean;
 }
 
 interface Props {
@@ -437,7 +438,6 @@ export default function DashboardClient({ installer, leads: initialLeads, review
       <main className="flex-1 md:ml-64 p-5 md:p-10 pb-32 md:pb-10 min-h-screen">
         <div className="max-w-4xl mx-auto space-y-10">
           
-          {/* Header - greeting */}
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-black text-[#1A1A1A] tracking-tight">
               {isLoggedIn ? `Welcome, ${installer.company_name.split(' ')[0]}` : installer.company_name}
@@ -446,6 +446,20 @@ export default function DashboardClient({ installer, leads: initialLeads, review
               <span className="text-xs font-bold text-[#6B6B6B] uppercase tracking-widest">{isLoggedIn ? installer.subscription_tier + ' Plan' : 'Preview Mode'}</span>
             </div>
           </div>
+
+          {isLoggedIn && !installer.is_approved && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-4">
+              <div className="text-3xl">⏳</div>
+              <div>
+                <h4 className="text-amber-900 font-bold text-lg mb-1">Your account is pending verification</h4>
+                <p className="text-amber-800 text-sm">
+                  Welcome to SolarCheck! We are currently reviewing your registration. 
+                  Your profile is not yet visible to the public, and you won't receive leads until approved.
+                  This usually takes 24-48 hours.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className={!isLoggedIn ? 'pointer-events-none select-none' : ''}>
             

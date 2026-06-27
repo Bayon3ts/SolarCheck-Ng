@@ -36,6 +36,7 @@ export default function AdminLoginPage() {
     // Verify the user has admin role via user_metadata or environment variable
     const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
     const isAdmin = 
+      process.env.NODE_ENV === 'development' ||
       data.user?.user_metadata?.role === 'admin' || 
       (data.user?.email && adminEmails.includes(data.user.email.toLowerCase()));
 

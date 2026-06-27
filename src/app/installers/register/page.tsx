@@ -39,6 +39,7 @@ function InstallerRegistrationForm() {
     id_type: '',
     id_number: '',
     id_file: null as File | null,
+    password: '',
   });
 
   const handleNext = () => {
@@ -114,10 +115,23 @@ function InstallerRegistrationForm() {
     setError(null);
 
     try {
+      const submitData = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value === null || value === undefined) return;
+        
+        if (key === 'id_file' && value instanceof File) {
+          submitData.append('cac_document', value);
+        } else if (Array.isArray(value)) {
+          submitData.append(key, JSON.stringify(value));
+        } else {
+          submitData.append(key, String(value));
+        }
+      });
+
       const response = await fetch("/api/installers/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        // Do not set Content-Type header; fetch will set multipart/form-data with the correct boundary
+        body: submitData,
       });
 
       const data = await response.json();
@@ -237,16 +251,29 @@ function InstallerRegistrationForm() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-primary">Phone Number *</label>
+                    <label className="text-sm font-medium text-text-primary">Password *</label>
                     <input 
-                      type="tel" 
-                      value={formData.phone}
-                      onChange={(e) => updateField("phone", e.target.value)}
-                      placeholder="08012345678"
+                      type="password" 
+                      value={formData.password}
+                      onChange={(e) => updateField("password", e.target.value)}
+                      placeholder="Create a strong password"
                       className="input-field w-full"
                       required
+                      minLength={6}
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-text-primary">Phone Number *</label>
+                  <input 
+                    type="tel" 
+                    value={formData.phone}
+                    onChange={(e) => updateField("phone", e.target.value)}
+                    placeholder="08012345678"
+                    className="input-field w-full"
+                    required
+                  />
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-5">

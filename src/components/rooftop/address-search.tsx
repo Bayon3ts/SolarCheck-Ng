@@ -1,105 +1,101 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { loadGoogleMaps } from '@/lib/google-maps-loader';
 
 interface AddressSearchProps {
   onAddressSelect: (result: { address: string; lat: number; lng: number }) => void;
 }
 
-interface NominatimResult {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-}
-
 export function AddressSearch({ onAddressSelect }: AddressSearchProps) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<NominatimResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Load the Google Maps script (shared loader — no double-load if RoofTracer
+  // also mounts at the same time).
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    loadGoogleMaps()
+      .then(() => setIsLoaded(true))
+      .catch((err: Error) => setLoadError(err.message));
   }, []);
 
+  // Attach Places Autocomplete once the script is ready.
   useEffect(() => {
-    if (query.trim().length < 3) {
-      setResults([]);
-      setShowDropdown(false);
+    if (!isLoaded || !inputRef.current) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const google = (window as any).google;
+
+    const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+      componentRestrictions: { country: 'ng' },
+      fields: ['formatted_address', 'geometry'],
+    });
+
+    const listener = autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry?.location) return;
+      onAddressSelect({
+        address: place.formatted_address ?? '',
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+      });
+    });
+
+    return () => listener.remove();
+  }, [isLoaded, onAddressSelect]);
+
+  const handleUseGPS = () => {
+    if (!navigator.geolocation) {
+      alert('Location access is not available in this browser.');
       return;
     }
-
-    const timer = setTimeout(async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=ng&addressdetails=1&limit=5`);
-        if (!res.ok) throw new Error('Network error');
-        const data = await res.json();
-        setResults(data);
-        setShowDropdown(true);
-      } catch (err) {
-        console.error('[SolarCheck] Nominatim search failed', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  const handleSelect = (result: NominatimResult) => {
-    setQuery(result.display_name);
-    setShowDropdown(false);
-    onAddressSelect({
-      address: result.display_name,
-      lat: parseFloat(result.lat),
-      lng: parseFloat(result.lon),
-    });
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        onAddressSelect({
+          address: 'Current GPS location',
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        }),
+      () =>
+        alert(
+          'Could not get your location. Please allow location access, or try ' +
+          'the address search with a nearby landmark or major road name instead.'
+        ),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
+  if (loadError) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+        <p className="font-semibold mb-1">Rooftop sizing isn&apos;t available right now</p>
+        <p className="text-xs">{loadError}</p>
+        <p className="text-xs mt-2 text-gray-500">You can skip this step — it won&apos;t affect your sizing report.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div>
       <label className="text-sm font-semibold text-gray-900 block mb-2">
         Enter your address
       </label>
-      <div className="relative">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => { if (results.length > 0) setShowDropdown(true); }}
-          placeholder="Start typing your address in Nigeria..."
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:border-emerald-600 focus:outline-none"
-        />
-        {isLoading && (
-          <div className="absolute right-4 top-3.5">
-            <div className="animate-spin h-5 w-5 border-2 border-emerald-600 border-t-transparent rounded-full" />
-          </div>
-        )}
-      </div>
-
-      {showDropdown && results.length > 0 && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-          {results.map((r) => (
-            <button
-              key={r.place_id}
-              onClick={() => handleSelect(r)}
-              className="w-full text-left px-4 py-3 hover:bg-emerald-50 text-sm text-gray-700 border-b border-gray-100 last:border-0 transition-colors"
-            >
-              {r.display_name}
-            </button>
-          ))}
-        </div>
-      )}
+      <input
+        ref={inputRef}
+        type="text"
+        placeholder="Start typing your address in Nigeria..."
+        disabled={!isLoaded}
+        autoComplete="off"
+        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:border-emerald-600 focus:outline-none disabled:opacity-50"
+      />
+      <button
+        type="button"
+        onClick={handleUseGPS}
+        className="text-xs text-emerald-700 font-semibold mt-2 flex items-center gap-1 hover:text-emerald-900 transition-colors"
+      >
+        📍 Or use my current GPS location instead
+      </button>
       <p className="text-xs text-gray-500 mt-1.5">
-        We'll show a satellite view so you can trace your roof outline.
+        Can&apos;t find your exact street? Try a nearby major road, landmark, or estate name — or use GPS above.
       </p>
     </div>
   );

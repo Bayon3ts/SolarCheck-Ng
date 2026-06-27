@@ -281,3 +281,14 @@
     AFTER INSERT ON leads
     FOR EACH ROW
     EXECUTE FUNCTION increment_installer_leads();
+
+-- Add user_id column to link installers to their Supabase Auth account
+ALTER TABLE installers 
+  ADD COLUMN IF NOT EXISTS user_id UUID 
+  REFERENCES auth.users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_installers_user_id 
+  ON installers(user_id);
+
+-- Reload schema cache so PostgREST picks up the new column immediately
+NOTIFY pgrst, 'reload schema';

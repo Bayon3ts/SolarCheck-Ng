@@ -37,7 +37,6 @@ export default async function DashboardPage() {
       .from('installers')
       .select('*')
       .eq('user_id', user.id)
-      .eq('is_approved', true)
       .single();
 
     installer = byUserId;
@@ -49,7 +48,6 @@ export default async function DashboardPage() {
         .from('installers')
         .select('*')
         .eq('email', user.email)
-        .eq('is_approved', true)
         .single();
 
       installer = byEmail;

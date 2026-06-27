@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { LatLng, calculatePolygonAreaM2, calculateUsableRoofAreaM2 } from '@/lib/rooftop/roof-area';
+import { loadGoogleMaps } from '@/lib/google-maps-loader';
 
 interface RoofTracerProps {
   lat: number;
@@ -12,67 +13,122 @@ export function RoofTracer({ lat, lng, onAreaCalculated }: RoofTracerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [points, setPoints] = useState<LatLng[]>([]);
   const [isDrawing, setIsDrawing] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  // Load the Google Maps script via shared loader (no double-load race condition).
+  useEffect(() => {
+    loadGoogleMaps()
+      .then(() => setMapReady(true))
+      .catch((err: Error) => setMapError(err.message));
+  }, []);
 
   useEffect(() => {
+    if (!mapReady) return;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const google = (window as any).google;
-    if (!google || !google.maps || !mapRef.current) return;
 
-    const map = new google.maps.Map(mapRef.current, {
-      center: { lat, lng },
-      zoom: 20,
-      mapTypeId: 'satellite',
-      tilt: 0,
-      disableDefaultUI: true,
-      zoomControl: true,
-    });
+    if (!google?.maps || !mapRef.current) {
+      setMapError('Map container not ready.');
+      return;
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let polygon: any = null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let markers: any[] = [];
     let currentPoints: LatLng[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let map: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let idleListener: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let clickListener: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let centerMarker: any = null;
 
-    const clickListener = map.addListener('click', (e: any) => {
-      if (!isDrawing || !e.latLng) return;
+    try {
+      map = new google.maps.Map(mapRef.current, {
+        center: { lat, lng },
+        zoom: 20,
+        mapTypeId: 'satellite',
+        tilt: 0,
+        disableDefaultUI: true,
+        zoomControl: true,
+      });
 
-      const point = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-      currentPoints = [...currentPoints, point];
-      setPoints(currentPoints);
+      // 'idle' fires once tiles have loaded — confirms the map actually rendered
+      idleListener = map.addListener('idle', () => {
+        console.log('[RoofTracer] Map loaded successfully');
+      });
 
-      const marker = new google.maps.Marker({
-        position: point,
+      // Draggable orange marker so the user can fine-tune the pinned location
+      // before tracing — purely a visual aid, tracing still works from any click
+      centerMarker = new google.maps.Marker({
+        position: { lat, lng },
         map,
+        draggable: true,
+        title: 'Drag to your exact roof location',
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 5,
-          fillColor: '#10b981',
-          fillOpacity: 1,
+          scale: 8,
+          fillColor: '#F5A623',
+          fillOpacity: 0.9,
           strokeColor: '#FFFFFF',
           strokeWeight: 2,
         },
       });
-      markers.push(marker);
 
-      if (polygon) polygon.setMap(null);
-      if (currentPoints.length >= 2) {
-        polygon = new google.maps.Polygon({
-          paths: currentPoints,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      clickListener = map.addListener('click', (e: any) => {
+        if (!isDrawing || !e.latLng) return;
+
+        const point = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        currentPoints = [...currentPoints, point];
+        setPoints(currentPoints);
+
+        const marker = new google.maps.Marker({
+          position: point,
           map,
-          fillColor: '#10b981',
-          fillOpacity: 0.25,
-          strokeColor: '#10b981',
-          strokeWeight: 2,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 5,
+            fillColor: '#10b981',
+            fillOpacity: 1,
+            strokeColor: '#FFFFFF',
+            strokeWeight: 2,
+          },
         });
-      }
-    });
+        markers.push(marker);
+
+        if (polygon) polygon.setMap(null);
+        if (currentPoints.length >= 2) {
+          polygon = new google.maps.Polygon({
+            paths: currentPoints,
+            map,
+            fillColor: '#10b981',
+            fillOpacity: 0.25,
+            strokeColor: '#10b981',
+            strokeWeight: 2,
+          });
+        }
+      });
+    } catch (err) {
+      console.error('[RoofTracer] Map init failed:', err);
+      setMapError(
+        `Map failed to initialize: ${err instanceof Error ? err.message : 'Unknown error'}`
+      );
+    }
 
     return () => {
-      clickListener.remove();
+      if (idleListener) idleListener.remove();
+      if (clickListener) clickListener.remove();
+      if (centerMarker) centerMarker.setMap(null);
       markers.forEach((m) => m.setMap(null));
       if (polygon) polygon.setMap(null);
     };
-  }, [lat, lng, isDrawing]);
+  }, [lat, lng, isDrawing, mapReady]);
 
   const handleFinishTracing = () => {
     if (points.length < 3) return;
@@ -105,10 +161,41 @@ export function RoofTracer({ lat, lng, onAreaCalculated }: RoofTracerProps) {
       </div>
 
       <p className="text-xs text-gray-500">
-        Click each corner of your roof in sequence on the satellite view, then click "Finish Outline".
+        Click each corner of your roof in sequence on the satellite view, then click &quot;Finish Outline&quot;.
       </p>
 
-      <div ref={mapRef} className="w-full h-64 md:h-80 rounded-xl border border-gray-200 overflow-hidden" />
+      {/* Loading placeholder — shown until the shared loader resolves */}
+      {!mapReady && !mapError && (
+        <div className="w-full h-64 md:h-80 rounded-xl border border-gray-200 flex items-center justify-center bg-gray-50">
+          <p className="text-sm text-gray-500">Loading satellite view…</p>
+        </div>
+      )}
+
+      {/* Error state */}
+      {mapError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+          <p className="font-semibold mb-1">Couldn&apos;t load the satellite view</p>
+          <p className="text-xs">{mapError}</p>
+          <p className="text-xs mt-2 text-gray-500">
+            You can skip this step — it&apos;s optional and won&apos;t affect your sizing report.
+          </p>
+        </div>
+      )}
+
+      {/* Pin-drag instruction — only shown when map is ready */}
+      {mapReady && !mapError && (
+        <p className="text-xs text-gray-500">
+          📍 If the orange pin isn&apos;t on your exact roof, drag it to the right spot first, then trace your roof outline below.
+        </p>
+      )}
+
+      {/* Map container — hidden until loader resolves or on error */}
+      <div
+        ref={mapRef}
+        className={`w-full h-64 md:h-80 rounded-xl border border-gray-200 overflow-hidden ${
+          !mapReady || mapError ? 'hidden' : ''
+        }`}
+      />
 
       {isDrawing && points.length > 0 && (
         <div className="flex gap-2">
