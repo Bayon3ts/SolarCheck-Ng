@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import DashboardClient from './dashboard-client';
+import DashboardClient from '@/components/dashboard/dashboard-client';
 
 export const metadata: Metadata = {
   title: 'Installer Dashboard | SolarCheck',

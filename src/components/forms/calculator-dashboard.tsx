@@ -8,6 +8,11 @@ import CalcResultsView from "./calc-results-view";
 import CalcStickyBar from "./calc-sticky-bar";
 
 import { useSearchParams } from "next/navigation";
+import { AddressSearch } from '@/components/rooftop/address-search';
+import { RoofTracer } from '@/components/rooftop/roof-tracer';
+import { FitCheckDisplay } from '@/components/rooftop/fit-check-result';
+import { checkPanelFit, FitCheckResult } from '@/lib/rooftop/panel-footprint';
+import { LatLng } from '@/lib/rooftop/roof-area';
 
 const DEFAULT_INPUTS: CalculatorInputs = {
   ownershipStatus: "owner",
@@ -37,6 +42,10 @@ export default function CalculatorDashboard() {
   const [hasCalculated, setHasCalculated] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [isRoofStepOpen, setIsRoofStepOpen] = useState(false);
+  const [geoCoords, setGeoCoords] = useState<LatLng | null>(null);
+  const [fitAnalysis, setFitAnalysis] = useState<FitCheckResult | null>(null);
 
   const calcRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
@@ -165,13 +174,67 @@ export default function CalculatorDashboard() {
           {/* Right Columns - 2/3 Width */}
           <div className="w-full lg:w-2/3 space-y-8">
             {hasCalculated && results ? (
-              <CalcResultsView
-                inputs={inputs}
-                results={results}
-                onChange={updateInputs}
-                leadSubmitted={leadSubmitted}
-                onLeadSubmit={handleLeadSubmit}
-              />
+              <>
+                {/* ROOFTOP FIT CHECK */}
+                <div className="border border-gray-200 bg-white rounded-2xl overflow-hidden shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setIsRoofStepOpen(!isRoofStepOpen)}
+                    className="w-full flex items-center justify-between p-5 font-semibold text-left text-gray-900 bg-gray-50 hover:bg-gray-100/80 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      📐 <span>Will this fit on your roof? <span className="text-xs text-gray-500 font-normal">(Optional Layout Verification)</span></span>
+                    </span>
+                    <span className="text-xl transform transition-transform duration-200">{isRoofStepOpen ? '−' : '+'}</span>
+                  </button>
+
+                  {isRoofStepOpen && (
+                    <div className="p-5 border-t border-gray-100 space-y-5">
+                      {!geoCoords ? (
+                        <AddressSearch 
+                          onAddressSelect={(res) => setGeoCoords({ lat: res.lat, lng: res.lng })} 
+                        />
+                      ) : (
+                        <div className="space-y-5">
+                          <RoofTracer
+                            lat={geoCoords.lat}
+                            lng={geoCoords.lng}
+                            onAreaCalculated={(traceData) => {
+                              const assessment = checkPanelFit(
+                                results.panelsNeeded,
+                                results.panelSizeWatts,
+                                traceData.usableAreaM2
+                              );
+                              setFitAnalysis(assessment);
+                            }}
+                          />
+                          
+                          {fitAnalysis && <FitCheckDisplay result={fitAnalysis} />}
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGeoCoords(null);
+                              setFitAnalysis(null);
+                            }}
+                            className="text-xs text-gray-500 underline hover:text-gray-800 block pt-1"
+                          >
+                            Change installation address
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <CalcResultsView
+                  inputs={inputs}
+                  results={results}
+                  onChange={updateInputs}
+                  leadSubmitted={leadSubmitted}
+                  onLeadSubmit={handleLeadSubmit}
+                />
+              </>
             ) : (
               <div className="hidden lg:flex flex-col items-center justify-center h-full min-h-[500px] border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50 text-center p-12">
                 <div className="text-6xl mb-4 opacity-50">☀️</div>
