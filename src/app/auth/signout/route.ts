@@ -23,7 +23,21 @@ export async function POST(request: NextRequest) {
     }
   )
 
-  await supabase.auth.signOut()
+  try {
+    await supabase.auth.signOut()
+  } catch (err) {
+    console.error("Sign out error:", err)
+  }
+
+  // Force clear the session cookies just in case the server-side signOut failed
+  // (e.g. if the user was deleted manually from the database).
+  // Supabase SSR uses chunked cookies, so we delete all cookies starting with 'sb-'
+  const allCookies = cookieStore.getAll();
+  for (const cookie of allCookies) {
+    if (cookie.name.startsWith('sb-')) {
+      cookieStore.delete(cookie.name);
+    }
+  }
 
   // Use the request's own origin so this works in both dev and production
   const origin = request.nextUrl.origin

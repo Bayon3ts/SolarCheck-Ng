@@ -166,7 +166,7 @@ function InstallerRegistrationForm() {
           Welcome to SolarCheck. Your profile is currently pending verification. Our team will review your application and CAC details within 24-48 hours.
         </p>
         <Button asChild variant="primary" size="lg">
-          <Link href="/dashboard">Go to Dashboard</Link>
+          <Link href="/login">Login to Dashboard</Link>
         </Button>
       </div>
     );
@@ -259,7 +259,7 @@ function InstallerRegistrationForm() {
                       placeholder="Create a strong password"
                       className="input-field w-full"
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
                 </div>

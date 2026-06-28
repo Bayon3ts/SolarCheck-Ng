@@ -1,9 +1,9 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function AdminInstallersPage() {
-  const supabase = await createServerClient();
+  const supabase = createAdminClient();
   const { data: installers } = await supabase
     .from("installers")
     .select("*")
