@@ -11,9 +11,9 @@ import { CHEMISTRY_PROFILES } from "@/lib/battery-fraud/chemistry-profiles";
 
 export default function CheckBatteryPage() {
   const [claim, setClaim] = useState<Partial<BatteryClaim>>({
-    chemistry: "LFP",
-    capacityKwh: 0,
-    claimedDod: 80,
+    chemistry: "",
+    capacityKwh: undefined,
+    claimedDod: undefined,
   });
   const [report, setReport] = useState<FraudReport | null>(null);
 
@@ -57,14 +57,16 @@ export default function CheckBatteryPage() {
                   <label className="block text-sm font-medium text-text-primary mb-1">Chemistry *</label>
                   <select
                     className="select-field w-full"
-                    value={claim.chemistry}
+                    value={claim.chemistry || ""}
                     onChange={(e) => setClaim({ ...claim, chemistry: e.target.value })}
                     required
                   >
+                    <option value="" disabled>Select your battery's chemistry</option>
                     {Object.values(CHEMISTRY_PROFILES).map((p) => (
                       <option key={p.id} value={p.id}>{p.label}</option>
                     ))}
                   </select>
+                  <p className="text-xs text-text-muted mt-1">Not sure? Check the label or ask the seller — this determines what counts as a realistic claim for your battery type.</p>
                 </div>
                 
                 <div>
@@ -75,6 +77,7 @@ export default function CheckBatteryPage() {
                     className="input-field w-full"
                     value={claim.capacityKwh || ""}
                     onChange={(e) => setClaim({ ...claim, capacityKwh: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="e.g. 5"
                     required
                   />
                 </div>
@@ -86,6 +89,7 @@ export default function CheckBatteryPage() {
                     className="input-field w-full"
                     value={claim.claimedDod || ""}
                     onChange={(e) => setClaim({ ...claim, claimedDod: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="e.g. 80 (what the seller/label claims)"
                     required
                   />
                 </div>
@@ -98,6 +102,7 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.weightKg || ""}
                       onChange={(e) => setClaim({ ...claim, weightKg: e.target.value ? Number(e.target.value) : undefined })}
+                      placeholder="e.g. 45 — check the label or weigh it yourself"
                     />
                   </div>
                   <div>
@@ -108,6 +113,7 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.claimedUsableKwh || ""}
                       onChange={(e) => setClaim({ ...claim, claimedUsableKwh: e.target.value ? Number(e.target.value) : undefined })}
+                      placeholder="e.g. 4 — leave blank if not stated separately"
                     />
                   </div>
                 </div>
@@ -120,6 +126,7 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.claimedRtEff || ""}
                       onChange={(e) => setClaim({ ...claim, claimedRtEff: e.target.value ? Number(e.target.value) : undefined })}
+                      placeholder="e.g. 92 — leave blank if unknown"
                     />
                   </div>
                   <div>
@@ -129,6 +136,7 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.cycleLife || ""}
                       onChange={(e) => setClaim({ ...claim, cycleLife: e.target.value ? Number(e.target.value) : undefined })}
+                      placeholder="e.g. 4000 — number of charge cycles claimed"
                     />
                   </div>
                 </div>
@@ -142,6 +150,7 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.claimedAutonomyHours || ""}
                       onChange={(e) => setClaim({ ...claim, claimedAutonomyHours: e.target.value ? Number(e.target.value) : undefined })}
+                      placeholder="e.g. 8 — how long the seller says it'll run your load"
                     />
                   </div>
                   <div>
@@ -152,6 +161,7 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.claimedLoadKw || ""}
                       onChange={(e) => setClaim({ ...claim, claimedLoadKw: e.target.value ? Number(e.target.value) : undefined })}
+                      placeholder="e.g. 0.5 — your typical simultaneous load, for autonomy claims"
                     />
                   </div>
                 </div>
