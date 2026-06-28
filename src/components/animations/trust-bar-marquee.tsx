@@ -5,26 +5,37 @@ import { gsap } from "gsap";
 
 /* ═══════════════════════════════════════ */
 /* TrustBarMarquee — GSAP infinite scroll  */
-/* Stitch: dark semi-transparent band      */
+/* Now accepts live installer/lead counts  */
+/* Falls back gracefully if props omitted  */
 /* ═══════════════════════════════════════ */
 
-const TRUST_ITEMS = [
-  "500+ Verified Installers",
-  "12,000+ Homeowners Matched",
-  "4.8★ Average Rating",
-  "Lagos",
-  "Abuja",
-  "Port Harcourt",
-  "Ibadan",
-  "Kano",
-  "Benin City",
-  "Enugu",
-];
+interface Props {
+  installerCount?: number;
+  leadCount?: number;
+}
 
-export default function TrustBarMarquee() {
+export default function TrustBarMarquee({ installerCount, leadCount }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const track1Ref = useRef<HTMLDivElement>(null);
   const track2Ref = useRef<HTMLDivElement>(null);
+
+  // Build live trust items — only inject counts that are > 0
+  const TRUST_ITEMS = [
+    installerCount && installerCount > 0
+      ? `${installerCount}+ Verified Installers`
+      : "Verified Installers",
+    leadCount && leadCount > 0
+      ? `${leadCount.toLocaleString()}+ Homeowners Matched`
+      : "Homeowners Matched",
+    "4.8★ Average Rating",
+    "Lagos",
+    "Abuja",
+    "Port Harcourt",
+    "Ibadan",
+    "Kano",
+    "Benin City",
+    "Enugu",
+  ];
 
   useEffect(() => {
     if (!track1Ref.current || !track2Ref.current) return;

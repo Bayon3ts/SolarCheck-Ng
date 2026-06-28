@@ -63,6 +63,7 @@
     timeline TEXT CHECK (timeline IN ('asap', '1-3months', 'researching')),
     message TEXT,
     lead_type TEXT DEFAULT 'shared' CHECK (lead_type IN ('shared', 'exclusive')),
+    fraud_check_source TEXT, -- Expected values: 'battery_detector', 'controller_detector'
     status TEXT DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'quoted', 'converted')),
     whatsapp_sent BOOLEAN DEFAULT false,
     email_sent BOOLEAN DEFAULT false,
@@ -81,6 +82,7 @@
     installer_id UUID REFERENCES installers(id) ON DELETE CASCADE NOT NULL,
     reviewer_name TEXT NOT NULL,
     reviewer_phone TEXT,
+    reviewer_city TEXT,
     rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
     title TEXT NOT NULL,
     body TEXT NOT NULL,

@@ -8,6 +8,7 @@ import FeaturedInstallersSection from "@/components/sections/featured-installers
 import CalculatorTeaser from "@/components/sections/calculator-teaser";
 import VerificationSection from "@/components/sections/verification-section";
 import TestimonialsSection from "@/components/sections/testimonials-section";
+import TrustToolsSection from "@/components/sections/trust-tools-section";
 
 export const revalidate = 0;
 
@@ -15,22 +16,30 @@ import BlogTeaser from "@/components/sections/blog-teaser";
 import FinalCTA from "@/components/sections/final-cta";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import { getSiteStats } from "@/lib/supabase/stats";
 
 export const metadata: Metadata = {
   title: "SolarCheck Nigeria — Find Trusted Solar Installers Near You",
   description:
-    "Compare 500+ verified solar installers across Nigeria. Get free quotes, read reviews from 12,000+ homeowners, and find the best solar system for your home.",
+    "Compare verified solar installers across Nigeria. Get free quotes, read reviews from real homeowners, and find the best solar system for your home.",
   alternates: {
     canonical: "/",
   },
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Fetch once server-side — passed to HeroSection (→ TrustBarMarquee) and FinalCTA
+  // StatsSection fetches its own stats internally (self-contained async server component)
+  const { verifiedInstallers, totalLeads } = await getSiteStats();
+
   return (
     <>
       <Navbar />
       <main>
-        <HeroSection />
+        <HeroSection
+          installerCount={verifiedInstallers > 0 ? verifiedInstallers : undefined}
+          leadCount={totalLeads > 0 ? totalLeads : undefined}
+        />
 
         {/* ── Equipment Review Hub ─────────────────────────── */}
         <section className="py-16 bg-white">
@@ -61,7 +70,7 @@ export default function HomePage() {
                   Solar Panels
                 </h3>
                 <p className="text-text-muted text-sm group-hover:text-white/80 mb-4">
-                  Jinko, Canadian Solar, Longi & more
+                  Jinko, Canadian Solar, Longi &amp; more
                 </p>
                 <div className="text-primary group-hover:text-white font-semibold text-sm">
                   Compare panels →
@@ -80,7 +89,7 @@ export default function HomePage() {
                   Solar Batteries
                 </h3>
                 <p className="text-text-muted text-sm group-hover:text-gray-700 mb-4">
-                  Felicity, Luminous, Huawei & more
+                  Felicity, Luminous, Huawei &amp; more
                 </p>
                 <div className="text-accent-dark group-hover:text-gray-800 font-semibold text-sm">
                   Compare batteries →
@@ -99,7 +108,7 @@ export default function HomePage() {
                   Solar Inverters
                 </h3>
                 <p className="text-text-muted text-sm group-hover:text-white/80 mb-4">
-                  Growatt, Luminous, Victron & more
+                  Growatt, Luminous, Victron &amp; more
                 </p>
                 <div className="text-blue-600 group-hover:text-white font-semibold text-sm">
                   Compare inverters →
@@ -116,9 +125,13 @@ export default function HomePage() {
         <FeaturedInstallersSection />
         <CalculatorTeaser />
         <VerificationSection />
+
+        {/* ── Trust Tools (fraud-checkers) — pre-warms visitors before quote CTA ── */}
+        <TrustToolsSection />
+
         <TestimonialsSection />
         <BlogTeaser />
-        <FinalCTA />
+        <FinalCTA leadCount={totalLeads > 0 ? totalLeads : undefined} />
       </main>
       <Footer />
     </>

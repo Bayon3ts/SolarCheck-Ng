@@ -16,7 +16,12 @@ const BUTTON_LABELS = [
   'Calculate Now →',
 ];
 
-export default function HeroSection() {
+interface HeroSectionProps {
+  installerCount?: number;
+  leadCount?: number;
+}
+
+export default function HeroSection({ installerCount, leadCount }: HeroSectionProps) {
   const line1Words = ["Stop", "Overpaying", "for", "Power."];
   const [labelIndex, setLabelIndex] = useState(0);
 
@@ -208,7 +213,7 @@ export default function HeroSection() {
 
       {/* Trust bar at bottom */}
       <div className="relative z-10">
-        <TrustBarMarquee />
+        <TrustBarMarquee installerCount={installerCount} leadCount={leadCount} />
       </div>
     </section>
   );

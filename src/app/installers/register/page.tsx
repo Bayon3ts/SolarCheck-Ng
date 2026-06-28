@@ -87,21 +87,7 @@ function InstallerRegistrationForm() {
     });
   };
 
-  const processPayment = async () => {
-    // In a real app, you'd initialize Paystack here
-    // const paystack = new PaystackPop();
-    // paystack.newTransaction({
-    //   key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-    //   email: formData.email,
-    //   amount: amount * 100, // kobo
-    //   metadata: { installer_id: installerId, plan: formData.plan },
-    //   onSuccess: () => setIsSuccess(true),
-    //   onCancel: () => setError("Payment cancelled. You can complete it later from your dashboard.")
-    // });
-    
-    // Simulating successful payment for now
-    setTimeout(() => setIsSuccess(true), 1500);
-  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,10 +123,9 @@ function InstallerRegistrationForm() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        if (formData.plan === "featured" || formData.plan === "premium") {
-          // Move to payment step
+        if (data.data?.checkoutUrl) {
           setStep(5);
-          await processPayment();
+          window.location.href = data.data.checkoutUrl;
         } else {
           setIsSuccess(true);
         }

@@ -1,31 +1,48 @@
-"use client";
-
 import AnimatedCounter from "@/components/animations/animated-counter";
 import ScrollReveal from "@/components/animations/scroll-reveal";
+import { getSiteStats } from "@/lib/supabase/stats";
 
 /* ═══════════════════════════════════════ */
-/* Stats Band — Full-width primary green   */
-/* Stitch: 4 stats, dividers, count-up     */
+/* StatsSection — Async Server Component   */
+/* Replaces all hardcoded stat values with */
+/* live counts from Supabase               */
 /* ═══════════════════════════════════════ */
 
-const STATS = [
-  { value: 500, suffix: "+", label: "Verified Installers" },
-  { value: 36, suffix: "", label: "States Covered" },
-  { value: 0, prefix: "₦", suffix: "", label: "Cost to Homeowners" },
-  { value: 4.8, suffix: "★", label: "Average Rating", isDecimal: true },
-];
+export default async function StatsSection() {
+  const { verifiedInstallers, totalLeads, avgRating } = await getSiteStats();
 
-export default function StatsSection() {
+  // Only render stats that have real data — never show a zero
+  const stats = [
+    verifiedInstallers > 0
+      ? { value: verifiedInstallers, suffix: "+", label: "Verified Installers" }
+      : null,
+    { value: 36, suffix: "", label: "States Covered" },
+    { value: 0, prefix: "₦", suffix: "", label: "Cost to Homeowners" },
+    avgRating !== null
+      ? { value: avgRating, suffix: "★", label: "Average Rating", isDecimal: true }
+      : null,
+    // If we have no verified installers yet, still show the leads count if it exists
+    !verifiedInstallers && totalLeads > 0
+      ? { value: totalLeads, suffix: "+", label: "Homeowners Matched" }
+      : null,
+  ].filter(Boolean) as Array<{
+    value: number;
+    suffix: string;
+    label: string;
+    prefix?: string;
+    isDecimal?: boolean;
+  }>;
+
   return (
     <section className="bg-primary py-16 md:py-20">
       <div className="container-custom">
         <ScrollReveal>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-0">
-            {STATS.map((stat, i) => (
+            {stats.map((stat, i) => (
               <div
                 key={i}
                 className={`flex flex-col items-center justify-center text-center ${
-                  i < STATS.length - 1
+                  i < stats.length - 1
                     ? "md:border-r md:border-white/20"
                     : ""
                 }`}

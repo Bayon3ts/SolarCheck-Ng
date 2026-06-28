@@ -10,7 +10,11 @@ import ScrollReveal from "@/components/animations/scroll-reveal";
 /* Final CTA — Full-width dark section     */
 /* ═══════════════════════════════════════ */
 
-export default function FinalCTA() {
+interface FinalCTAProps {
+  leadCount?: number;
+}
+
+export default function FinalCTA({ leadCount }: FinalCTAProps) {
   const [formData, setFormData] = useState({
     state: "",
     monthly_bill_range: "",
@@ -31,8 +35,9 @@ export default function FinalCTA() {
             Ready to stop overpaying for power?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-white/70">
-            Join 12,000+ Nigerian homeowners who found trusted solar
-            installers through SolarCheck. It&apos;s free.
+            {leadCount && leadCount > 0
+              ? `Join ${leadCount.toLocaleString()}+ Nigerian homeowners who found trusted solar installers through SolarCheck. It's free.`
+              : "Join thousands of Nigerian homeowners who found trusted solar installers through SolarCheck. It's free."}
           </p>
         </ScrollReveal>
 

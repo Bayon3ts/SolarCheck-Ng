@@ -31,7 +31,7 @@ function GetQuotesForm() {
     ownership_status: "own",
     timeline: "asap",
     message: "",
-    lead_type: searchParams.get("installer") ? "exclusive" : "shared",
+    lead_type: "shared",
     installer_id: searchParams.get("installer") || undefined,
   });
 
@@ -238,6 +238,46 @@ function GetQuotesForm() {
                         <span className="font-medium text-text-primary">{t.label}</span>
                       </label>
                     ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-text-primary">How many installer quotes do you want? *</label>
+                  <div className="flex flex-col gap-3">
+                    <label className={`border rounded-xl p-4 cursor-pointer transition-all ${formData.lead_type === "shared" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-gray-400"}`}>
+                      <input 
+                        type="radio" 
+                        name="lead_type" 
+                        value="shared" 
+                        className="sr-only"
+                        checked={formData.lead_type === "shared"}
+                        onChange={(e) => updateField("lead_type", e.target.value)}
+                      />
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">⚖️</span>
+                        <div>
+                          <p className="font-medium text-text-primary">Up to 3 quotes (Recommended)</p>
+                          <p className="text-sm text-text-muted">Compare options for the most competitive pricing.</p>
+                        </div>
+                      </div>
+                    </label>
+                    <label className={`border rounded-xl p-4 cursor-pointer transition-all ${formData.lead_type === "exclusive" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-gray-400"}`}>
+                      <input 
+                        type="radio" 
+                        name="lead_type" 
+                        value="exclusive" 
+                        className="sr-only"
+                        checked={formData.lead_type === "exclusive"}
+                        onChange={(e) => updateField("lead_type", e.target.value)}
+                      />
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">⚡</span>
+                        <div>
+                          <p className="font-medium text-text-primary">1 quote only</p>
+                          <p className="text-sm text-text-muted">Faster process with more dedicated attention from a single premium installer.</p>
+                        </div>
+                      </div>
+                    </label>
                   </div>
                 </div>
               </motion.div>

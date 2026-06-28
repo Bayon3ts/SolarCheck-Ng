@@ -62,6 +62,7 @@ export const leadSubmitSchema = z.object({
   timeline: z.enum(["asap", "1-3months", "researching"]).optional(),
   message: z.string().max(500, "Message is too long").optional(),
   lead_type: z.enum(["shared", "exclusive"]).default("shared"),
+  fraud_check_source: z.string().optional(),
 });
 
 // ── Review submission schema ──

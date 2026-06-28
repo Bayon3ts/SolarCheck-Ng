@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { installerRegistrationSchema } from "@/lib/validations";
-// import { generatePaymentLink } from "@/lib/paystack"; // Assume this exists
+import { initializePayment, SUBSCRIPTION_PLANS } from "@/lib/paystack";
 // import { sendEmail } from "@/lib/resend"; // Assume this exists
 
 export async function POST(request: NextRequest) {
@@ -149,9 +149,21 @@ export async function POST(request: NextRequest) {
     // Handle Paystack Link Generation
     let checkoutUrl = null;
     if (data.plan !== "free") {
-      // Stub: Generate Paystack Payment Link
-      // checkoutUrl = await generatePaymentLink(installerId, data.plan, data.email);
-      checkoutUrl = "https://checkout.paystack.com/stub_link";
+      const planConfig = SUBSCRIPTION_PLANS[data.plan as keyof typeof SUBSCRIPTION_PLANS];
+      if (planConfig) {
+        const paystackRes = await initializePayment({
+          email: data.email,
+          amount: planConfig.priceKobo,
+          metadata: { installer_id: installerId, plan: data.plan },
+        });
+        if (paystackRes && paystackRes.status && paystackRes.data) {
+          checkoutUrl = paystackRes.data.authorization_url;
+        } else {
+          console.error("[Registration] Failed to initialize payment");
+          // Not failing the whole request here since the user is created,
+          // but we won't have a checkout URL.
+        }
+      }
     }
 
     // Stub: Send Emails via Resend

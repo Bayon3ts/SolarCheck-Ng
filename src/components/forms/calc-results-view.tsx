@@ -98,6 +98,33 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   );
 }
 
+// ── Equipment Check CTA ──────────────────────────────────────────────────────
+function EquipmentCheckCTACard() {
+  return (
+    <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-lg p-6 mb-6 text-white">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex-1">
+          <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+            <span className="text-2xl">🛡️</span> Verify your equipment quotes
+          </h3>
+          <p className="text-slate-300 text-sm leading-relaxed">
+            Nigerian installers sell fake MPPT controllers and relabelled lead-acid batteries as lithium every day. 
+            Use our free physics-based checkers to verify any quotes before paying.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
+          <a href="/check-battery" target="_blank" className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2.5 px-5 rounded-xl transition-colors text-center text-sm">
+            Check Battery
+          </a>
+          <a href="/check-controller" target="_blank" className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2.5 px-5 rounded-xl transition-colors text-center text-sm">
+            Check Controller
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props) {
   const [name, setName] = useState('');
@@ -539,6 +566,9 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           </p>
         )}
       </Section>
+
+      {/* ── 9.5 EQUIPMENT CHECK CTA ────────────────────────────────────────── */}
+      <EquipmentCheckCTACard />
 
       {/* ── 10. LEAD CAPTURE FORM ───────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-200 shadow-sm p-6">
