@@ -32,6 +32,7 @@ function GetQuotesForm() {
     timeline: "asap",
     message: "",
     lead_type: "shared",
+    fraud_check_source: searchParams.get("source") || undefined,
     installer_id: searchParams.get("installer") || undefined,
   });
 

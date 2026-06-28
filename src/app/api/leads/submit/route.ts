@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       timeline: data.timeline || null,
       message: data.message || null,
       lead_type: data.lead_type,
+      fraud_check_source: data.fraud_check_source || null,
       status: "new" as const,
       whatsapp_sent: false,
       email_sent: false,
