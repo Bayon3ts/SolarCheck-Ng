@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getFuelPrice } from "@/lib/calculator/calculations";
 
 export default function DynamicPriceHeader() {
-  const [fuelPrice, setFuelPrice] = useState<number>(1300);
+  const [fuelPrice, setFuelPrice] = useState<number>(1000);
 
   useEffect(() => {
     getFuelPrice().then(data => {
