@@ -185,8 +185,8 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
     if (existingIdx !== -1) {
       const newApps = [...inputs.appliances];
       const appDef = APPLIANCES.find(a => a.id === id);
-      const maxHours = appDef?.typicalHours || 24;
-      const validHours = hours < 0 ? 0 : hours > maxHours ? maxHours : hours;
+      const validHours = hours < 0 ? 0 : hours > 24 ? 24 : hours;
+      // typicalHours is the suggested default, not an enforced ceiling.
       newApps[existingIdx] = { ...newApps[existingIdx], daytimeHours: validHours };
       onChange({ appliances: newApps });
     }
@@ -196,8 +196,11 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   const totalApplianceKwh = inputs.appliances.reduce((sum, app) => {
     const def = APPLIANCES.find(a => a.id === app.id);
     if (!def) return sum;
-    const dayHrs = app.daytimeHours ?? Math.min(def.typicalHours, 8);
-    return sum + getApplianceKwh(def, dayHrs, 0) * app.qty;
+    const DAY_WINDOW = 12;
+    const totalUserHours = app.daytimeHours ?? Math.min(def.typicalHours, 24);
+    const dayHrs = Math.min(totalUserHours, DAY_WINDOW);
+    const nightHrs = Math.max(0, totalUserHours - DAY_WINDOW);
+    return sum + (getApplianceKwh(def, dayHrs, 0) + getApplianceKwh(def, 0, nightHrs)) * app.qty;
   }, 0);
 
   const totalApplianceCount = inputs.appliances.reduce((sum, app) => sum + app.qty, 0);
@@ -215,15 +218,18 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   const applianceDayKwh = inputs.appliances.reduce((sum, app) => {
     const def = APPLIANCES.find(a => a.id === app.id);
     if (!def || app.qty <= 0) return sum;
-    const dayHrs = app.daytimeHours ?? Math.min(def.typicalHours, 8);
+    const DAY_WINDOW = 12;
+    const totalUserHours = app.daytimeHours ?? Math.min(def.typicalHours, 24);
+    const dayHrs = Math.min(totalUserHours, DAY_WINDOW);
     return sum + getApplianceKwh(def, dayHrs, 0) * app.qty;
   }, 0);
 
   const applianceNightKwh = inputs.appliances.reduce((sum, app) => {
     const def = APPLIANCES.find(a => a.id === app.id);
     if (!def || app.qty <= 0) return sum;
-    const dayHrs = app.daytimeHours ?? Math.min(def.typicalHours, 8);
-    const nightHrs = Math.max(0, def.typicalHours - dayHrs);
+    const DAY_WINDOW = 12;
+    const totalUserHours = app.daytimeHours ?? Math.min(def.typicalHours, 24);
+    const nightHrs = Math.max(0, totalUserHours - DAY_WINDOW);
     return sum + getApplianceKwh(def, 0, nightHrs) * app.qty;
   }, 0);
 
@@ -331,12 +337,12 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                                       <input
                                         type="number"
                                         min={0}
-                                        max={app.typicalHours}
+                                        max={24}
                                         value={daytimeHours}
                                         onChange={(e) => updateApplianceDaytimeHours(app.id, parseInt(e.target.value) || 0)}
                                         className="w-14 border border-border rounded px-2 py-0.5 text-xs text-center outline-none bg-white"
                                       />
-                                      <span>hrs (6am–6pm)</span>
+                                      <span>hrs/day (0–24)</span>
                                     </div>
                                   )}
                                 </div>

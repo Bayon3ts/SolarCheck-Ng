@@ -1036,8 +1036,20 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       const qty = appSelection.qty;
       if (qty <= 0) return;
 
-      const dayHrs = (appSelection as any).dayHours ?? (appSelection as any).daytimeHours ?? Math.min(appDef.typicalHours || 0, 12);
-      const nightHrs = (appSelection as any).nightHours ?? Math.max(0, (appDef.typicalHours || 0) - dayHrs);
+      const totalUserHours = (appSelection as any).daytimeHours
+        ?? (appSelection as any).dayHours
+        ?? Math.min(appDef.typicalHours || 0, 24);
+
+      // Split total hours across day (6am–6pm = 12hr window) and night (6pm–6am = 12hr).
+      // Rule: fill the daytime window first, overflow goes to night.
+      // Examples:
+      //   8hr total  → dayHrs=8,  nightHrs=0  (fits in daytime)
+      //   14hr total → dayHrs=12, nightHrs=2  (2hr overflow into night)
+      //   18hr total → dayHrs=12, nightHrs=6
+      //   24hr total → dayHrs=12, nightHrs=12 (full day + full night, e.g. fridge)
+      const DAY_WINDOW = 12; // 6am–6pm
+      const dayHrs  = Math.min(totalUserHours, DAY_WINDOW);
+      const nightHrs = Math.max(0, totalUserHours - DAY_WINDOW);
       console.log('APP CALC', appDef.id, { qty, dayHrs, nightHrs }, 'DAY KWH', getApplianceKwh(appDef, dayHrs, 0) * qty);
 
       // ── FIX 2: Strict Night Load separation ────────────────────────────────
@@ -1066,8 +1078,13 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       const isWaterPump = appDef.id.startsWith('borehole_');
       const isFridge = appDef.category === 'Refrigeration';
 
-      if (isAC) hasAC = true;
-      if (isWaterPump) hasWaterPump = true;
+      // Only count an appliance as active if it is actually running (hours > 0).
+      // An appliance added at qty > 0 but set to 0 hours is "installed but off" —
+      // it must not trigger the 5 kVA floor or inflate peak surge.
+      const isActuallyRunning = (dayHrs + nightHrs) > 0;
+
+      if (isAC && isActuallyRunning) hasAC = true;
+      if (isWaterPump && isActuallyRunning) hasWaterPump = true;
 
       // ── UPGRADE 5: Classify into coincidence-factor buckets ───────────────
       // Must come AFTER isAC/isWaterPump/isFridge are declared above.
@@ -1075,14 +1092,16 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       const isBaseload = ['Lighting', 'Computing', 'Entertainment', 'Security'].includes(appDef.category);
       const isRefrig = isFridge;
 
-      if (isInductiveCooling) {
-        coincidenceInductiveKw += continuousKw;  // 1.0 — full rated load when running
-      } else if (isBaseload) {
-        coincidenceBaseloadKw += continuousKw;   // 0.75 — not all baseloads peak simultaneously
-      } else if (isRefrig) {
-        coincidenceRefrigKw += continuousKw;     // 0.85 — compressor cycling reduces demand
-      } else {
-        coincidenceOtherKw += continuousKw;      // 0.8 — kitchen, laundry, medical, business
+      if (isActuallyRunning) {
+        if (isInductiveCooling) {
+          coincidenceInductiveKw += continuousKw;  // 1.0 — full rated load when running
+        } else if (isBaseload) {
+          coincidenceBaseloadKw += continuousKw;   // 0.75 — not all baseloads peak simultaneously
+        } else if (isRefrig) {
+          coincidenceRefrigKw += continuousKw;     // 0.85 — compressor cycling reduces demand
+        } else {
+          coincidenceOtherKw += continuousKw;      // 0.8 — kitchen, laundry, medical, business
+        }
       }
 
       if (appDef.category === 'Lighting') {
@@ -1106,7 +1125,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       } else if (appDef.category === 'Laundry') {
         surgeMult = 2.0;                          // washing machine motor startup
       }
-      peakSurgeKw += continuousKw * surgeMult;
+      if (isActuallyRunning) {
+        peakSurgeKw += continuousKw * surgeMult;
+      }
     });
   } else {
     // No appliances entered — estimate from bill + generator spend
@@ -1233,7 +1254,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // with a standard safety surge margin of 25%.
   const steadyPeakKw = simultaneousLoadKw;
   const peakLoadWatts = steadyPeakKw * 1000;
-  const targetCapacity = peakLoadWatts * 1.25;
+  const POWER_FACTOR_NG = 0.8; // Nigerian standard — inductive loads (AC, fans, motors, fridges) draw reactive current.
+  // Inverters are rated in kVA (apparent power), not kW (real power). Source: Field installer review, June 2026.
+  const targetCapacity = (peakLoadWatts * 1.25) / POWER_FACTOR_NG;
 
   let recommendedInverterKva = 3.0; // Default baseline
   if (targetCapacity <= 3000) {
@@ -1558,7 +1581,12 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   let systemCostMax = baseSystemCostMax + totalBatteryCost + roofMountingCost;
 
   const totalPanelWatts = actualPvKwp * 1000;
-  const batteryVoltage: 12 | 24 | 48 = (actualPvKwp < 1 ? 12 : actualPvKwp < 3 ? 24 : 48);
+  const batteryVoltage: 12 | 24 | 48 =
+    inverterKva <= 1.5 ? 12
+    : inverterKva <= 3  ? 24
+    : 48;
+  // Source: Field standard — voltage class follows inverter size, not PV array.
+  // 96V excluded: SolarCheck targets residential systems (48V LFP ceiling).
   const selectedInverterType: 'hybrid' | 'off-grid' | 'pcu' | 'on-grid' = systemMode === 'grid-tied' ? 'on-grid' : (systemMode === 'off-grid' ? 'off-grid' : 'hybrid');
 
   const chargeController = getChargeControllerSpec(selectedInverterType, totalPanelWatts, batteryVoltage);
