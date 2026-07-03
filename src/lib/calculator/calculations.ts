@@ -1624,12 +1624,18 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
   // Coverage label: claim "100%" only when usable generation exceeds load by 15%
   // safety margin (1.15×), protecting against Harmattan / cloudy-streak shortfalls.
+  // Fix 1: Compute actual solar coverage from real daily generation, not user target.
+  // Source: field installer review June 2026 — coverage must reflect physics, not input.
+  const actualSolarCoveragePct = dailyLoadKwh > 0
+    ? Math.min(100, Math.round((netUsableDailyGen / dailyLoadKwh) * 100))
+    : 100;
+
   const coverageLabel: string = (() => {
-    if (dailyLoadKwh <= 0) return `${coveragePct}% Coverage`;
-    if (netUsableDailyGen <= dailyLoadKwh * 1.15) {
-      return '85% \u2013 95% Realistic Coverage';
-    }
-    return `${coveragePct}% Coverage`;
+    if (dailyLoadKwh <= 0) return '100% Coverage';
+    if (actualSolarCoveragePct >= 95) return `${actualSolarCoveragePct}% Full Coverage`;
+    if (actualSolarCoveragePct >= 85) return `${actualSolarCoveragePct}% Realistic Coverage`;
+    if (actualSolarCoveragePct >= 70) return `~${actualSolarCoveragePct}% Partial Coverage`;
+    return `~${actualSolarCoveragePct}% \u2014 Significantly Undersized`;
   })();
 
   const rainySeasonCoverageLabel = '65% \u2013 80% Rainy Season Est.';
@@ -1645,19 +1651,25 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     loadProfileLabel = 'Night-Heavy Load Profile';
   }
 
+  // Fix 3: Scale savings by actualSolarCoveragePct (real physics) not coveragePct (user input).
+  // coveragePct is the user's target; actualSolarCoveragePct is what the panel array
+  // can actually deliver. An undersized array must not claim 100% savings.
   if (systemMode === 'off-grid') {
     monthlyGridSavingsExpected = monthlyBill;
-    monthlyGeneratorSavingsExpected = generatorSpend;
+    monthlyGeneratorSavingsExpected = generatorSpend * (actualSolarCoveragePct / 100);
   } else {
-    // Grid savings: proportional to solar direct usage
-    monthlyGridSavingsExpected = Math.min(monthlyBill * (coveragePct / 100), monthlyBill);
-    // Generator savings: proportional to (1 - backup_fraction) of generator spend
-    // backupFraction = fraction of load still needing backup → savings = 1 - backupFraction
+    // Grid savings: proportional to actual solar coverage
+    monthlyGridSavingsExpected = Math.min(
+      monthlyBill * (actualSolarCoveragePct / 100),
+      monthlyBill
+    );
+    // Generator savings: proportional to actual coverage × (1 - backup fraction)
     if (generatorSpend > 0) {
-      monthlyGeneratorSavingsExpected = generatorSpend * (1 - backupFraction);
+      monthlyGeneratorSavingsExpected =
+        generatorSpend * (actualSolarCoveragePct / 100) * (1 - backupFraction);
     }
-    // Cap: total savings cannot exceed total spend
-    const totalSavingsCap = monthlyCurrentSpend * (coveragePct / 100);
+    // Cap: total savings cannot exceed total spend × actual coverage
+    const totalSavingsCap = monthlyCurrentSpend * (actualSolarCoveragePct / 100);
     const totalSavings = monthlyGridSavingsExpected + monthlyGeneratorSavingsExpected;
     if (totalSavings > totalSavingsCap) {
       const scale = totalSavingsCap / totalSavings;
@@ -1872,7 +1884,39 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     qaWarnings.push(`Claimed savings (${Math.round(totalClaimedSavings).toLocaleString()}₦) exceed physical displacement capacity (${Math.round(theoreticalDisplacement).toLocaleString()}₦).`);
   }
 
-  // D. Hard contradiction checks — these are genuine physics failures, not oversizing
+  // D. Battery-PV Balance — verify PV can realistically recharge the battery daily.
+  // A battery that cannot fully recharge daily will chronically undercharge,
+  // accelerating degradation and defeating rated cycle-life claims.
+  const CHARGE_EFFICIENCY = 0.90; // MPPT charge efficiency (standard)
+  const dailyChargeableKwh = netUsableDailyGen * CHARGE_EFFICIENCY;
+  const batteryPvRatio = batteryKwh > 0 ? dailyChargeableKwh / batteryKwh : 1;
+
+  let batteryPvBalance: 'HEALTHY' | 'MARGINAL' | 'MISMATCH' = 'HEALTHY';
+  if (batteryPvRatio >= 0.5) {
+    batteryPvBalance = 'HEALTHY';
+  } else if (batteryPvRatio >= 0.3) {
+    batteryPvBalance = 'MARGINAL';
+    qaScore -= 10;
+    qaWarnings.push(
+      `Battery-PV imbalance: your ${actualPvKwp.toFixed(1)} kWp array delivers ` +
+      `~${dailyChargeableKwh.toFixed(1)} kWh/day chargeable energy but your battery ` +
+      `bank is ${batteryKwh.toFixed(1)} kWh. Battery will only reach ` +
+      `~${Math.round(batteryPvRatio * 100)}% charge daily — consider reducing battery ` +
+      `to ${(dailyChargeableKwh * 0.8).toFixed(1)} kWh or increasing panels.`
+    );
+  } else {
+    batteryPvBalance = 'MISMATCH';
+    qaScore -= 20;
+    qaWarnings.push(
+      `\u26a0\ufe0f Battery-PV mismatch: your ${actualPvKwp.toFixed(1)} kWp array can only charge ` +
+      `~${Math.round(batteryPvRatio * 100)}% of your ${batteryKwh.toFixed(1)} kWh battery daily. ` +
+      `Chronic undercharging will significantly reduce battery lifespan. ` +
+      `Increase panels to at least ${(batteryKwh / CHARGE_EFFICIENCY).toFixed(1)} kWp ` +
+      `or reduce battery to ${(dailyChargeableKwh * 0.8).toFixed(1)} kWh.`
+    );
+  }
+
+  // E. Hard contradiction checks — these are genuine physics failures, not oversizing
   // Deduct heavily for label vs physics contradictions
   if (pvClassification === 'OPTIMAL' && pvRatio > 1.5) {
     qaScore -= 15;
@@ -2120,6 +2164,8 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     batterySufficiency,
     energyOffsetPct: coveragePct,
     coverageLabel,
+    actualSolarCoveragePct,
+    batteryPvBalance,
     rainySeasonCoverageLabel,
     loadProfileLabel,
     autonomyHours: Math.round(autonomyHours * 10) / 10,

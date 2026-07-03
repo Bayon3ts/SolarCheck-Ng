@@ -212,6 +212,10 @@ export interface CalculatorResults {
   energyOffsetPct: number;
   /** Physics-honest coverage label — claims 100% only when usable generation > load × 1.15 */
   coverageLabel: string;
+  /** Actual solar coverage percentage computed from real daily generation vs load (0-100) */
+  actualSolarCoveragePct: number;
+  /** Battery-PV balance check: HEALTHY ≥50% daily charge, MARGINAL 30-50%, MISMATCH <30% */
+  batteryPvBalance: 'HEALTHY' | 'MARGINAL' | 'MISMATCH';
   /** Custom warning label for rainy season coverage */
   rainySeasonCoverageLabel?: string;
   /** Tiered load profile classification: Day-Dominant / Mixed / Night-Heavy */
