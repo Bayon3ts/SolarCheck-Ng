@@ -200,6 +200,8 @@ export interface CalculatorResults {
   dailyLoadKwh: number;
   nightLoadKwh: number;
   peakLoadKw: number;
+  /** Sum of all rated appliance watts — for wiring and breaker sizing */
+  totalConnectedLoadW: number;
 
   // PV Array
   pvKwp: number;

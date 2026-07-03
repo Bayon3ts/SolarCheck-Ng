@@ -2140,6 +2140,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     isValid,
     validationError,
     peakLoadKw: simultaneousPeakKw,
+    totalConnectedLoadW,
     dailyLoadKwh,
     nightLoadKwh,
     pvKwp: actualPvKwp,

@@ -174,6 +174,12 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
     ? ((monthlySavings / r.monthlyCurrentSpend) * 100).toFixed(0)
     : '0';
 
+  const inverterTierLabel = r.inverterKva <= 3 ? 'Standard'
+    : r.inverterKva <= 5 ? 'AC-Ready'
+    : r.inverterKva <= 8 ? 'Heavy Duty'
+    : r.inverterKva <= 12 ? 'High Capacity'
+    : 'Industrial';
+
   return (
     <div className="space-y-4">
 
@@ -203,7 +209,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           <div className="text-xs text-text-muted mt-1 capitalize">{inputs.systemMode} inverter</div>
           <div className="mt-2">
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-              {r.inverterKva >= 5 ? 'Heavy duty' : 'Standard'}
+              {inverterTierLabel}
             </span>
           </div>
         </div>
@@ -424,13 +430,41 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
                 </span>
               } />
               <Row label="Daily load" value={`${r.dailyLoadKwh?.toFixed(2)} kWh`} />
-              <Row label="Peak load" value={`${r.peakLoadKw?.toFixed(2)} kW`} />
+              <Row
+                label="Peak load"
+                value={
+                  <span className="space-y-0.5 text-right">
+                    <span className="block text-sm font-semibold">
+                      {r.peakLoadKw?.toFixed(2)} kW
+                      <span className="ml-1 text-xs font-normal text-slate-500">simultaneous</span>
+                    </span>
+                    {r.totalConnectedLoadW > 0 && (
+                      <span className="block text-xs text-slate-500">
+                        {(r.totalConnectedLoadW / 1000).toFixed(2)} kW connected
+                      </span>
+                    )}
+                  </span>
+                }
+                sub="Simultaneous = what inverter handles. Connected = wiring/breaker sizing."
+              />
             </div>
           </div>
           <div>
             <p className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">Inverter & Battery</p>
             <div className="space-y-0 divide-y divide-gray-100 mb-4">
               <Row label="Inverter" value={`${r.inverterKva} kVA`} accent />
+              {/* Inverter sizing rationale — explains why the kVA was chosen */}
+              {r.inverterKva && r.peakLoadKw && (
+                <div className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 mt-1 mb-2 leading-relaxed">
+                  <span className="font-semibold text-slate-600">How this was sized: </span>
+                  {r.peakLoadKw.toFixed(2)} kW simultaneous load
+                  × 1.25 surge margin ÷ 0.8 power factor
+                  = {((r.peakLoadKw * 1.25) / 0.8).toFixed(2)} kVA required
+                  {r.totalConnectedLoadW && r.totalConnectedLoadW / 1000 > r.inverterKva * 0.6
+                    ? ' — AC/pump startup floor applied.'
+                    : ' — rounded to next standard size.'}
+                </div>
+              )}
               <Row label="Battery" value={`${r.batteryKwh.toFixed(1)} kWh`} accent />
               <Row label="Battery sufficiency" value={<SufficiencyBadge val={r.batterySufficiency} />} />
               <Row label="Night autonomy" value={`${r.autonomyHours.toFixed(1)} hrs`} />
