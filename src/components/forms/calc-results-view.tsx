@@ -27,16 +27,14 @@ function fmtM(n: number) {
 
 function SufficiencyBadge({ val }: { val: string }) {
   const map: Record<string, string> = {
-    insufficient:        'bg-red-100 text-red-700',
-    limited:             'bg-orange-100 text-orange-700',
-    adequate:            'bg-blue-100 text-blue-700',
-    strong:              'bg-green-100 text-green-700',
-    full:                'bg-emerald-100 text-emerald-700',
-    'daytime-optimized': 'bg-cyan-100 text-cyan-700',
+    'INSUFFICIENT ⚠️':        'bg-red-100 text-red-700',
+    'TIGHT ⚠️':             'bg-orange-100 text-orange-700',
+    'ADEQUATE ✅':            'bg-green-100 text-green-700',
+    'MINIMAL STORAGE (day-use focused)': 'bg-cyan-100 text-cyan-700',
   };
   return (
-    <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${map[val] ?? 'bg-gray-100 text-gray-600'}`}>
-      {val === 'daytime-optimized' ? '☀️ Daytime Optimized' : val}
+    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${map[val] ?? 'bg-gray-100 text-gray-600'}`}>
+      {val}
     </span>
   );
 }
@@ -195,9 +193,9 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           )}
           <div className="mt-2">
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              r.pvClassification === 'OPTIMAL'     ? 'bg-green-100 text-green-700' :
-              r.pvClassification === 'OVER SIZED'  ? 'bg-amber-100 text-amber-700' :
-                                                     'bg-red-100 text-red-700'
+              r.pvClassification === 'WELL SIZED' ? 'bg-green-100 text-green-700' :
+              r.pvClassification.includes('OVER SIZED') ? 'bg-amber-100 text-amber-700' :
+              'bg-red-100 text-red-700'
             }`}>{r.pvClassification}</span>
           </div>
         </div>
@@ -232,7 +230,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               r.autonomyHours >= 12 ? 'bg-green-100 text-green-700' :
               r.autonomyHours >= 8  ? 'bg-amber-100 text-amber-700' :
                                       'bg-red-100 text-red-700'
-            }`}>{r.autonomyHours >= 12 ? 'All night' : r.autonomyHours >= 8 ? 'Most night' : 'Limited'}</span>
+            }`}>{r.autonomyHours >= 12 ? 'Full night covered' : r.autonomyHours >= 8 ? 'Most night' : 'Limited night backup'}</span>
           </div>
           {r.autonomyNote && (
             <div className="mt-2 text-[10px] text-slate-500 leading-tight italic">
@@ -271,6 +269,22 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           <ul className="space-y-1 text-sm text-gray-700 list-disc pl-4">
             <li><strong>Option A (Budget Layout):</strong> Maintain the current hardware footprint. Enforce strict behavioral management: zero high-inductive cooling loads after 6:00 PM.</li>
             <li><strong>Option B (Storage Expansion Upgrade):</strong> Scale the battery bank footprint from {r.batteryKwh.toFixed(1)} kWh up to 7.5 kWh – 10 kWh to transition the system from a fragile daytime-offset layout into a true, resilient nocturnal home-comfort setup.</li>
+          </ul>
+        </div>
+      )}
+
+      {/* ── CONSISTENCY WARNINGS ──────────────────────────────────────────── */}
+      {r.systemConsistencyWarnings && r.systemConsistencyWarnings.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <h4 className="text-amber-800 font-bold mb-2 flex items-center gap-2">
+            <span>⚠️</span> Engineering Constraints Detected
+          </h4>
+          <ul className="space-y-2">
+            {r.systemConsistencyWarnings.map((warn, idx) => (
+              <li key={idx} className="text-sm text-amber-700 leading-relaxed">
+                {warn}
+              </li>
+            ))}
           </ul>
         </div>
       )}
@@ -415,8 +429,8 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               )}
               <Row label="Classification" value={
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                  r.pvClassification === 'OPTIMAL' ? 'bg-green-100 text-green-700' :
-                  r.pvClassification === 'OVER SIZED' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                  r.pvClassification === 'WELL SIZED' ? 'bg-green-100 text-green-700' :
+                  r.pvClassification.includes('OVER SIZED') ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                 }`}>{r.pvClassification}</span>
               } />
               <Row label="Avg PSH" value={`${r.avgPSH?.toFixed(1)} hrs/day`} />

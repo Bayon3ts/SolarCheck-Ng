@@ -209,7 +209,7 @@ export interface CalculatorResults {
   panelSizeWatts: number;
   panelTierLabel?: string;  // e.g. "Standard Residential (3–6 kWp range)"
   avgPSH: number;
-  pvClassification: 'UNDER SIZED' | 'OPTIMAL' | 'OVER SIZED';
+  pvClassification: 'UNDER SIZED' | 'WELL SIZED' | 'OVER SIZED' | 'OVER SIZED (DAYTIME)';
   seasonalRisk: 'Rainy season stable' | 'Rainy season borderline' | 'Rainy season at risk';
   energyOffsetPct: number;
   /** Physics-honest coverage label — claims 100% only when usable generation > load × 1.15 */
@@ -235,7 +235,8 @@ export interface CalculatorResults {
   isFragileBatteryWarning: boolean;
   surgeFailureWarning?: string;
   dynamicApplianceInsights: string[];
-  batterySufficiency: 'insufficient' | 'limited' | 'adequate' | 'strong' | 'full' | 'daytime-optimized';
+  batterySufficiency: 'INSUFFICIENT ⚠️' | 'TIGHT ⚠️' | 'ADEQUATE ✅' | 'MINIMAL STORAGE (day-use focused)';
+  systemConsistencyWarnings: string[];
   // Cost
   systemCostMin: number;
   systemCostMax: number;
