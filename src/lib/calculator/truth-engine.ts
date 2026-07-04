@@ -101,6 +101,7 @@ export interface TruthEngineInputs {
   peakLoadKw: number;
   pvKwp: number;
   batteryKwh: number;
+  batteryVoltage?: 12 | 24 | 48;
   inverterKva: number;
   avgPSH: number;
   systemEfficiency: number;

@@ -43,7 +43,7 @@ export interface CalculatorInputs {
   roofDirection: RoofDirection;
   roofPitch: RoofPitch;
   coveragePct: number;        // 50 to 100
-  
+
   appliances: ApplianceSelection[]; // array of appliance selections with qty
 
   // Assumptions
@@ -53,7 +53,7 @@ export interface CalculatorInputs {
   nepaInflation: number;
   discountRate: number;
   fuelEfficiency: number; // kWh per liter
-  
+
   systemMode: SystemMode;
   batteryType: BatteryType;
   autonomyDays: number; // 0.5, 1, 2+
@@ -226,6 +226,7 @@ export interface CalculatorResults {
   // Inverter & Battery
   inverterKva: number;
   batteryKwh: number;
+  batteryVoltage: 12 | 24 | 48;
   batteryType: string;
   realUsableBattery: number;
   batteryCoverageRatio: number;
@@ -311,4 +312,3 @@ export interface LeadCaptureData {
   timeline: string;
   landlord_consent?: boolean;
 }
-

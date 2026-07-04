@@ -27,9 +27,9 @@ function fmtM(n: number) {
 
 function SufficiencyBadge({ val }: { val: string }) {
   const map: Record<string, string> = {
-    'INSUFFICIENT ⚠️':        'bg-red-100 text-red-700',
-    'TIGHT ⚠️':             'bg-orange-100 text-orange-700',
-    'ADEQUATE ✅':            'bg-green-100 text-green-700',
+    'INSUFFICIENT ⚠️': 'bg-red-100 text-red-700',
+    'TIGHT ⚠️': 'bg-orange-100 text-orange-700',
+    'ADEQUATE ✅': 'bg-green-100 text-green-700',
     'MINIMAL STORAGE (day-use focused)': 'bg-cyan-100 text-cyan-700',
   };
   return (
@@ -41,9 +41,9 @@ function SufficiencyBadge({ val }: { val: string }) {
 
 function QAVerdict({ verdict, score }: { verdict: string; score: number }) {
   const cfg =
-    verdict === 'Physics-Accurate'     ? { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-800', icon: '✅' } :
-    verdict === 'Installer-Conservative' ? { bg: 'bg-amber-50 border-amber-200',    text: 'text-amber-800',   icon: '⚠️' } :
-                                           { bg: 'bg-red-50 border-red-200',          text: 'text-red-800',     icon: '❌' };
+    verdict === 'Physics-Accurate' ? { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-800', icon: '✅' } :
+      verdict === 'Installer-Conservative' ? { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-800', icon: '⚠️' } :
+        { bg: 'bg-red-50 border-red-200', text: 'text-red-800', icon: '❌' };
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${cfg.bg} ${cfg.text}`}>
       {cfg.icon} {verdict} — {score}/100
@@ -86,7 +86,7 @@ function Row({ label, value, sub, accent }: { label: string; value: React.ReactN
 }
 
 // ── Custom bar tooltip for recharts ──────────────────────────────────────────
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{value: number}>; label?: string }) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-sm">
@@ -106,7 +106,7 @@ function EquipmentCheckCTACard() {
             <span className="text-2xl">🛡️</span> Verify your equipment quotes
           </h3>
           <p className="text-slate-300 text-sm leading-relaxed">
-            Nigerian installers sell fake MPPT controllers and relabelled lead-acid batteries as lithium every day. 
+            Nigerian installers sell fake MPPT controllers and relabelled lead-acid batteries as lithium every day.
             Use our free physics-based checkers to verify any quotes before paying.
           </p>
         </div>
@@ -174,9 +174,9 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
 
   const inverterTierLabel = r.inverterKva <= 3 ? 'Standard'
     : r.inverterKva <= 5 ? 'AC-Ready'
-    : r.inverterKva <= 8 ? 'Heavy Duty'
-    : r.inverterKva <= 12 ? 'High Capacity'
-    : 'Industrial';
+      : r.inverterKva <= 8 ? 'Heavy Duty'
+        : r.inverterKva <= 12 ? 'High Capacity'
+          : 'Industrial';
 
   return (
     <div className="space-y-4">
@@ -192,11 +192,10 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
             <div className="text-[10px] text-text-muted mt-0.5 leading-tight">{r.panelTierLabel}</div>
           )}
           <div className="mt-2">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              r.pvClassification === 'WELL SIZED' ? 'bg-green-100 text-green-700' :
-              r.pvClassification.includes('OVER SIZED') ? 'bg-amber-100 text-amber-700' :
-              'bg-red-100 text-red-700'
-            }`}>{r.pvClassification}</span>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.pvClassification === 'WELL SIZED' ? 'bg-green-100 text-green-700' :
+                r.pvClassification.includes('OVER SIZED') ? 'bg-amber-100 text-amber-700' :
+                  'bg-red-100 text-red-700'
+              }`}>{r.pvClassification}</span>
           </div>
         </div>
 
@@ -216,23 +215,34 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
         <div className="bg-gradient-to-br from-violet-50 to-violet-100/50 border border-violet-200/60 rounded-2xl p-4">
           <div className="text-2xl mb-1">🔋</div>
           <div className="text-2xl font-black text-violet-700 leading-none">{r.batteryKwh.toFixed(1)}<span className="text-base font-semibold">kWh</span></div>
-          <div className="text-xs text-text-muted mt-1">LFP · 48V bank</div>
+          <div className="text-xs text-text-muted mt-1">LFP · {r.batteryVoltage ?? 48}V bank</div>
           <div className="mt-2"><SufficiencyBadge val={r.batterySufficiency} /></div>
         </div>
 
         {/* Night Autonomy */}
         <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200/60 rounded-2xl p-4">
           <div className="text-2xl mb-1">🌙</div>
-          <div className="text-2xl font-black text-slate-700 leading-none">{r.autonomyHours.toFixed(1)}<span className="text-base font-semibold">hrs</span></div>
-          <div className="text-xs text-text-muted mt-1">Night autonomy</div>
-          <div className="mt-2">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              r.autonomyHours >= 12 ? 'bg-green-100 text-green-700' :
-              r.autonomyHours >= 8  ? 'bg-amber-100 text-amber-700' :
-                                      'bg-red-100 text-red-700'
-            }`}>{r.autonomyHours >= 12 ? 'Full night covered' : r.autonomyHours >= 8 ? 'Most night' : 'Limited night backup'}</span>
-          </div>
-          {r.autonomyNote && (
+          {r.nightLoadKwh > 0 ? (
+            <>
+              <div className="text-2xl font-black text-slate-700 leading-none">{r.autonomyHours.toFixed(1)}<span className="text-base font-semibold">hrs</span></div>
+              <div className="text-xs text-text-muted mt-1">Night autonomy</div>
+              <div className="mt-2">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.autonomyHours >= 12 ? 'bg-green-100 text-green-700' :
+                    r.autonomyHours >= 8 ? 'bg-amber-100 text-amber-700' :
+                      'bg-red-100 text-red-700'
+                  }`}>{r.autonomyHours >= 12 ? 'Full night covered' : r.autonomyHours >= 8 ? 'Most night' : 'Limited night backup'}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-2xl font-black text-slate-700 leading-none">—</div>
+              <div className="text-xs text-text-muted mt-1">Night autonomy</div>
+              <div className="mt-2">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">No night loads</span>
+              </div>
+            </>
+          )}
+          {r.autonomyNote && r.nightLoadKwh > 0 && (
             <div className="mt-2 text-[10px] text-slate-500 leading-tight italic">
               Low night load → extends battery life
             </div>
@@ -252,9 +262,9 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           <p className="text-sm text-gray-700 mt-1">
             <strong>The Hardware Reality:</strong> To prevent rapid cell degradation, the system enforces an 80% Depth of Discharge (DoD) buffer. Your true usable nighttime energy is only <strong>{(r.batteryKwh * 0.8).toFixed(2)} kWh</strong>.
           </p>
-          
+
           <hr className="my-4 border-amber-200" />
-          
+
           <h4 className="font-semibold text-gray-900 text-sm">🚫 System Operational Boundaries (Hard Limits)</h4>
           <p className="text-xs text-gray-600 mb-2">This configuration operates smoothly only because your current night usage is exceptionally low ({r.nightLoadKwh.toFixed(2)} kWh). Changing your evening routine will break this balance:</p>
           <ul className="space-y-2 text-sm text-gray-700">
@@ -428,15 +438,14 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
                 <Row label="Panel tier" value={<span className="text-xs text-text-muted">{r.panelTierLabel}</span>} />
               )}
               <Row label="Classification" value={
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                  r.pvClassification === 'WELL SIZED' ? 'bg-green-100 text-green-700' :
-                  r.pvClassification.includes('OVER SIZED') ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
-                }`}>{r.pvClassification}</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.pvClassification === 'WELL SIZED' ? 'bg-green-100 text-green-700' :
+                    r.pvClassification.includes('OVER SIZED') ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                  }`}>{r.pvClassification}</span>
               } />
               <Row label="Avg PSH" value={`${r.avgPSH?.toFixed(1)} hrs/day`} />
-              <Row 
-                label="Required roof space" 
-                value={<span title="Includes a 25% safety buffer for structural paths and panel spacing.">{r.totalRequiredAreaSqM} m²</span>} 
+              <Row
+                label="Required roof space"
+                value={<span title="Includes a 25% safety buffer for structural paths and panel spacing.">{r.totalRequiredAreaSqM} m²</span>}
               />
               <Row label="Coverage target" value={
                 <span className={r.coverageLabel?.includes('Realistic') ? 'text-amber-600 font-bold' : ''}>
@@ -571,9 +580,8 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${
-                qa.score >= 85 ? 'bg-emerald-500' : qa.score >= 50 ? 'bg-amber-400' : 'bg-red-500'
-              }`}
+              className={`h-full rounded-full transition-all ${qa.score >= 85 ? 'bg-emerald-500' : qa.score >= 50 ? 'bg-amber-400' : 'bg-red-500'
+                }`}
               style={{ width: `${qa.score}%` }}
             />
           </div>
@@ -588,9 +596,8 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
             const good = ['OPTIMAL', 'PASS'].includes(val);
             const warn = ['CONSERVATIVE', 'BORDERLINE', 'INFLATED'].includes(val);
             return (
-              <div key={label} className={`rounded-xl border p-3 text-center text-xs ${
-                good ? 'bg-green-50 border-green-100' : warn ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'
-              }`}>
+              <div key={label} className={`rounded-xl border p-3 text-center text-xs ${good ? 'bg-green-50 border-green-100' : warn ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'
+                }`}>
                 <p className="text-text-muted mb-1">{label}</p>
                 <p className={`font-bold ${good ? 'text-green-700' : warn ? 'text-amber-700' : 'text-red-700'}`}>{val}</p>
               </div>

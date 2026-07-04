@@ -1486,9 +1486,21 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     const nightLoadMinBattery = nightLoadKwh > 0 ? nightLoadKwh / LFP_DOD : 0;
     const hardwareMin = hasAC || hasWaterPump ? 4.8 : BATT_MIN;
 
-    let inverterBusMin = 4.8;
-    if (inverterKva > 10) inverterBusMin = 14.4;
-    else if (inverterKva > 5) inverterBusMin = 9.6;
+    // Inverter bus minimum — scaled to inverter size, not flat 4.8kWh for all.
+    // A 1kVA inverter powering LEDs + phone doesn't need a ₦320k battery bank.
+    // Source: engineering practice — bus minimum reflects inverter throughput capacity.
+    let inverterBusMin: number;
+    if (inverterKva >= 10) {
+      inverterBusMin = 14.4;  // 10kVA+ → 3 × 4.8kWh packs minimum
+    } else if (inverterKva >= 8) {
+      inverterBusMin = 9.6;   // 8kVA → 2 × 4.8kWh packs minimum
+    } else if (inverterKva >= 5) {
+      inverterBusMin = 4.8;   // 5kVA → 1 × 4.8kWh pack minimum
+    } else if (inverterKva >= 3) {
+      inverterBusMin = 2.4;   // 3kVA → 200Ah@12V minimum
+    } else {
+      inverterBusMin = 1.2;   // 1–2kVA → 100Ah@12V minimum, small system
+    }
 
     let minBattery = Math.max(hardwareMin, nightLoadMinBattery, inverterBusMin);
 
@@ -2183,6 +2195,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     peakLoadKw: simultaneousPeakKw,
     pvKwp: actualPvKwp,
     batteryKwh,
+    batteryVoltage,
     inverterKva,
     avgPSH,
     systemEfficiency: totalEfficiency,
@@ -2268,6 +2281,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     panelTierLabel,
     inverterKva,
     batteryKwh,
+    batteryVoltage,
     batteryType: batteryKwh > 0 ? 'lithium' : 'none',
     realUsableBattery: usableBattery,
     batteryCoverageRatio: engineeringTruthCheck.batteryNightsRatio,
