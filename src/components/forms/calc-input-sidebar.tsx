@@ -134,7 +134,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [openAssumptions, setOpenAssumptions] = useState<string | null>(null);
   const [applianceSearch, setApplianceSearch] = useState("");
-    const [fuelData, setFuelData] = useState<{
+  const [fuelData, setFuelData] = useState<{
     price: number;
     updatedAt: string;
     source: string;
@@ -238,7 +238,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
 
   const CATEGORIES = Array.from(new Set(APPLIANCES.map(a => a.category)));
 
-  
+
 
   return (
     <div className="space-y-4">
@@ -289,84 +289,84 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
         </div>
 
         <div className="p-4 space-y-6 max-h-[400px] overflow-y-auto custom-scrollbar">
-                <input
-                  type="text"
-                  placeholder="Search appliances..."
-                  value={applianceSearch}
-                  onChange={e => setApplianceSearch(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-border text-sm outline-none focus:border-primary transition-all"
-                />
-                {CATEGORIES.map(cat => {
-                  const filteredApps = APPLIANCES.filter(
-                    a => a.category === cat && a.name.toLowerCase().includes(applianceSearch.toLowerCase())
-                  );
-                  if (filteredApps.length === 0) return null;
-                  return (
-                    <div key={cat} className="space-y-3">
-                      <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">{cat}</h4>
-                      <div className="space-y-2">
-                        {filteredApps.map(app => {
-                          const quantityItem = inputs.appliances.find(a => a.id === app.id) as { id: string, qty: number, daytimeHours?: number } | undefined;
-                          const qty = quantityItem?.qty || 0;
-                          const daytimeHours = quantityItem?.daytimeHours ?? Math.min(app.typicalHours, 8);
-                          const supported = true;
-                          const upgradeTo = null;
-                          return (
-                            <div
-                              key={app.id}
-                              
-                              className={`flex items-center justify-between p-3 rounded-xl border bg-gray-50 transition-opacity border-gray-100 opacity-100`}
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <span className="text-xl flex-shrink-0">{app.icon}</span>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-text-primary leading-tight truncate">
-                                    {app.name}
-                                    {app.isInverter && (
-                                      <span className="ml-2 text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase">⚡ Inverter Tech</span>
-                                    )}
-                                  </p>
-                                  <p className="text-xs text-text-muted">
-                                    {supported
-                                      ? `${getApplianceKwh(app, daytimeHours, 0).toFixed(2)} kWh/day • ${app.watts}W`
-                                      : `⬆ Needs ${upgradeTo}`}
-                                  </p>
-                                  {qty > 0 && supported && (
-                                    <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
-                                      <span>Daytime use:</span>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        max={24}
-                                        value={daytimeHours}
-                                        onChange={(e) => updateApplianceDaytimeHours(app.id, parseInt(e.target.value) || 0)}
-                                        className="w-14 border border-border rounded px-2 py-0.5 text-xs text-center outline-none bg-white"
-                                      />
-                                      <span>hrs/day (0–24)</span>
-                                    </div>
-                                  )}
-                                </div>
+          <input
+            type="text"
+            placeholder="Search appliances..."
+            value={applianceSearch}
+            onChange={e => setApplianceSearch(e.target.value)}
+            className="w-full px-4 py-2 rounded-xl border border-border text-sm outline-none focus:border-primary transition-all"
+          />
+          {CATEGORIES.map(cat => {
+            const filteredApps = APPLIANCES.filter(
+              a => a.category === cat && a.name.toLowerCase().includes(applianceSearch.toLowerCase())
+            );
+            if (filteredApps.length === 0) return null;
+            return (
+              <div key={cat} className="space-y-3">
+                <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">{cat}</h4>
+                <div className="space-y-2">
+                  {filteredApps.map(app => {
+                    const quantityItem = inputs.appliances.find(a => a.id === app.id) as { id: string, qty: number, daytimeHours?: number } | undefined;
+                    const qty = quantityItem?.qty || 0;
+                    const daytimeHours = quantityItem?.daytimeHours ?? app.typicalHours;
+                    const supported = true;
+                    const upgradeTo = null;
+                    return (
+                      <div
+                        key={app.id}
+
+                        className={`flex items-center justify-between p-3 rounded-xl border bg-gray-50 transition-opacity border-gray-100 opacity-100`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-xl flex-shrink-0">{app.icon}</span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-text-primary leading-tight truncate">
+                              {app.name}
+                              {app.isInverter && (
+                                <span className="ml-2 text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase">⚡ Inverter Tech</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-text-muted">
+                              {supported
+                                ? `${getApplianceKwh(app, daytimeHours, 0).toFixed(2)} kWh/day • ${app.watts}W`
+                                : `⬆ Needs ${upgradeTo}`}
+                            </p>
+                            {qty > 0 && supported && (
+                              <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
+                                <span>Daytime use:</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={24}
+                                  value={daytimeHours}
+                                  onChange={(e) => updateApplianceDaytimeHours(app.id, parseInt(e.target.value) || 0)}
+                                  className="w-14 border border-border rounded px-2 py-0.5 text-xs text-center outline-none bg-white"
+                                />
+                                <span>hrs/day (0–24)</span>
                               </div>
-                              <div className={`flex items-center gap-3 bg-white border border-border rounded-lg p-1 flex-shrink-0 `}>
-                                <button onClick={() => updateApplianceQty(app.id, -1)} className="p-1 hover:bg-gray-100 rounded-md text-text-muted">
-                                  <Minus className="w-4 h-4" />
-                                </button>
-                                <span className="w-4 text-center text-sm font-bold">{qty}</span>
-                                <button onClick={() => updateApplianceQty(app.id, 1)} className="p-1 hover:bg-gray-100 rounded-md text-text-muted">
-                                  <Plus className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            )}
+                          </div>
+                        </div>
+                        <div className={`flex items-center gap-3 bg-white border border-border rounded-lg p-1 flex-shrink-0 `}>
+                          <button onClick={() => updateApplianceQty(app.id, -1)} className="p-1 hover:bg-gray-100 rounded-md text-text-muted">
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <span className="w-4 text-center text-sm font-bold">{qty}</span>
+                          <button onClick={() => updateApplianceQty(app.id, 1)} className="p-1 hover:bg-gray-100 rounded-md text-text-muted">
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
+            );
+          })}
+        </div>
       </div>
 
-      
+
       {/* ══════════════════════════════════════════════════ */}
       {/* HOME DETAILS                                       */}
       {/* ══════════════════════════════════════════════════ */}
@@ -546,7 +546,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               (roof type, direction, pitch)
             </span>
           </span>
-          <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}/>
+          <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
         </button>
 
         {showAdvanced && (
@@ -601,63 +601,63 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                 </select>
               </div>
             </div>
-            
-            
-        {/* 10. System Mode */}
-        <div className="space-y-3 mb-6">
-          <label className="block text-sm font-semibold text-text-primary">System Type</label>
-          <div className="flex flex-col gap-3">
-            {[
-              { id: "grid-tied", label: "Grid-Tied", desc: "No battery, daytime savings only" },
-              { id: "hybrid", label: "Hybrid", desc: "Solar + Grid + Battery (Recommended)" },
-              { id: "off-grid", label: "Off-Grid", desc: "Complete independence" }
-            ].map(mode => (
-              <label key={mode.id} className={`p-3 rounded-xl border-2 flex items-center gap-3 cursor-pointer transition-all ${inputs.systemMode === mode.id ? "border-primary bg-primary/5" : "border-border bg-white hover:border-gray-300"}`}>
-                <input
-                  type="radio"
-                  name="systemMode"
-                  checked={inputs.systemMode === mode.id}
-                  onChange={() => onChange({ systemMode: mode.id as import("@/lib/calculator/types").SystemMode })}
-                  className="accent-primary w-4 h-4"
-                />
-                <div>
-                  <div className="font-bold text-text-primary">{mode.label}</div>
-                  <div className="text-xs text-text-muted">{mode.desc}</div>
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
 
-        {/* 11. Autonomy */}
-        {inputs.systemMode !== 'grid-tied' && (
-          <div className="space-y-3 mb-6 p-4 rounded-xl bg-gray-50 border border-border">
-            <div className="flex justify-between items-end">
-              <div>
-                <label className="block text-sm font-semibold text-text-primary">Autonomy Requirement</label>
-                <p className="text-xs text-text-muted mt-0.5">How long the battery lasts without sun/grid</p>
+
+            {/* 10. System Mode */}
+            <div className="space-y-3 mb-6">
+              <label className="block text-sm font-semibold text-text-primary">System Type</label>
+              <div className="flex flex-col gap-3">
+                {[
+                  { id: "grid-tied", label: "Grid-Tied", desc: "No battery, daytime savings only" },
+                  { id: "hybrid", label: "Hybrid", desc: "Solar + Grid + Battery (Recommended)" },
+                  { id: "off-grid", label: "Off-Grid", desc: "Complete independence" }
+                ].map(mode => (
+                  <label key={mode.id} className={`p-3 rounded-xl border-2 flex items-center gap-3 cursor-pointer transition-all ${inputs.systemMode === mode.id ? "border-primary bg-primary/5" : "border-border bg-white hover:border-gray-300"}`}>
+                    <input
+                      type="radio"
+                      name="systemMode"
+                      checked={inputs.systemMode === mode.id}
+                      onChange={() => onChange({ systemMode: mode.id as import("@/lib/calculator/types").SystemMode })}
+                      className="accent-primary w-4 h-4"
+                    />
+                    <div>
+                      <div className="font-bold text-text-primary">{mode.label}</div>
+                      <div className="text-xs text-text-muted">{mode.desc}</div>
+                    </div>
+                  </label>
+                ))}
               </div>
-              <span className="text-sm font-bold text-primary">{inputs.autonomyDays === 0.5 ? "Half Day" : inputs.autonomyDays === 1 ? "1 Day" : "2+ Days"}</span>
             </div>
-            <input
-              type="range"
-              min={0.5} max={2.5} step={0.5}
-              value={inputs.autonomyDays}
-              onChange={e => {
-                const val = Number(e.target.value);
-                // Snap to valid values (0.5, 1, 2)
-                const snapped = val <= 0.5 ? 0.5 : val <= 1.5 ? 1 : 2;
-                onChange({ autonomyDays: snapped });
-              }}
-              className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary"
-            />
-            <div className="flex justify-between text-[10px] text-text-muted px-1 font-medium">
-              <span>0.5 Day (Night only)</span>
-              <span>1 Day (Standard)</span>
-              <span>2+ Days (Resilient)</span>
-            </div>
-          </div>
-        )}
+
+            {/* 11. Autonomy */}
+            {inputs.systemMode !== 'grid-tied' && (
+              <div className="space-y-3 mb-6 p-4 rounded-xl bg-gray-50 border border-border">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <label className="block text-sm font-semibold text-text-primary">Autonomy Requirement</label>
+                    <p className="text-xs text-text-muted mt-0.5">How long the battery lasts without sun/grid</p>
+                  </div>
+                  <span className="text-sm font-bold text-primary">{inputs.autonomyDays === 0.5 ? "Half Day" : inputs.autonomyDays === 1 ? "1 Day" : "2+ Days"}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0.5} max={2.5} step={0.5}
+                  value={inputs.autonomyDays}
+                  onChange={e => {
+                    const val = Number(e.target.value);
+                    // Snap to valid values (0.5, 1, 2)
+                    const snapped = val <= 0.5 ? 0.5 : val <= 1.5 ? 1 : 2;
+                    onChange({ autonomyDays: snapped });
+                  }}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <div className="flex justify-between text-[10px] text-text-muted px-1 font-medium">
+                  <span>0.5 Day (Night only)</span>
+                  <span>1 Day (Standard)</span>
+                  <span>2+ Days (Resilient)</span>
+                </div>
+              </div>
+            )}
 
             {/* 9. Coverage % */}
             <div className="space-y-3">
