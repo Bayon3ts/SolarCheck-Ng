@@ -1047,12 +1047,12 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   let totalTVKw = 0;
   let totalGeneralKw = 0;
   let numAcUnits = 0;
-  
+
   // Track pure motor loads for the surge checks
   let acMotorKw = 0;
   let fridgeMotorKw = 0;
   let pumpMotorKw = 0;
-  
+
   let singleLargestActiveKw = 0;    // safety floor — biggest individual appliance running
   let baseLightingLoadsKw = 0;      // safety floor addition
 
@@ -1076,16 +1076,16 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       //   18hr total → dayHrs=12, nightHrs=6
       //   24hr total → dayHrs=12, nightHrs=12 (full day + full night, e.g. fridge)
       const DAY_WINDOW = 12; // 6am–6pm
-      const dayHrs  = Math.min(totalUserHours, DAY_WINDOW);
+      const dayHrs = Math.min(totalUserHours, DAY_WINDOW);
       const nightHrs = Math.max(0, totalUserHours - DAY_WINDOW);
       console.log('APP CALC', appDef.id, { qty, dayHrs, nightHrs }, 'DAY KWH', getApplianceKwh(appDef, dayHrs, 0) * qty);
 
       // ── FIX 2: Strict Night Load separation ────────────────────────────────
       // We no longer rely on typicalHours static split. 
       // If daytime load exists, it calculates exactly. If night, exactly night.
-      
+
       const climateFactor = appDef.category === 'Refrigeration' ? 1.0 : 1.0;
-      
+
       const appDayKwh = getApplianceKwh(appDef, dayHrs, 0) * qty * climateFactor;
       dailyLoadKwh += appDayKwh;
 
@@ -1173,16 +1173,16 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     peakSurgeKw = dailyLoadKwh * 0.2;  // rough estimate
     simultaneousLoadKw = dailyLoadKwh * 0.15;
   }
-  
+
   // ── CALCULATE PEAK LOAD ──────────────────
-  
+
   if (appliances.length > 0) {
     const acFactor = numAcUnits >= 2 ? 0.9 : 0.75;
-    simultaneousLoadKw = 
-      (totalACKw * acFactor) + 
-      (totalFridgeKw * 0.6) + 
-      (totalLightingKw * 0.7) + 
-      (totalTVKw * 0.6) + 
+    simultaneousLoadKw =
+      (totalACKw * acFactor) +
+      (totalFridgeKw * 0.6) +
+      (totalLightingKw * 0.7) +
+      (totalTVKw * 0.6) +
       (totalGeneralKw * 0.5);
   }
 
@@ -1214,19 +1214,19 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // for battery charging, rainy checks, inverter sizing, or coverage labels.
   //
   // Component breakdown (IEC 61724 / PVsyst):
-  const panelLosses    = 0.90; // temperature + dust
-  const inverterEff    = 0.96; // MPPT hybrid conversion
+  const panelLosses = 0.90; // temperature + dust
+  const inverterEff = 0.96; // MPPT hybrid conversion
   const batteryRoundtrip = (inputs.systemMode !== 'grid-tied') ? 0.90 : 1.00; // LFP
-  const wiringLosses   = 0.97; // DC ohmic + junction losses
+  const wiringLosses = 0.97; // DC ohmic + junction losses
   // Spatial factors from roof geometry (orientation, pitch, shade):
-  const spatialFactor  = directionFactor * pitchFactor * shadeFactor;
+  const spatialFactor = directionFactor * pitchFactor * shadeFactor;
   // Combine WITHOUT batteryRoundtrip — round-trip is a per-cycle electrochemical
   // loss inside the battery cell; it does NOT reduce PV generation capacity:
-  const rawEfficiency  = panelLosses * inverterEff * wiringLosses * spatialFactor;
+  const rawEfficiency = panelLosses * inverterEff * wiringLosses * spatialFactor;
   // Clamp to [0.75, 0.80] — Nigeria PR field data (IEC 61724 West Africa):
-  const SYSTEM_EFF     = Math.min(0.80, Math.max(0.75, rawEfficiency));
+  const SYSTEM_EFF = Math.min(0.80, Math.max(0.75, rawEfficiency));
   const systemEfficiency = SYSTEM_EFF;  // legacy alias used by PV sizing formulas
-  const totalEfficiency  = SYSTEM_EFF;  // alias for efficiencyBreakdown object
+  const totalEfficiency = SYSTEM_EFF;  // alias for efficiencyBreakdown object
 
   // ── PV SIZING — annual average is the baseline ──────────────────────────
   // ENGINEERING NOTE: Size to annual average PSH. The rainy-season worst-month
@@ -1300,27 +1300,36 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
   // ── FIX 6: INVERTER SIZING — load-based, not PV-based ────────────────────
   const peakLoadWatts = realPeakLoadKw * 1000;
-  
+
   // Appliance-specific motor surge
   const surgeLoadWatts = (acMotorKw * 1000 * 1.5) + (fridgeMotorKw * 1000 * 2.5) + (pumpMotorKw * 1000 * 3.5);
-  
+
   const POWER_FACTOR_NG = 0.8; // Nigerian standard
-  
+
   // Inverters are rated in kVA (apparent power), not kW (real power).
   const targetCapacity = Math.max(peakLoadWatts * 1.25, surgeLoadWatts) / POWER_FACTOR_NG;
 
-  let recommendedInverterKva = 3.0; // Default baseline
-  if (targetCapacity <= 3000) {
-    recommendedInverterKva = 3.0;
+  // ── INVERTER STANDARD SIZE LADDER — full Nigerian market range ───────────────
+  // Sizes: 1 → 1.5 → 2 → 3 → 5 → 8 → 10 → 12 → 15 → 20 → 30 kVA
+  // Source: Luminous, Felicity, Mercury, Deye, Growatt Nigerian market ranges.
+  // Previously started at 3kVA min — small loads (lights/phone/router) were
+  // massively oversized. Fixed June 2026.
+  let recommendedInverterKva: number;
+  if (targetCapacity <= 1000) {
+    recommendedInverterKva = 1.0;    // ultra-light: LEDs, phone, router
+  } else if (targetCapacity <= 1500) {
+    recommendedInverterKva = 1.5;    // light: fan + TV + laptop
+  } else if (targetCapacity <= 2000) {
+    recommendedInverterKva = 2.0;    // basic: fans + TV + fridge (no AC)
+  } else if (targetCapacity <= 3000) {
+    recommendedInverterKva = 3.0;    // standard small home (no AC)
   } else if (targetCapacity <= 5000) {
-    recommendedInverterKva = 5.0;
+    recommendedInverterKva = 5.0;    // AC-capable: 1HP AC + base loads
   } else if (targetCapacity <= 8000) {
-    recommendedInverterKva = 8.0;
+    recommendedInverterKva = 8.0;    // heavy: 1.5–2HP AC + full home
   } else if (targetCapacity <= 10000) {
-    // 8,055W * 1.25 = 10,068W -> extremely close to 10kVA safety line
-    recommendedInverterKva = 10.0; 
+    recommendedInverterKva = 10.0;
   } else if (targetCapacity <= 12000) {
-    // Only step up to 15kVA if surge target strictly exceeds 12kW
     recommendedInverterKva = 12.0;
   } else if (targetCapacity <= 15000) {
     recommendedInverterKva = 15.0;
@@ -1336,6 +1345,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   //
   // maximum_protection (default):
   //   AC or water pump present → hard 5 kVA floor (handles inductive startup surges).
+  //   No AC/pump: proportionate floor based on total connected load.
   //
   // budget_conscious:
   //   If an AC is present BUT total nameplate connected load is below 2 200 W,
@@ -1359,9 +1369,24 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   ) {
     // Budget step-down: 3 kVA / 24V class permitted — load-management banner required
     minInverterKva = 3;
+  } else if (hasAC) {
+    // AC startup surge: hard 5 kVA floor regardless of total load
+    minInverterKva = 5;
+  } else if (hasWaterPump) {
+    // Borehole pump surge: hard 5 kVA floor
+    minInverterKva = 5;
+  } else if (totalConnectedLoadW > 1500) {
+    // Mixed loads above 1.5kW nameplate → 3kVA floor for headroom
+    minInverterKva = 3;
+  } else if (totalConnectedLoadW > 800) {
+    // Medium loads 800W–1500W → 2kVA floor
+    minInverterKva = 2;
+  } else if (totalConnectedLoadW > 400) {
+    // Light loads 400W–800W → 1.5kVA floor
+    minInverterKva = 1.5;
   } else {
-    // Maximum protection (default) or heavy load: strict hardware floor
-    minInverterKva = hasAC ? 5 : hasWaterPump ? 5 : 3;
+    // Ultra-light loads under 400W → 1kVA sufficient
+    minInverterKva = 1;
   }
 
   const inverterKva = Math.max(recommendedInverterKva, minInverterKva);
@@ -1460,20 +1485,20 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     //   3. Inverter AC-to-DC bus alignment: large inverters need large batteries to prevent sag.
     const nightLoadMinBattery = nightLoadKwh > 0 ? nightLoadKwh / LFP_DOD : 0;
     const hardwareMin = hasAC || hasWaterPump ? 4.8 : BATT_MIN;
-    
+
     let inverterBusMin = 4.8;
     if (inverterKva > 10) inverterBusMin = 14.4;
     else if (inverterKva > 5) inverterBusMin = 9.6;
 
     let minBattery = Math.max(hardwareMin, nightLoadMinBattery, inverterBusMin);
-    
+
     // If the battery floor is pushed above 4.8kWh, snap it to standard 4.8kWh module increments
     if (minBattery > 4.8) {
       minBattery = Math.ceil(minBattery / 4.8) * 4.8;
     }
 
     batteryKwh = Math.max(batteryKwh, minBattery);
-    
+
     // Snap final total to 4.8kWh increments if it grew beyond 4.8
     if (batteryKwh > 4.8) {
       batteryKwh = Math.ceil(batteryKwh / 4.8) * 4.8;
@@ -1558,7 +1583,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // PV classification against true coverage
   let pvClassification: 'UNDER SIZED' | 'WELL SIZED' | 'OVER SIZED' | 'OVER SIZED (DAYTIME)' = 'WELL SIZED';
   const pvCoverage = dailyLoadKwh > 0 ? (actualPvKwp * avgPSH * systemEfficiency) / dailyLoadKwh : 1;
-  
+
   if (pvCoverage < 0.9) pvClassification = 'UNDER SIZED';
   else if (pvCoverage <= 1.2) pvClassification = 'WELL SIZED';
   else if (pvCoverage > 1.5 && batteryKwh === 0) pvClassification = 'OVER SIZED (DAYTIME)';
@@ -1586,11 +1611,11 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       invKwh: number;
       label: string;
     }> = [
-      { stdId: 'ac_1hp_std',   invId: 'ac_1hp_inv',   stdKwh: 6.0,  invKwh: 5.6,  label: '1HP' },
-      { stdId: 'ac_1_5hp_std', invId: 'ac_1_5hp_inv', stdKwh: 12.0, invKwh: 9.6,  label: '1.5HP' },
-      { stdId: 'ac_2hp_std',   invId: 'ac_2hp_inv',   stdKwh: 12.0, invKwh: 12.0, label: '2HP' },
-      // kWh values updated June 2026 — installer-verified wattages
-    ];
+        { stdId: 'ac_1hp_std', invId: 'ac_1hp_inv', stdKwh: 6.0, invKwh: 5.6, label: '1HP' },
+        { stdId: 'ac_1_5hp_std', invId: 'ac_1_5hp_inv', stdKwh: 12.0, invKwh: 9.6, label: '1.5HP' },
+        { stdId: 'ac_2hp_std', invId: 'ac_2hp_inv', stdKwh: 12.0, invKwh: 12.0, label: '2HP' },
+        // kWh values updated June 2026 — installer-verified wattages
+      ];
 
     for (const pair of STD_TO_INV_MAP) {
       const sel = inputs.appliances.find(
@@ -1634,8 +1659,8 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const totalPanelWatts = actualPvKwp * 1000;
   const batteryVoltage: 12 | 24 | 48 =
     inverterKva <= 1.5 ? 12
-    : inverterKva <= 3  ? 24
-    : 48;
+      : inverterKva <= 3 ? 24
+        : 48;
   // Source: Field standard — voltage class follows inverter size, not PV array.
   // 96V excluded: SolarCheck targets residential systems (48V LFP ceiling).
   const selectedInverterType: 'hybrid' | 'off-grid' | 'pcu' | 'on-grid' = systemMode === 'grid-tied' ? 'on-grid' : (systemMode === 'off-grid' ? 'off-grid' : 'hybrid');
@@ -1894,10 +1919,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const theoreticalAutonomy = nightLoadKwh > 0
     ? (batteryKwh * LFP_DOD) / (nightLoadKwh / 12)
     : 0;
-  
+
   const CEILING_HOURS = 12.0;
-  const isBatteryValid = theoreticalAutonomy >= CEILING_HOURS 
-    ? autonomyHours === CEILING_HOURS 
+  const isBatteryValid = theoreticalAutonomy >= CEILING_HOURS
+    ? autonomyHours === CEILING_HOURS
     : Math.abs(theoreticalAutonomy - autonomyHours) < 0.1;
 
   if (isBatteryValid || theoreticalAutonomy === 0) {
