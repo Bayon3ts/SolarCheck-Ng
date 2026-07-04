@@ -1,0 +1,139 @@
+diff --git a/src/lib/calculator/calculations.ts b/src/lib/calculator/calculations.ts
+index 84e3726..dc76323 100644
+--- a/src/lib/calculator/calculations.ts
++++ b/src/lib/calculator/calculations.ts
+@@ -67,15 +67,16 @@ export async function getFuelPrice(): Promise<{
+ // ── Appliance data (client + server share) ────────────────
+ export const APPLIANCES = [
+   // ═══ COOLING ═══
++  // AC wattages: installer-verified field values, June 2026
+   {
+     id: 'ac_1hp_inv',
+     name: '1HP Air Conditioner (Inverter)',
+     category: 'Cooling',
+     icon: '❄️',
+-    kwhPerDay: 4.4,
++    kwhPerDay: 5.6,   // 700W × 8hrs ÷ 1000
+     typicalHours: 8,
+     isInverter: true,
+-    watts: 550,
++    watts: 700,       // was 550W — corrected per installer review June 2026
+     dutyCycle: 1,
+   },
+   {
+@@ -83,10 +84,10 @@ export const APPLIANCES = [
+     name: '1HP Air Conditioner (Standard)',
+     category: 'Cooling',
+     icon: '❄️',
+-    kwhPerDay: 6.0,
++    kwhPerDay: 6.0,   // 750W × 8hrs ÷ 1000
+     typicalHours: 8,
+     isInverter: false,
+-    watts: 750,
++    watts: 750,       // confirmed correct
+     dutyCycle: 1,
+   },
+   {
+@@ -94,10 +95,10 @@ export const APPLIANCES = [
+     name: '1.5HP Air Conditioner (Inverter)',
+     category: 'Cooling',
+     icon: '❄️',
+-    kwhPerDay: 6.0,
++    kwhPerDay: 9.6,   // 1200W × 8hrs ÷ 1000
+     typicalHours: 8,
+     isInverter: true,
+-    watts: 750,
++    watts: 1200,      // was 750W — corrected per installer review June 2026
+     dutyCycle: 1,
+   },
+   {
+@@ -105,10 +106,10 @@ export const APPLIANCES = [
+     name: '1.5HP Air Conditioner (Standard)',
+     category: 'Cooling',
+     icon: '❄️',
+-    kwhPerDay: 8.8,
++    kwhPerDay: 12.0,  // 1500W × 8hrs ÷ 1000
+     typicalHours: 8,
+     isInverter: false,
+-    watts: 1100,
++    watts: 1500,      // was 1100W — corrected per installer review June 2026
+     dutyCycle: 1,
+   },
+   {
+@@ -116,10 +117,10 @@ export const APPLIANCES = [
+     name: '2HP Air Conditioner (Inverter)',
+     category: 'Cooling',
+     icon: '❄️',
+-    kwhPerDay: 8.0,
++    kwhPerDay: 12.0,  // 1500W × 8hrs ÷ 1000
+     typicalHours: 8,
+     isInverter: true,
+-    watts: 1000,
++    watts: 1500,      // was 1000W — corrected per installer review June 2026
+     dutyCycle: 1,
+   },
+   {
+@@ -127,21 +128,44 @@ export const APPLIANCES = [
+     name: '2HP Air Conditioner (Standard)',
+     category: 'Cooling',
+     icon: '❄️',
+-    kwhPerDay: 12.0,
++    kwhPerDay: 12.0,  // 1500W × 8hrs ÷ 1000
+     typicalHours: 8,
+     isInverter: false,
+-    watts: 1500,
++    watts: 1500,      // confirmed correct
+     dutyCycle: 1,
+   },
++  // Ceiling fans: split into 3 sizes — installer-verified, June 2026
+   {
+     id: 'fan_ceiling',
+-    name: 'Ceiling Fan',
++    name: 'Ceiling Fan (30")',  // renamed from 'Ceiling Fan' — id kept for backward compat
+     category: 'Cooling',
+     icon: '🌀',
+-    kwhPerDay: 0.48,
++    kwhPerDay: 0.54,  // 45W × 12hrs ÷ 1000
+     typicalHours: 12,
+     isInverter: false,
+-    watts: 40,
++    watts: 45,        // was 40W
++    dutyCycle: 1,
++  },
++  {
++    id: 'fan_ceiling_small',
++    name: 'Ceiling Fan (24")',
++    category: 'Cooling',
++    icon: '🌀',
++    kwhPerDay: 0.42,  // 35W × 12hrs ÷ 1000
++    typicalHours: 12,
++    isInverter: false,
++    watts: 35,        // installer-verified June 2026
++    dutyCycle: 1,
++  },
++  {
++    id: 'fan_ceiling_large',
++    name: 'Ceiling Fan (36")',
++    category: 'Cooling',
++    icon: '🌀',
++    kwhPerDay: 0.66,  // 55W × 12hrs ÷ 1000
++    typicalHours: 12,
++    isInverter: false,
++    watts: 55,        // installer-verified June 2026
+     dutyCycle: 1,
+   },
+   {
+@@ -1562,9 +1586,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
+       invKwh: number;
+       label: string;
+     }> = [
+-      { stdId: 'ac_1hp_std',   invId: 'ac_1hp_inv',   stdKwh: 6.0,  invKwh: 4.4, label: '1HP' },
+-      { stdId: 'ac_1_5hp_std', invId: 'ac_1_5hp_inv', stdKwh: 8.8,  invKwh: 6.0, label: '1.5HP' },
+-      { stdId: 'ac_2hp_std',   invId: 'ac_2hp_inv',   stdKwh: 12.0, invKwh: 8.0, label: '2HP' },
++      { stdId: 'ac_1hp_std',   invId: 'ac_1hp_inv',   stdKwh: 6.0,  invKwh: 5.6,  label: '1HP' },
++      { stdId: 'ac_1_5hp_std', invId: 'ac_1_5hp_inv', stdKwh: 12.0, invKwh: 9.6,  label: '1.5HP' },
++      { stdId: 'ac_2hp_std',   invId: 'ac_2hp_inv',   stdKwh: 12.0, invKwh: 12.0, label: '2HP' },
++      // kWh values updated June 2026 — installer-verified wattages
+     ];
+ 
+     for (const pair of STD_TO_INV_MAP) {
