@@ -209,7 +209,7 @@ export interface CalculatorResults {
   panelSizeWatts: number;
   panelTierLabel?: string;  // e.g. "Standard Residential (3–6 kWp range)"
   avgPSH: number;
-  pvClassification: 'UNDER SIZED' | 'WELL SIZED' | 'OVER SIZED' | 'OVER SIZED (DAYTIME)';
+  pvClassification: 'UNDER SIZED' | 'WELL SIZED' | 'OPTIMAL' | 'OVER SIZED' | 'OVER SIZED (DAYTIME)';
   seasonalRisk: 'Rainy season stable' | 'Rainy season borderline' | 'Rainy season at risk';
   energyOffsetPct: number;
   /** Physics-honest coverage label — claims 100% only when usable generation > load × 1.15 */
