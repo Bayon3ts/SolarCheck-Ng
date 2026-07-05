@@ -1522,7 +1522,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // Usable battery capacity — LFP_DOD only (RT_EFF excluded per spec, see note above)
   const usableBattery = batteryKwh * LFP_DOD;
 
-  const isFragileBatteryWarning = nightLoadKwh <= 0.5 && usableBattery <= 5.0;
+  // Fragile battery warning: only meaningful when there IS a real night load
+  // that the battery struggles to cover. Zero/near-zero night load means the
+  // battery is correctly sized for daytime-only use — not a warning scenario.
+  const isFragileBatteryWarning = nightLoadKwh > 0.5 && nightLoadKwh <= 1.0 && usableBattery <= 5.0;
 
   // Autonomy hours — capped to prevent nonsensical values from tiny night loads
   // e.g. 0.2 kWh night load + 4.8 kWh battery (AC floor) → uncapped = 288h (impossible)
