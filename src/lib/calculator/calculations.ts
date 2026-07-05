@@ -1671,18 +1671,92 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   else if (rainyToLoadRatio >= 1.15) seasonalRisk = 'Rainy season borderline';
   else seasonalRisk = 'Rainy season at risk';
 
-  // STEP 6 — COST & SAVINGS (Ranges)
-  const roofMountingCost = roofType === 'clay_tiles' ? 35000 : 0;
-  let baseSystemCostMin = actualPvKwp * 500000;
-  let baseSystemCostMax = actualPvKwp * 700000;
+  // STEP 6 — COST & SAVINGS (Itemized Nigerian Retail Pricing)
+  // All prices: Lagos retail market, June 2026. Source: installer field review.
+  // Min = budget/local brands. Max = premium/tier-1 brands (Jinko, Victron, Deye).
+  // Always get 3 competing quotes — prices vary ±20% by vendor and location.
+
+  // ── PANEL COST (per unit, by wattage tier) ────────────────────────────────
+  // 400W: ₦80k–₦110k | 450W: ₦90k–₦120k | 550W: ₦110k–₦140k
+  // 650W: ₦140k–₦170k | 700W: ₦150k–₦180k
+  const panelUnitCostMin =
+    panelSizeWatts <= 400 ? 80000
+      : panelSizeWatts <= 450 ? 90000
+        : panelSizeWatts <= 550 ? 110000
+          : panelSizeWatts <= 650 ? 140000
+            : 150000;
+  const panelUnitCostMax =
+    panelSizeWatts <= 400 ? 110000
+      : panelSizeWatts <= 450 ? 120000
+        : panelSizeWatts <= 550 ? 140000
+          : panelSizeWatts <= 650 ? 170000
+            : 180000;
+  const totalPanelCostMin = panelsNeeded * panelUnitCostMin;
+  const totalPanelCostMax = panelsNeeded * panelUnitCostMax;
+
+  // ── INVERTER COST (by kVA tier) ───────────────────────────────────────────
+  // Nigerian market hybrid inverter pricing (Felicity, Growatt, Deye, Victron)
+  // 1kVA: ₦80k–₦120k | 1.5kVA: ₦95k–₦140k | 2kVA: ₦120k–₦165k
+  // 3kVA: ₦165k–₦230k | 5kVA: ₦280k–₦380k | 8kVA: ₦450k–₦600k
+  // 10kVA: ₦600k–₦800k | 12kVA+: ₦800k–₦1.2M
+  const inverterCostMin =
+    inverterKva <= 1 ? 80000
+      : inverterKva <= 1.5 ? 95000
+        : inverterKva <= 2 ? 120000
+          : inverterKva <= 3 ? 165000
+            : inverterKva <= 5 ? 280000
+              : inverterKva <= 8 ? 450000
+                : inverterKva <= 10 ? 600000
+                  : 800000;
+  const inverterCostMax =
+    inverterKva <= 1 ? 120000
+      : inverterKva <= 1.5 ? 140000
+        : inverterKva <= 2 ? 165000
+          : inverterKva <= 3 ? 230000
+            : inverterKva <= 5 ? 380000
+              : inverterKva <= 8 ? 600000
+                : inverterKva <= 10 ? 800000
+                  : 1200000;
+
+  // ── BATTERY COST (per kWh, by pack size) ─────────────────────────────────
+  // LFP packs: Nigerian retail June 2026
+  // ≤5kWh: ₦60k–₦80k/kWh | 5–10kWh: ₦55k–₦75k/kWh | >10kWh: ₦50k–₦70k/kWh
+  // (bulk/larger packs have slightly lower per-kWh cost)
+  const batteryPerKwhMin = batteryKwh <= 5 ? 60000 : batteryKwh <= 10 ? 55000 : 50000;
+  const batteryPerKwhMax = batteryKwh <= 5 ? 80000 : batteryKwh <= 10 ? 75000 : 70000;
+  const totalBatteryCostMin = batteryKwh * batteryPerKwhMin;
+  const totalBatteryCostMax = batteryKwh * batteryPerKwhMax;
+
+  // ── MOUNTING + LABOUR (per panel + roof type premium) ────────────────────
+  // Per panel: ₦12k–₦20k (includes brackets, roof penetration, labour)
+  // Clay tiles: +₦5k/panel extra (harder to penetrate safely)
+  // Flat concrete: +₦3k/panel extra (ballast/anchor system)
   const isFlatConcrete = roofType === 'flat_concrete';
-  if (isFlatConcrete) { baseSystemCostMin *= 1.05; baseSystemCostMax *= 1.05; }
+  const mountingPerPanelMin = roofType === 'clay_tiles' ? 17000 : isFlatConcrete ? 15000 : 12000;
+  const mountingPerPanelMax = roofType === 'clay_tiles' ? 25000 : isFlatConcrete ? 23000 : 20000;
+  const totalMountingCostMin = panelsNeeded * mountingPerPanelMin;
+  const totalMountingCostMax = panelsNeeded * mountingPerPanelMax;
 
-  const batteryUnitCost = 180000;
-  const totalBatteryCost = batteryKwh * batteryUnitCost;
+  // ── CABLES + ACCESSORIES ──────────────────────────────────────────────────
+  // Copper cables, breakers, lugs, trunking, surge protection
+  // Scales with system size: small (1–2kVA) = ₦15k–₦25k, large (5kVA+) = ₦25k–₦45k
+  const accessoriesCostMin = inverterKva <= 2 ? 15000 : inverterKva <= 5 ? 20000 : 25000;
+  const accessoriesCostMax = inverterKva <= 2 ? 25000 : inverterKva <= 5 ? 35000 : 45000;
 
-  let systemCostMin = baseSystemCostMin + totalBatteryCost + roofMountingCost;
-  let systemCostMax = baseSystemCostMax + totalBatteryCost + roofMountingCost;
+  // ── TOTALS ────────────────────────────────────────────────────────────────
+  let systemCostMin = totalPanelCostMin + inverterCostMin + totalBatteryCostMin
+    + totalMountingCostMin + accessoriesCostMin;
+  let systemCostMax = totalPanelCostMax + inverterCostMax + totalBatteryCostMax
+    + totalMountingCostMax + accessoriesCostMax;
+
+  // Store itemized breakdown for UI display
+  const costBreakdown = {
+    panels: { min: totalPanelCostMin, max: totalPanelCostMax, label: `${panelsNeeded} × ${panelSizeWatts}W panels` },
+    inverter: { min: inverterCostMin, max: inverterCostMax, label: `${inverterKva}kVA hybrid inverter` },
+    battery: { min: totalBatteryCostMin, max: totalBatteryCostMax, label: `${batteryKwh}kWh LFP battery bank` },
+    mounting: { min: totalMountingCostMin, max: totalMountingCostMax, label: 'Mounting + labour' },
+    accessories: { min: accessoriesCostMin, max: accessoriesCostMax, label: 'Cables + accessories' },
+  };
 
   const totalPanelWatts = actualPvKwp * 1000;
   const batteryVoltage: 12 | 24 | 48 =
@@ -2272,7 +2346,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   }
 
   // Economic Sanity Check
-  if (totalBatteryCost > systemCostMax * 0.4) {
+  if (totalBatteryCostMin > systemCostMax * 0.4) {
     systemConsistencyWarnings.push("Battery may not be cost-optimal ⚠️");
   }
 
@@ -2305,6 +2379,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     dynamicApplianceInsights: efficiencyRecommendations,
     systemCostMin,
     systemCostMax,
+    costBreakdown,
     paybackMonths,
     fiveYearSavings,
     systemStatus: finalVerdict === 'Marketing-Biased' ? 'FAIL' : 'PASS',

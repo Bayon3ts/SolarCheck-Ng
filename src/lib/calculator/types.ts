@@ -226,6 +226,14 @@ export interface CalculatorResults {
   // Inverter & Battery
   inverterKva: number;
   batteryKwh: number;
+  /** Itemized cost breakdown by component — Nigerian retail, June 2026 */
+  costBreakdown: {
+    panels: { min: number; max: number; label: string };
+    inverter: { min: number; max: number; label: string };
+    battery: { min: number; max: number; label: string };
+    mounting: { min: number; max: number; label: string };
+    accessories: { min: number; max: number; label: string };
+  };
   batteryVoltage: 12 | 24 | 48;
   batteryType: string;
   realUsableBattery: number;
