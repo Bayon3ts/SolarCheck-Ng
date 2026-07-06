@@ -286,10 +286,10 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
       {/* ── SYSTEM VERDICT BANNER ─────────────────────────────────────────── */}
       {r.systemVerdict && (
         <div className={`rounded-2xl p-4 border ${r.systemVerdict.systemClass === 'FULL_SOLAR'
-            ? 'bg-green-50 border-green-200'
-            : r.systemVerdict.systemClass === 'GRID_ASSISTED'
-              ? 'bg-amber-50 border-amber-200'
-              : 'bg-orange-50 border-orange-200'
+          ? 'bg-green-50 border-green-200'
+          : r.systemVerdict.systemClass === 'GRID_ASSISTED'
+            ? 'bg-amber-50 border-amber-200'
+            : 'bg-orange-50 border-orange-200'
           }`}>
           <div className="flex items-start gap-3">
             <span className="text-xl mt-0.5">
@@ -299,23 +299,23 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.systemVerdict.systemClass === 'FULL_SOLAR'
-                    ? 'bg-green-100 text-green-700'
-                    : r.systemVerdict.systemClass === 'GRID_ASSISTED'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-orange-100 text-orange-800'
+                  ? 'bg-green-100 text-green-700'
+                  : r.systemVerdict.systemClass === 'GRID_ASSISTED'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-orange-100 text-orange-800'
                   }`}>
                   {r.systemVerdict.systemClass === 'FULL_SOLAR' ? 'Fully Solar-Capable' :
                     r.systemVerdict.systemClass === 'GRID_ASSISTED' ? 'Grid-Assisted System' :
                       'Grid-Dependent System'}
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.systemVerdict.confidence === 'HIGH' ? 'bg-green-100 text-green-700' :
-                    r.systemVerdict.confidence === 'MEDIUM' ? 'bg-slate-100 text-slate-600' :
-                      'bg-red-100 text-red-700'
+                  r.systemVerdict.confidence === 'MEDIUM' ? 'bg-slate-100 text-slate-600' :
+                    'bg-red-100 text-red-700'
                   }`}>{r.systemVerdict.confidence} confidence</span>
               </div>
               <p className={`text-sm font-semibold ${r.systemVerdict.systemClass === 'FULL_SOLAR' ? 'text-green-800' :
-                  r.systemVerdict.systemClass === 'GRID_ASSISTED' ? 'text-amber-800' :
-                    'text-orange-800'
+                r.systemVerdict.systemClass === 'GRID_ASSISTED' ? 'text-amber-800' :
+                  'text-orange-800'
                 }`}>{r.systemVerdict.verdictText}</p>
               <p className="text-xs text-slate-500 mt-1">
                 Annual solar coverage: {r.systemVerdict.annualCoveragePct}% · Rainy season: {r.systemVerdict.rainySeasonCoveragePct}%
@@ -535,9 +535,9 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
                   {r.peakLoadKw.toFixed(2)} kW simultaneous load
                   × 1.25 surge margin ÷ 0.8 power factor
                   = {((r.peakLoadKw * 1.25) / 0.8).toFixed(2)} kVA required
-                  {r.totalConnectedLoadW && r.totalConnectedLoadW / 1000 > r.inverterKva * 0.6
-                    ? ' — AC/pump startup floor applied.'
-                    : ' — rounded to next standard size.'}
+                  {((r.peakLoadKw * 1.25) / 0.8) < (r.inverterKva - 0.4)
+                    ? ' — AC/pump startup floor applied (motor inrush current requires minimum 5 kVA).'
+                    : ' — rounded up to next standard size.'}
                 </div>
               )}
               <Row label="Battery" value={`${r.batteryKwh.toFixed(1)} kWh`} accent />
