@@ -193,8 +193,8 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           )}
           <div className="mt-2">
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.pvClassification === 'WELL SIZED' ? 'bg-green-100 text-green-700' :
-                r.pvClassification.includes('OVER SIZED') ? 'bg-amber-100 text-amber-700' :
-                  'bg-red-100 text-red-700'
+              r.pvClassification.includes('OVER SIZED') ? 'bg-amber-100 text-amber-700' :
+                'bg-red-100 text-red-700'
               }`}>{r.pvClassification}</span>
           </div>
         </div>
@@ -228,8 +228,8 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               <div className="text-xs text-text-muted mt-1">Night autonomy</div>
               <div className="mt-2">
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.autonomyHours >= 12 ? 'bg-green-100 text-green-700' :
-                    r.autonomyHours >= 8 ? 'bg-amber-100 text-amber-700' :
-                      'bg-red-100 text-red-700'
+                  r.autonomyHours >= 8 ? 'bg-amber-100 text-amber-700' :
+                    'bg-red-100 text-red-700'
                   }`}>{r.autonomyHours >= 12 ? 'Full night covered' : r.autonomyHours >= 8 ? 'Most night' : 'Limited night backup'}</span>
               </div>
             </>
@@ -283,16 +283,68 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
         </div>
       )}
 
-      {/* ── CONSISTENCY WARNINGS ──────────────────────────────────────────── */}
+      {/* ── SYSTEM VERDICT BANNER ─────────────────────────────────────────── */}
+      {r.systemVerdict && (
+        <div className={`rounded-2xl p-4 border ${r.systemVerdict.systemClass === 'FULL_SOLAR'
+            ? 'bg-green-50 border-green-200'
+            : r.systemVerdict.systemClass === 'GRID_ASSISTED'
+              ? 'bg-amber-50 border-amber-200'
+              : 'bg-orange-50 border-orange-200'
+          }`}>
+          <div className="flex items-start gap-3">
+            <span className="text-xl mt-0.5">
+              {r.systemVerdict.systemClass === 'FULL_SOLAR' ? '☀️' :
+                r.systemVerdict.systemClass === 'GRID_ASSISTED' ? '⚡' : '🔌'}
+            </span>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.systemVerdict.systemClass === 'FULL_SOLAR'
+                    ? 'bg-green-100 text-green-700'
+                    : r.systemVerdict.systemClass === 'GRID_ASSISTED'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-orange-100 text-orange-800'
+                  }`}>
+                  {r.systemVerdict.systemClass === 'FULL_SOLAR' ? 'Fully Solar-Capable' :
+                    r.systemVerdict.systemClass === 'GRID_ASSISTED' ? 'Grid-Assisted System' :
+                      'Grid-Dependent System'}
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.systemVerdict.confidence === 'HIGH' ? 'bg-green-100 text-green-700' :
+                    r.systemVerdict.confidence === 'MEDIUM' ? 'bg-slate-100 text-slate-600' :
+                      'bg-red-100 text-red-700'
+                  }`}>{r.systemVerdict.confidence} confidence</span>
+              </div>
+              <p className={`text-sm font-semibold ${r.systemVerdict.systemClass === 'FULL_SOLAR' ? 'text-green-800' :
+                  r.systemVerdict.systemClass === 'GRID_ASSISTED' ? 'text-amber-800' :
+                    'text-orange-800'
+                }`}>{r.systemVerdict.verdictText}</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Annual solar coverage: {r.systemVerdict.annualCoveragePct}% · Rainy season: {r.systemVerdict.rainySeasonCoveragePct}%
+              </p>
+            </div>
+          </div>
+          {r.systemVerdict.warnings.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-current/10 space-y-1.5">
+              {r.systemVerdict.warnings.map((w, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs">
+                  <span>{w.level === 'CRITICAL' ? '🔴' : w.level === 'ADVISORY' ? '🟡' : 'ℹ️'}</span>
+                  <span className="text-slate-600 leading-relaxed">{w.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── PERFORMANCE NOTES (renamed from Engineering Constraints) ───────── */}
       {r.systemConsistencyWarnings && r.systemConsistencyWarnings.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-          <h4 className="text-amber-800 font-bold mb-2 flex items-center gap-2">
-            <span>⚠️</span> Engineering Constraints Detected
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+          <h4 className="text-slate-700 font-bold mb-2 flex items-center gap-2 text-sm">
+            <span>📋</span> Performance Notes
           </h4>
-          <ul className="space-y-2">
+          <ul className="space-y-1.5">
             {r.systemConsistencyWarnings.map((warn, idx) => (
-              <li key={idx} className="text-sm text-amber-700 leading-relaxed">
-                {warn}
+              <li key={idx} className="text-xs text-slate-600 leading-relaxed flex items-start gap-2">
+                <span className="text-slate-400 mt-0.5">•</span>{warn}
               </li>
             ))}
           </ul>
@@ -439,7 +491,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               )}
               <Row label="Classification" value={
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.pvClassification === 'WELL SIZED' ? 'bg-green-100 text-green-700' :
-                    r.pvClassification.includes('OVER SIZED') ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                  r.pvClassification.includes('OVER SIZED') ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                   }`}>{r.pvClassification}</span>
               } />
               <Row label="Avg PSH" value={`${r.avgPSH?.toFixed(1)} hrs/day`} />

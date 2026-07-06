@@ -2137,6 +2137,93 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   else if (qaScore >= 60) finalVerdict = 'Installer-Conservative';
   else finalVerdict = 'Marketing-Biased';
 
+  // ── SYSTEM VERDICT ENGINE ─────────────────────────────────────────────────
+  // One dominant truth that all warnings must support, never contradict.
+  // Uses seasonal coverage (not just annual avg) — rainy season is the real
+  // binding constraint in Lagos, not the annual average.
+  // Source: Based on real Lagos irradiance data (annual avg 3.75, rainy 3.32 PSH).
+
+  const rainyCoverage = dailyLoadKwh > 0
+    ? (actualPvKwp * rainyProduction / (actualPvKwp > 0 ? actualPvKwp : 1)) / dailyLoadKwh
+    : 1;
+  // Simpler: rainy season coverage = rainyProduction / dailyLoadKwh
+  const rainySeasonCoverage = dailyLoadKwh > 0 ? rainyProduction / dailyLoadKwh : 1;
+  const batteryCoversNight = nightLoadKwh <= 0 || (usableBattery / Math.max(nightLoadKwh, 0.1)) >= 1.0;
+  const pvCanChargeBattery = batteryPvBalance !== 'MISMATCH';
+
+  type SystemClass = 'FULL_SOLAR' | 'GRID_ASSISTED' | 'GRID_DEPENDENT';
+  let systemClass: SystemClass;
+
+  if (pvCoverage >= 1.05 && batteryCoversNight && pvCanChargeBattery) {
+    systemClass = 'FULL_SOLAR';
+  } else if (pvCoverage >= 0.75) {
+    // Even if annual avg looks good, rainy season < 60% means grid-dependent in practice
+    systemClass = rainySeasonCoverage >= 0.60 ? 'GRID_ASSISTED' : 'GRID_DEPENDENT';
+  } else {
+    systemClass = 'GRID_DEPENDENT';
+  }
+
+  const systemVerdictText: string =
+    systemClass === 'FULL_SOLAR' ? 'Runs fully on solar under normal conditions' :
+      systemClass === 'GRID_ASSISTED' ? 'Covers most of your energy — grid or generator needed during low sunlight' :
+        'Solar offsets a portion of your usage — grid remains primary source';
+
+  type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW';
+  const systemConfidence: ConfidenceLevel =
+    pvCoverage >= 1.1 && pvCanChargeBattery && batteryCoversNight ? 'HIGH' :
+      pvCoverage >= 0.85 && batteryCoversNight ? 'MEDIUM' : 'LOW';
+
+  // Verdict-aligned warnings — NEVER contradict the system class
+  type VerdictWarningLevel = 'INFO' | 'ADVISORY' | 'CRITICAL';
+  interface VerdictWarning { level: VerdictWarningLevel; text: string; }
+  const verdictWarnings: VerdictWarning[] = [];
+
+  if (rainySeasonCoverage < 0.75) {
+    verdictWarnings.push({
+      level: systemClass === 'FULL_SOLAR' ? 'ADVISORY' : 'INFO',
+      text: 'Output drops during rainy season — grid or generator backup recommended June–September'
+    });
+  }
+  if (!pvCanChargeBattery) {
+    verdictWarnings.push({
+      level: 'ADVISORY',
+      text: `Battery may not fully recharge daily — panels deliver ~${Math.round(batteryPvRatio * 100)}% of battery capacity per day`
+    });
+  }
+  if (!batteryCoversNight && nightLoadKwh > 0) {
+    verdictWarnings.push({
+      level: systemClass === 'FULL_SOLAR' ? 'ADVISORY' : 'CRITICAL',
+      text: 'Battery cannot cover full night usage — some appliances will need grid backup after midnight'
+    });
+  }
+  if (pvCoverage < 0.75) {
+    verdictWarnings.push({
+      level: 'CRITICAL',
+      text: `Solar covers ~${Math.round(pvCoverage * 100)}% of your load — consider reducing load or adding panels`
+    });
+  }
+  if (hasAC && autonomyHours > 24) {
+    verdictWarnings.push({
+      level: 'INFO',
+      text: 'Backup time assumes limited night AC usage — running AC overnight will reduce autonomy significantly'
+    });
+  }
+
+  // Filter: FULL_SOLAR systems should not show CRITICAL warnings (they contradict the class)
+  const filteredVerdictWarnings = verdictWarnings.filter(w => {
+    if (systemClass === 'FULL_SOLAR' && w.level === 'CRITICAL') return false;
+    return true;
+  });
+
+  const systemVerdict = {
+    systemClass,
+    verdictText: systemVerdictText,
+    confidence: systemConfidence,
+    warnings: filteredVerdictWarnings,
+    annualCoveragePct: Math.round(pvCoverage * 100),
+    rainySeasonCoveragePct: Math.round(rainySeasonCoverage * 100),
+  };
+
   const truthQAReport = {
     score: qaScore,
     pvStatus,
@@ -2380,6 +2467,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     systemCostMin,
     systemCostMax,
     costBreakdown,
+    systemVerdict,
     paybackMonths,
     fiveYearSavings,
     systemStatus: finalVerdict === 'Marketing-Biased' ? 'FAIL' : 'PASS',

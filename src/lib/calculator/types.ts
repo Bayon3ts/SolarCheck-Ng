@@ -226,6 +226,15 @@ export interface CalculatorResults {
   // Inverter & Battery
   inverterKva: number;
   batteryKwh: number;
+  /** Single-truth verdict system — all warnings support this, none contradict it */
+  systemVerdict: {
+    systemClass: 'FULL_SOLAR' | 'GRID_ASSISTED' | 'GRID_DEPENDENT';
+    verdictText: string;
+    confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+    warnings: Array<{ level: 'INFO' | 'ADVISORY' | 'CRITICAL'; text: string }>;
+    annualCoveragePct: number;
+    rainySeasonCoveragePct: number;
+  };
   /** Itemized cost breakdown by component — Nigerian retail, June 2026 */
   costBreakdown: {
     panels: { min: number; max: number; label: string };
