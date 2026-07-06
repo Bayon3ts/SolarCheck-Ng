@@ -352,6 +352,108 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
       )}
 
       {/* ── 2. COST & SAVINGS HERO ──────────────────────────────────────────── */}
+
+      {/* ── SOLARREVIEWS INTERPRETATION LAYER (new — user-facing first) ──── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+
+        {/* Plain-English system summary */}
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Your Recommended System</p>
+          <p className="text-lg font-black text-slate-800 leading-snug">
+            {r.inverterKva <= 2
+              ? 'A small solar system for essentials — lights, phone charging, and basic entertainment.'
+              : r.inverterKva <= 3
+                ? 'A compact solar system for small homes — fans, lights, TV, and a fridge.'
+                : r.inverterKva <= 5
+                  ? 'A mid-sized solar system for a typical Nigerian home — AC included.'
+                  : r.inverterKva <= 8
+                    ? 'A large solar system for a fully-powered home — multiple ACs, full appliances.'
+                    : 'A high-capacity solar system for a large home or small business.'}
+          </p>
+          <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+            {r.systemVerdict?.systemClass === 'FULL_SOLAR'
+              ? 'Runs entirely on solar under normal conditions. No generator or grid needed day-to-day.'
+              : r.systemVerdict?.systemClass === 'GRID_ASSISTED'
+                ? `Covers ~${r.systemVerdict.annualCoveragePct}% of your energy. You\'ll still need grid or generator during rainy season (June–September).`
+                : `Covers ~${r.systemVerdict?.annualCoveragePct ?? 0}% of your energy. Solar reduces your bill significantly but grid remains your primary source.`}
+          </p>
+        </div>
+
+        {/* What it powers */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          {[
+            { icon: '❄️', label: r.inverterKva >= 5 ? 'AC (limited hrs)' : 'No AC', ok: r.inverterKva >= 5 },
+            { icon: '🧊', label: 'Fridge 24/7', ok: r.batteryKwh >= 2.4 },
+            { icon: '💡', label: 'Lights all day', ok: true },
+            { icon: '📺', label: 'TV & decoder', ok: true },
+            { icon: '🌙', label: r.autonomyHours >= 10 ? 'Full night backup' : 'Partial night', ok: r.autonomyHours >= 8 },
+            { icon: '📶', label: 'Router 24/7', ok: true },
+          ].map((item, i) => (
+            <div key={i} className={`flex items-center gap-1.5 text-xs px-2 py-1.5 rounded-lg ${item.ok ? 'bg-green-50 text-green-700' : 'bg-slate-50 text-slate-400'}`}>
+              <span>{item.icon}</span>
+              <span className="font-medium leading-tight">{item.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Night backup indicator */}
+        <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
+          <span className="text-xl">🌙</span>
+          <div className="flex-1">
+            <p className="text-xs font-bold text-slate-600">Night backup</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex-1 bg-slate-200 rounded-full h-1.5">
+                <div className={`h-1.5 rounded-full ${r.autonomyHours >= 12 ? 'bg-green-500 w-full' :
+                    r.autonomyHours >= 8 ? 'bg-amber-400 w-3/4' :
+                      r.autonomyHours >= 4 ? 'bg-orange-400 w-1/2' : 'bg-red-400 w-1/4'
+                  }`} />
+              </div>
+              <span className="text-xs font-bold text-slate-700">
+                {r.nightLoadKwh > 0 ? `${r.autonomyHours.toFixed(0)} hrs` : 'Full night'}
+              </span>
+            </div>
+          </div>
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.autonomyHours >= 10 ? 'bg-green-100 text-green-700' :
+              r.autonomyHours >= 6 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+            }`}>
+            {r.autonomyHours >= 10 ? 'Strong' : r.autonomyHours >= 6 ? 'Moderate' : 'Weak'}
+          </span>
+        </div>
+
+        {/* Grid reliance indicator */}
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-slate-500 font-medium">Grid reliance</span>
+          <span className={`font-bold px-2 py-0.5 rounded-full ${r.systemVerdict?.systemClass === 'FULL_SOLAR' ? 'bg-green-100 text-green-700' :
+              r.systemVerdict?.systemClass === 'GRID_ASSISTED' ? 'bg-amber-100 text-amber-800' :
+                'bg-orange-100 text-orange-800'
+            }`}>
+            {r.systemVerdict?.systemClass === 'FULL_SOLAR' ? 'Low — solar first' :
+              r.systemVerdict?.systemClass === 'GRID_ASSISTED' ? 'Medium — seasonal' :
+                'High — solar offset'}
+          </span>
+        </div>
+      </div>
+
+      {/* ── INSTALLER RISK WARNING ─────────────────────────────────────────── */}
+      <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
+        <div className="flex items-start gap-3">
+          <span className="text-lg mt-0.5">⚠️</span>
+          <div>
+            <p className="text-sm font-bold text-red-800 mb-1">Most systems this size fail because of installers — not panels</p>
+            <ul className="text-xs text-red-700 space-y-1 leading-relaxed">
+              <li>• Undersized batteries sold as full-capacity</li>
+              <li>• PWM controllers sold as MPPT — delivers 30% less energy</li>
+              <li>• Aluminium cables used instead of copper — fire risk</li>
+              <li>• Quoted price below <strong>{fmt(Math.round(r.systemCostMin * 0.78))}</strong> almost certainly means fake components</li>
+            </ul>
+            <div className="flex gap-2 mt-3">
+              <a href="/check-battery" className="text-xs font-bold text-red-700 underline">Check battery specs →</a>
+              <a href="/check-controller" className="text-xs font-bold text-red-700 underline">Verify controller →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {r.efficiencyRecommendations && r.efficiencyRecommendations.length > 0 && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
           <h4 className="text-emerald-800 font-bold mb-2 flex items-center gap-2">
@@ -373,6 +475,10 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
             <p className="text-white/70 text-sm uppercase tracking-wide font-semibold">System Cost Range</p>
             <p className="text-3xl font-black mt-0.5">
               {fmtM(r.systemCostMin)} – {fmtM(r.systemCostMax)}
+            </p>
+            {/* Overpaying warning — SolarReviews trust hook */}
+            <p className="text-white/60 text-xs mt-1">
+              Quoted above <span className="text-amber-300 font-bold">{fmtM(r.systemCostMax * 1.25)}</span>? You may be overpaying. <span className="text-white/80">Always get 3 competing quotes.</span>
             </p>
           </div>
         </div>
@@ -479,7 +585,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
       </Section>
 
       {/* ── 5. ENGINEERING DETAILS ──────────────────────────────────────────── */}
-      <Section title="Engineering Details" icon="🔧">
+      <Section title="Engineering Details" icon="🔧" defaultOpen={false}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
           <div>
             <p className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">PV Array</p>
@@ -577,7 +683,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
 
       {/* ── 7. DAYTIME ANALYSIS ─────────────────────────────────────────────── */}
       {dt?.isDaytimeHeavy && (
-        <Section title="Daytime-Heavy Load Detected" icon="🌤️">
+        <Section title="Daytime-Heavy Load Detected" icon="🌤️" defaultOpen={false}>
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
             <p className="text-sm font-semibold text-amber-800 mb-1">
               {dt.loadProfileLabel ?? `${(dt.daytimeRatio * 100).toFixed(0)}% of your load runs during daylight hours`}
@@ -599,7 +705,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
       )}
 
       {/* ── 8. ENVIRONMENTAL IMPACT ─────────────────────────────────────────── */}
-      <Section title="Environmental Impact" icon="🌱">
+      <Section title="Environmental Impact" icon="🌱" defaultOpen={false}>
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-center">
             <p className="text-3xl font-black text-emerald-700">
@@ -690,10 +796,15 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
         ) : (
           <>
             <div className="text-center mb-5">
-              <h3 className="text-xl font-bold text-text-primary mb-1">Get Your Custom Quote</h3>
-              <p className="text-sm text-text-muted">
-                A certified solar engineer will contact you with a detailed proposal based on this sizing.
+              <h3 className="text-xl font-bold text-text-primary mb-1">Get Quotes from Verified Installers</h3>
+              <p className="text-sm text-text-muted mb-3">
+                We screen every installer — CAC verified, physically inspected, customer references checked.
               </p>
+              <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
+                <span className="flex items-center gap-1">✓ Up to 3 real quotes</span>
+                <span className="flex items-center gap-1">✓ No spam</span>
+                <span className="flex items-center gap-1">✓ No pressure</span>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
@@ -768,7 +879,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               </button>
 
               <p className="text-xs text-center text-text-muted">
-                Free service · No spam · Only contacted about your solar request
+                Free service · No spam · Only verified installers · Compare real quotes
               </p>
             </form>
           </>

@@ -1393,7 +1393,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     minInverterKva = 1;
   }
 
-  const inverterKva = Math.max(recommendedInverterKva, minInverterKva);
+  let inverterKva = Math.max(recommendedInverterKva, minInverterKva);
 
   // budgetModeActive: true only when the relaxation actually changed the outcome
   // (i.e., the mode is budget_conscious AND the floor would otherwise have been 5 kVA
@@ -1410,16 +1410,41 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // ========================================================
   // FIX: Inverter PV Input Cap (DC:AC Ratio Clamp)
   // ========================================================
-  // Standard hybrid inverters cap max PV input at ~125% of AC capacity
-  const maxAllowedPvKwp = inverterKva * 1.25;
+  // Standard hybrid inverters cap max PV input at ~125% of AC capacity.
+  // BUT: if the load's required PV exceeds what the current inverter can accept,
+  // upgrade the inverter first — don't silently clip panels and show "UNDER SIZED".
+  // An undersized inverter causes panel clipping and wasted investment.
+
+  let maxAllowedPvKwp = inverterKva * 1.25;
 
   if (actualPvKwp > maxAllowedPvKwp) {
-    actualPvKwp = maxAllowedPvKwp;
+    // Calculate what inverter kVA is needed to accommodate the required PV
+    const pvRequiredInverterKva = actualPvKwp / 1.25;
 
-    // Re-calculate panel count to remain even and matching the clamped kWp
-    const rawPanelCount = (actualPvKwp * 1000) / panelSizeWatts;
-    panelsNeeded = Math.floor(rawPanelCount / 2) * 2; // Floor to nearest even number
-    actualPvKwp = (panelsNeeded * panelSizeWatts) / 1000;
+    // Round up to next standard inverter size
+    const upgradedInverterKva =
+      pvRequiredInverterKva <= 3 ? 3
+        : pvRequiredInverterKva <= 5 ? 5
+          : pvRequiredInverterKva <= 8 ? 8
+            : pvRequiredInverterKva <= 10 ? 10
+              : pvRequiredInverterKva <= 12 ? 12
+                : pvRequiredInverterKva <= 15 ? 15
+                  : 20;
+
+    // Only upgrade if doing so helps AND the load-based inverter size permits it
+    // (never downgrade the load-based selection, only upgrade for PV)
+    if (upgradedInverterKva > inverterKva) {
+      inverterKva = upgradedInverterKva;
+      maxAllowedPvKwp = inverterKva * 1.25;
+    }
+
+    // If panels still exceed the upgraded inverter's cap, clip to match
+    if (actualPvKwp > maxAllowedPvKwp) {
+      actualPvKwp = maxAllowedPvKwp;
+      const rawPanelCount = (actualPvKwp * 1000) / panelSizeWatts;
+      panelsNeeded = Math.floor(rawPanelCount / 2) * 2;
+      actualPvKwp = (panelsNeeded * panelSizeWatts) / 1000;
+    }
   }
 
   // ── UPGRADE BLOCK B: Roof Footprint Spatial Guardrail ───────────────────────────────────
