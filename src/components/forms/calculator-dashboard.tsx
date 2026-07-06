@@ -92,6 +92,18 @@ export default function CalculatorDashboard() {
     return calculateSolarSystem(debouncedInputs);
   }, [debouncedInputs]);
 
+  // ── CALCULATION LOADING ANIMATION ─────────────────────────────────────────
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [calcStep, setCalcStep] = useState(0);
+
+  const CALC_STEPS = [
+    { label: 'Analysing your daily load...', duration: 600 },
+    { label: 'Sizing your solar panels...', duration: 700 },
+    { label: 'Calculating battery capacity...', duration: 600 },
+    { label: 'Checking Nigerian market prices...', duration: 700 },
+    { label: 'Generating your system report...', duration: 500 },
+  ];
+
   function updateInputs(updates: Partial<CalculatorInputs>) {
     setInputs(prev => ({ ...prev, ...updates }));
   }
@@ -109,11 +121,29 @@ export default function CalculatorDashboard() {
       alert("Please select your electricity supply level first.");
       return;
     }
-    setHasCalculated(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Start animated loading sequence
+    setIsCalculating(true);
+    setCalcStep(0);
+
+    let step = 0;
+    const runStep = () => {
+      if (step >= CALC_STEPS.length) {
+        setIsCalculating(false);
+        setHasCalculated(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      setCalcStep(step);
+      setTimeout(() => {
+        step++;
+        runStep();
+      }, CALC_STEPS[step].duration);
+    };
+    runStep();
   }
 
-  
+
   async function handleLeadSubmit(lead: { full_name: string; whatsapp: string; timeline: string; landlord_consent?: boolean }) {
     if (!results) return;
     const payload = {
@@ -173,7 +203,60 @@ export default function CalculatorDashboard() {
 
           {/* Right Columns - 2/3 Width */}
           <div className="w-full lg:w-2/3 space-y-8">
-            {hasCalculated && results ? (
+
+            {/* ── CALCULATION LOADING SCREEN ──────────────────────── */}
+            {isCalculating && (
+              <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+                {/* Spinning solar ring */}
+                <div className="relative w-24 h-24">
+                  <div className="absolute inset-0 rounded-full border-4 border-slate-100" />
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#1A5C38] border-r-[#F5A623] animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center text-3xl">☀️</div>
+                </div>
+
+                {/* Step progress */}
+                <div className="w-full max-w-sm space-y-3">
+                  {CALC_STEPS.map((step, i) => (
+                    <div key={i} className={`flex items-center gap-3 transition-all duration-300 ${i < calcStep ? 'opacity-100' :
+                        i === calcStep ? 'opacity-100' :
+                          'opacity-20'
+                      }`}>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${i < calcStep
+                          ? 'bg-green-500 text-white'
+                          : i === calcStep
+                            ? 'bg-[#1A5C38] text-white animate-pulse'
+                            : 'bg-slate-100'
+                        }`}>
+                        {i < calcStep ? (
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-current" />
+                        )}
+                      </div>
+                      <span className={`text-sm font-medium ${i === calcStep ? 'text-[#1A5C38]' :
+                          i < calcStep ? 'text-green-600' : 'text-slate-400'
+                        }`}>{step.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full max-w-sm">
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#1A5C38] to-[#F5A623] rounded-full transition-all duration-500"
+                      style={{ width: `${((calcStep + 1) / CALC_STEPS.length) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-400 text-center mt-2">
+                    {Math.round(((calcStep + 1) / CALC_STEPS.length) * 100)}% complete
+                  </p>
+                </div>
+              </div>
+            )}
+            {!isCalculating && hasCalculated && results ? (
               <>
                 {/* ROOFTOP FIT CHECK */}
                 <div className="border border-gray-200 bg-white rounded-2xl overflow-hidden shadow-sm">
@@ -191,8 +274,8 @@ export default function CalculatorDashboard() {
                   {isRoofStepOpen && (
                     <div className="p-5 border-t border-gray-100 space-y-5">
                       {!geoCoords ? (
-                        <AddressSearch 
-                          onAddressSelect={(res) => setGeoCoords({ lat: res.lat, lng: res.lng })} 
+                        <AddressSearch
+                          onAddressSelect={(res) => setGeoCoords({ lat: res.lat, lng: res.lng })}
                         />
                       ) : (
                         <div className="space-y-5">
@@ -208,9 +291,9 @@ export default function CalculatorDashboard() {
                               setFitAnalysis(assessment);
                             }}
                           />
-                          
+
                           {fitAnalysis && <FitCheckDisplay result={fitAnalysis} />}
-                          
+
                           <button
                             type="button"
                             onClick={() => {
@@ -235,13 +318,13 @@ export default function CalculatorDashboard() {
                   onLeadSubmit={handleLeadSubmit}
                 />
               </>
-            ) : (
+            ) : !isCalculating ? (
               <div className="hidden lg:flex flex-col items-center justify-center h-full min-h-[500px] border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50 text-center p-12">
                 <div className="text-6xl mb-4 opacity-50">☀️</div>
                 <h3 className="text-xl font-bold text-gray-400">Ready to see your solar potential?</h3>
                 <p className="text-gray-400 mt-2 max-w-sm">Fill out the details on the left and click calculate to generate your custom solar sizing and savings report.</p>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

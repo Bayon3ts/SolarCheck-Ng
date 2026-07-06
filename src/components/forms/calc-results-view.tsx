@@ -503,8 +503,118 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
         )}
       </div>
 
-      {/* ── 3. MONTHLY SAVINGS BREAKDOWN ────────────────────────────────────── */}
-      <Section title="Monthly Cost Impact" icon="💰">
+      {/* ── 3. LEAD CAPTURE FORM (right after cost — SolarReviews position) ── */}
+      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-[#1A5C38]/20 shadow-sm p-6">
+        {leadDone ? (
+          <div className="text-center py-8">
+            <div className="text-5xl mb-4">🎉</div>
+            <h3 className="text-xl font-bold text-text-primary mb-2">You&apos;re on the list!</h3>
+            <p className="text-sm text-text-muted">
+              A certified solar engineer will contact you on WhatsApp within 24 hours.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="text-center mb-5">
+              <div className="inline-flex items-center gap-2 bg-[#1A5C38]/10 text-[#1A5C38] text-xs font-bold px-3 py-1 rounded-full mb-3">
+                ⚡ Free — Installers pay us, not you
+              </div>
+              <h3 className="text-xl font-bold text-text-primary mb-1">Get Quotes from Verified Installers</h3>
+              <p className="text-sm text-text-muted mb-3">
+                We screen every installer — CAC verified, physically inspected, customer references checked.
+              </p>
+              <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
+                <span className="flex items-center gap-1">✓ Up to 3 real quotes</span>
+                <span className="flex items-center gap-1">✓ No spam</span>
+                <span className="flex items-center gap-1">✓ No pressure</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
+              {formError && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl">
+                  {formError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-text-primary mb-1.5">Full Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="e.g. Chinedu Okafor"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-text-primary mb-1.5">WhatsApp Number</label>
+                <input
+                  type="tel"
+                  value={whatsapp}
+                  onChange={e => setWhatsapp(e.target.value)}
+                  placeholder="e.g. 08012345678"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-text-primary mb-1.5">Installation Timeline</label>
+                <select
+                  value={timeline}
+                  onChange={e => setTimeline(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm bg-white"
+                >
+                  <option value="asap">As soon as possible</option>
+                  <option value="1_month">Within 1 month</option>
+                  <option value="3_months">Within 3 months</option>
+                  <option value="exploring">Just exploring</option>
+                </select>
+              </div>
+
+              {inputs.ownershipStatus === "tenant" && (
+                <div className="flex items-start gap-3 p-3 bg-amber-50 rounded-xl">
+                  <input
+                    type="checkbox"
+                    id="landlord"
+                    checked={landlordConsent}
+                    onChange={e => setLandlordConsent(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 accent-primary"
+                  />
+                  <label htmlFor="landlord" className="text-xs text-amber-800 leading-relaxed">
+                    I confirm I have (or can get) my landlord&apos;s consent to install solar panels.
+                  </label>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-6 rounded-xl transition-all text-base shadow-lg shadow-primary/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Submitting...
+                  </>
+                ) : 'Get My Installer Quotes →'}
+              </button>
+              <p className="text-center text-xs text-text-muted">
+                Free service · No spam · Only verified installers · Compare real quotes
+              </p>
+            </form>
+          </>
+        )}
+      </div>
+
+      {/* ── 4. MONTHLY SAVINGS BREAKDOWN ────────────────────────────────────── */}
+      <Section title="Monthly Cost Impact" icon="💰" defaultOpen={false}>
         <div className="flex items-center justify-between mb-4">
           <div className="text-center flex-1">
             <p className="text-xs text-text-muted mb-1">Before Solar</p>
@@ -783,108 +893,6 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
       {/* ── 9.5 EQUIPMENT CHECK CTA ────────────────────────────────────────── */}
       <EquipmentCheckCTACard />
 
-      {/* ── 10. LEAD CAPTURE FORM ───────────────────────────────────────────── */}
-      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        {leadDone ? (
-          <div className="text-center py-8">
-            <div className="text-5xl mb-4">🎉</div>
-            <h3 className="text-xl font-bold text-text-primary mb-2">You&apos;re on the list!</h3>
-            <p className="text-sm text-text-muted">
-              A certified solar engineer will contact you on WhatsApp within 24 hours.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="text-center mb-5">
-              <h3 className="text-xl font-bold text-text-primary mb-1">Get Quotes from Verified Installers</h3>
-              <p className="text-sm text-text-muted mb-3">
-                We screen every installer — CAC verified, physically inspected, customer references checked.
-              </p>
-              <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
-                <span className="flex items-center gap-1">✓ Up to 3 real quotes</span>
-                <span className="flex items-center gap-1">✓ No spam</span>
-                <span className="flex items-center gap-1">✓ No pressure</span>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-              {formError && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl">
-                  {formError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">Full Name</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="e.g. Chinedu Okafor"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">WhatsApp Number</label>
-                <input
-                  type="tel"
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm"
-                  value={whatsapp}
-                  onChange={e => setWhatsapp(e.target.value)}
-                  placeholder="e.g. 08012345678"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">Installation Timeline</label>
-                <select
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm"
-                  value={timeline}
-                  onChange={e => setTimeline(e.target.value)}
-                >
-                  <option value="ASAP">As soon as possible</option>
-                  <option value="1_month">Within 1 month</option>
-                  <option value="3_months">Within 3 months</option>
-                  <option value="Just_researching">Just researching</option>
-                </select>
-              </div>
-
-              {inputs.ownershipStatus === 'tenant' && (
-                <div className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-xl">
-                  <input
-                    type="checkbox"
-                    id="consent"
-                    className="mt-1 accent-primary"
-                    checked={landlordConsent}
-                    onChange={e => setLandlordConsent(e.target.checked)}
-                  />
-                  <label htmlFor="consent" className="text-sm text-gray-700">
-                    I confirm I have (or can get) my landlord&apos;s consent to install solar panels.
-                  </label>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSubmitting || (inputs.ownershipStatus === 'tenant' && !landlordConsent)}
-                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Submitting…
-                  </>
-                ) : 'Get My Installer Quotes →'}
-              </button>
-
-              <p className="text-xs text-center text-text-muted">
-                Free service · No spam · Only verified installers · Compare real quotes
-              </p>
-            </form>
-          </>
-        )}
-      </div>
     </div>
   );
 }
