@@ -42,17 +42,13 @@ export default function HeroSection({ installerCount, leadCount }: HeroSectionPr
         muted
         loop
         playsInline
-        className="hidden md:block absolute inset-0 w-full h-full object-cover object-center"
+        className="absolute inset-0 w-full h-full object-cover object-center"
         poster="/images/hero-poster.jpg"
       >
         <source src="/videos/hero.mp4" type="video/mp4" />
       </video>
 
-      {/* MOBILE POSTER LAYER */}
-      <div
-        className="md:hidden absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: 'url(/images/hero-poster.jpg)' }}
-      />
+
 
       {/* GRADIENT OVERLAY LAYER */}
       <div

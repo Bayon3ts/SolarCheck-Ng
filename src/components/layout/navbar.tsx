@@ -106,7 +106,7 @@ export default function Navbar() {
     }
   }, [megaMenuOpen]);
 
-  const showTransparent = isHomePage && !isScrolled;
+  const showTransparent = isHomePage && !isScrolled && !isMobileOpen;
 
   const handleMouseEnter = () => {
     if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
@@ -233,12 +233,35 @@ export default function Navbar() {
 
           {/* Desktop CTA */}
           <div className="hidden items-center gap-3 md:flex">
-            <Button variant={showTransparent ? "secondary" : "primary"} size="sm" asChild>
-              <Link href="/get-quotes">
-                Get Free Quotes
-                <ChevronRight className="h-4 w-4" />
+
+            {/* Sign In — text link style, low visual weight */}
+            <Link
+              href="/login"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                pathname === "/login"
+                  ? showTransparent
+                    ? "text-white"
+                    : "text-primary"
+                  : showTransparent
+                    ? "text-white/80 hover:text-white"
+                    : "text-text-muted hover:text-primary"
+              )}
+            >
+              Sign In
+            </Link>
+
+            {/* Register — styled like old Get Free Quotes button */}
+            <Button
+              variant={showTransparent ? "secondary" : "primary"}
+              size="sm"
+              asChild
+            >
+              <Link href="/installers/register">
+                Register
               </Link>
             </Button>
+
           </div>
 
           {/* Mobile Hamburger */}
@@ -644,9 +667,20 @@ export default function Navbar() {
               </Link>
 
               <div className="mt-6 space-y-3 px-4">
-                <Button variant="primary" size="lg" className="w-full" asChild>
-                  <Link href="/get-quotes" onClick={() => setIsMobileOpen(false)}>Get Free Quotes</Link>
-                </Button>
+                {/* Sign In + Register side by side on mobile */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="outline" size="lg" className="w-full" asChild>
+                    <Link href="/login" onClick={() => setIsMobileOpen(false)}>
+                      Sign In
+                    </Link>
+                  </Button>
+                  <Button variant="primary" size="lg" className="w-full" asChild>
+                    <Link href="/installers/register" onClick={() => setIsMobileOpen(false)}>
+                      Register
+                    </Link>
+                  </Button>
+                </div>
+
                 <Button variant="outline" size="lg" className="w-full" asChild>
                   <Link href="/for-installers" onClick={() => setIsMobileOpen(false)}>List Your Company</Link>
                 </Button>
