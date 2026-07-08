@@ -1414,11 +1414,6 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // BUT: if the load's required PV exceeds what the current inverter can accept,
   // upgrade the inverter first — don't silently clip panels and show "UNDER SIZED".
   // An undersized inverter causes panel clipping and wasted investment.
-  //
-  // IMPORTANT: track the load-based kVA separately.
-  // Battery bus minimum must use load-based inverter (not PV-driven upgrade),
-  // otherwise a daytime-dominant user with large PV gets a massively oversized battery.
-  const loadBasedInverterKva = inverterKva; // freeze load-based value before any PV upgrade
 
   let maxAllowedPvKwp = inverterKva * 1.25;
 
@@ -1427,6 +1422,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     const pvRequiredInverterKva = actualPvKwp / 1.25;
 
     // Round up to next standard inverter size
+    // Extended to 30kVA for large commercial loads
     const upgradedInverterKva =
       pvRequiredInverterKva <= 3 ? 3
         : pvRequiredInverterKva <= 5 ? 5
@@ -1434,7 +1430,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
             : pvRequiredInverterKva <= 10 ? 10
               : pvRequiredInverterKva <= 12 ? 12
                 : pvRequiredInverterKva <= 15 ? 15
-                  : 20;
+                  : pvRequiredInverterKva <= 20 ? 20
+                    : pvRequiredInverterKva <= 25 ? 25
+                      : 30; // 30kVA max single unit — beyond this needs parallel inverters
 
     // Only upgrade if doing so helps AND the load-based inverter size permits it
     // (never downgrade the load-based selection, only upgrade for PV)
@@ -1521,26 +1519,19 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     const hardwareMin = hasAC || hasWaterPump ? 4.8 : BATT_MIN;
 
     // Inverter bus minimum — scaled to inverter size, not flat 4.8kWh for all.
-    // CRITICAL RULE: bus minimum only applies when there is meaningful night load.
-    // A daytime-dominant user (98% day load) with a large inverter does NOT need
-    // a 14.4kWh battery — the large inverter was sized for AC load or PV capacity,
-    // not for overnight backup. Battery must be sized for NIGHT USAGE, not inverter kVA.
-    // Use loadBasedInverterKva — not inverterKva — to prevent PV-driven upgrade
-    // from bloating battery. Reviewer field audit June 2026.
+    // A 1kVA inverter powering LEDs + phone doesn't need a ₦320k battery bank.
+    // Source: engineering practice — bus minimum reflects inverter throughput capacity.
     let inverterBusMin: number;
-    const hasSignificantNightLoad = nightLoadKwh > 2.0;
-    if (!hasSignificantNightLoad) {
-      inverterBusMin = loadBasedInverterKva >= 5 ? 2.4 : 1.2;
-    } else if (loadBasedInverterKva >= 10) {
-      inverterBusMin = 14.4;
-    } else if (loadBasedInverterKva >= 8) {
-      inverterBusMin = 9.6;
-    } else if (loadBasedInverterKva >= 5) {
-      inverterBusMin = 4.8;
-    } else if (loadBasedInverterKva >= 3) {
-      inverterBusMin = 2.4;
+    if (inverterKva >= 10) {
+      inverterBusMin = 14.4;  // 10kVA+ → 3 × 4.8kWh packs minimum
+    } else if (inverterKva >= 8) {
+      inverterBusMin = 9.6;   // 8kVA → 2 × 4.8kWh packs minimum
+    } else if (inverterKva >= 5) {
+      inverterBusMin = 4.8;   // 5kVA → 1 × 4.8kWh pack minimum
+    } else if (inverterKva >= 3) {
+      inverterBusMin = 2.4;   // 3kVA → 200Ah@12V minimum
     } else {
-      inverterBusMin = 1.2;
+      inverterBusMin = 1.2;   // 1–2kVA → 100Ah@12V minimum, small system
     }
 
     let minBattery = Math.max(hardwareMin, nightLoadMinBattery, inverterBusMin);
