@@ -1395,6 +1395,12 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
   let inverterKva = Math.max(recommendedInverterKva, minInverterKva);
 
+  // Freeze load-based inverter kVA BEFORE any PV-driven upgrade.
+  // Battery bus minimum must use this value — not the PV-upgraded kVA —
+  // otherwise daytime-dominant users with large PV arrays get massively oversized batteries.
+  // Rule: night usage drives battery size, not inverter kVA. (Field audit June 2026)
+  const loadBasedInverterKva = inverterKva;
+
   // budgetModeActive: true only when the relaxation actually changed the outcome
   // (i.e., the mode is budget_conscious AND the floor would otherwise have been 5 kVA
   //  AND the final inverterKva is indeed below 5).
@@ -1519,19 +1525,27 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     const hardwareMin = hasAC || hasWaterPump ? 4.8 : BATT_MIN;
 
     // Inverter bus minimum — scaled to inverter size, not flat 4.8kWh for all.
-    // A 1kVA inverter powering LEDs + phone doesn't need a ₦320k battery bank.
-    // Source: engineering practice — bus minimum reflects inverter throughput capacity.
+    // Battery bus minimum — uses loadBasedInverterKva (not PV-upgraded inverterKva)
+    // and only applies meaningful floors when there is significant night load.
+    // CRITICAL: night usage drives battery, not inverter size.
+    // A daytime-dominant user (e.g. 98% day load) with a 20kVA inverter upgraded for
+    // large PV should NOT get 14.4kWh battery — they only need 1-2kWh for overnight.
+    // Field audit rule June 2026: battery bus min only meaningful for overnight users.
+    const hasSignificantNightLoad = nightLoadKwh > 2.0;
     let inverterBusMin: number;
-    if (inverterKva >= 10) {
-      inverterBusMin = 14.4;  // 10kVA+ → 3 × 4.8kWh packs minimum
-    } else if (inverterKva >= 8) {
-      inverterBusMin = 9.6;   // 8kVA → 2 × 4.8kWh packs minimum
-    } else if (inverterKva >= 5) {
-      inverterBusMin = 4.8;   // 5kVA → 1 × 4.8kWh pack minimum
-    } else if (inverterKva >= 3) {
+    if (!hasSignificantNightLoad) {
+      // Daytime-dominant: minimal bus floor — don't over-battery
+      inverterBusMin = loadBasedInverterKva >= 5 ? 2.4 : 1.2;
+    } else if (loadBasedInverterKva >= 10) {
+      inverterBusMin = 14.4;  // 10kVA+ overnight → 3 × 4.8kWh packs
+    } else if (loadBasedInverterKva >= 8) {
+      inverterBusMin = 9.6;   // 8kVA overnight → 2 × 4.8kWh packs
+    } else if (loadBasedInverterKva >= 5) {
+      inverterBusMin = 4.8;   // 5kVA overnight → 1 × 4.8kWh pack
+    } else if (loadBasedInverterKva >= 3) {
       inverterBusMin = 2.4;   // 3kVA → 200Ah@12V minimum
     } else {
-      inverterBusMin = 1.2;   // 1–2kVA → 100Ah@12V minimum, small system
+      inverterBusMin = 1.2;   // 1–2kVA → 100Ah@12V minimum
     }
 
     let minBattery = Math.max(hardwareMin, nightLoadMinBattery, inverterBusMin);
