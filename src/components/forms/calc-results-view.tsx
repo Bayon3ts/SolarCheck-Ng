@@ -669,7 +669,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               {chartData.map((_, i) => (
                 <Cell
                   key={i}
-                  fill={rainyMonths.has(i) ? '#F59E0B' : '#0A5C36'}
+                  fill={rainyMonths.has(i) ? '#0A5C36' : '#F59E0B'}
                   fillOpacity={0.85}
                 />
               ))}
@@ -678,10 +678,10 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
         </ResponsiveContainer>
         <div className="flex gap-4 mt-2 justify-center">
           <div className="flex items-center gap-1.5 text-xs text-text-muted">
-            <span className="w-3 h-3 rounded-sm bg-primary inline-block" /> Dry season
+            <span className="w-3 h-3 rounded-sm bg-amber-400 inline-block" /> Dry season
           </div>
           <div className="flex items-center gap-1.5 text-xs text-text-muted">
-            <span className="w-3 h-3 rounded-sm bg-amber-400 inline-block" /> Rainy season
+            <span className="w-3 h-3 rounded-sm bg-primary inline-block" /> Rainy season
           </div>
         </div>
         <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
