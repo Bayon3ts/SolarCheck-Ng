@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
       message: data.message || null,
       lead_type: data.lead_type,
       fraud_check_source: data.fraud_check_source || null,
+      phone_verified: data.phone_verified ?? false,
       status: "new" as const,
       whatsapp_sent: false,
       email_sent: false,

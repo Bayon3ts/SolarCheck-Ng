@@ -323,9 +323,9 @@ export interface CalculatorResults {
 }
 
 export interface LeadCaptureData {
-
   full_name: string;
   whatsapp: string;
   timeline: string;
   landlord_consent?: boolean;
+  phone_verified?: boolean;
 }

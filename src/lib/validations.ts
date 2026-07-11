@@ -63,6 +63,7 @@ export const leadSubmitSchema = z.object({
   message: z.string().max(500, "Message is too long").optional(),
   lead_type: z.enum(["shared", "exclusive"]).default("shared"),
   fraud_check_source: z.string().optional(),
+  phone_verified: z.boolean().default(false),
 });
 
 // ── Review submission schema ──
