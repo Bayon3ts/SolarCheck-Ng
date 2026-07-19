@@ -244,8 +244,8 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
     <div className="space-y-4">
 
       {/* Appliances Section */}
-      <div className="bg-white rounded-2xl border border-border overflow-hidden">
-        <div className="px-5 py-4 border-b border-border">
+      <div className="bg-white rounded-2xl border border-border overflow-hidden flex flex-col max-h-[600px]">
+        <div className="px-5 py-4 border-b border-border flex-none">
           <div>
             <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
               <span>⚡</span> What appliances do you power?
@@ -288,7 +288,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
           </div>
         </div>
 
-        <div className="p-4 space-y-6 max-h-[400px] overflow-y-auto custom-scrollbar">
+        <div className="p-4 space-y-6 flex-1 overflow-y-auto custom-scrollbar min-h-0">
           <input
             type="text"
             placeholder="Search appliances..."
@@ -363,6 +363,13 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               </div>
             );
           })}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-border bg-gray-50 flex-none">
+          <p className="text-sm font-semibold text-text-primary">
+            {totalApplianceCount} appliance{totalApplianceCount !== 1 ? 's' : ''} selected
+          </p>
         </div>
       </div>
 

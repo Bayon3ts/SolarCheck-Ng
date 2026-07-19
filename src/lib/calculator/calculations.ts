@@ -1420,12 +1420,17 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // BUT: if the load's required PV exceeds what the current inverter can accept,
   // upgrade the inverter first — don't silently clip panels and show "UNDER SIZED".
   // An undersized inverter causes panel clipping and wasted investment.
+  //
+  // DC:AC ratio = 1.33 (not 1.25) — most Nigerian market hybrid inverters
+  // (Deye, Growatt, Felicity) accept 130–150% DC oversizing. Using 1.33 reduces
+  // unnecessary inverter upgrades that over-price systems without adding value.
 
-  let maxAllowedPvKwp = inverterKva * 1.25;
+  const DC_AC_RATIO = 1.33;
+  let maxAllowedPvKwp = inverterKva * DC_AC_RATIO;
 
   if (actualPvKwp > maxAllowedPvKwp) {
     // Calculate what inverter kVA is needed to accommodate the required PV
-    const pvRequiredInverterKva = actualPvKwp / 1.25;
+    const pvRequiredInverterKva = actualPvKwp / DC_AC_RATIO;
 
     // Round up to next standard inverter size
     // Extended to 30kVA for large commercial loads
@@ -1438,13 +1443,11 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
                 : pvRequiredInverterKva <= 15 ? 15
                   : pvRequiredInverterKva <= 20 ? 20
                     : pvRequiredInverterKva <= 25 ? 25
-                      : 30; // 30kVA max single unit — beyond this needs parallel inverters
+                      : 30;
 
-    // Only upgrade if doing so helps AND the load-based inverter size permits it
-    // (never downgrade the load-based selection, only upgrade for PV)
     if (upgradedInverterKva > inverterKva) {
       inverterKva = upgradedInverterKva;
-      maxAllowedPvKwp = inverterKva * 1.25;
+      maxAllowedPvKwp = inverterKva * DC_AC_RATIO;
     }
 
     // If panels still exceed the upgraded inverter's cap, clip to match
@@ -1513,8 +1516,17 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
   if (systemMode !== 'grid-tied') {
     if (batteryKwh > 0) {
-      // Round up to nearest LFP unit size (1.2 kWh steps)
-      batteryKwh = Math.ceil(batteryKwh / BATT_INCREMENT) * BATT_INCREMENT;
+      // Snap directly to 4.8kWh LFP pack increments (standard Nigerian market pack size).
+      // Allow up to 10% undersize — battery sufficiency check will flag as TIGHT.
+      // This prevents jumping from 4.8kWh to 9.6kWh when 5.0kWh is needed —
+      // one 4.8kWh pack (3.84kWh usable) is flagged TIGHT, not auto-doubled.
+      const PACK_SIZE = 4.8;
+      const UNDERSIZE_TOLERANCE = 1.10; // allow up to 10% over needed before adding a pack
+      if (batteryKwh <= PACK_SIZE * UNDERSIZE_TOLERANCE) {
+        batteryKwh = PACK_SIZE; // single pack, may be flagged TIGHT
+      } else {
+        batteryKwh = Math.ceil(batteryKwh / PACK_SIZE) * PACK_SIZE;
+      }
     }
 
     // Engineering minimum floors — take the largest of three constraints:
