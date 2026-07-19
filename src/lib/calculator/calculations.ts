@@ -1416,27 +1416,32 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // ========================================================
   // FIX: Inverter PV Input Cap (DC:AC Ratio Clamp)
   // ========================================================
-  // Standard hybrid inverters cap max PV input at ~125% of AC capacity.
-  // BUT: if the load's required PV exceeds what the current inverter can accept,
-  // upgrade the inverter first — don't silently clip panels and show "UNDER SIZED".
-  // An undersized inverter causes panel clipping and wasted investment.
+  // PV INPUT CAP — DC:AC ratio and inverter upgrade logic
+  // ========================================================
+  // Rule: LOAD drives inverter size. SOLAR fills the inverter's input capacity.
+  // If solar needs exceed what the load-based inverter can accept, prefer clipping
+  // panels over upgrading the inverter for residential loads.
   //
-  // DC:AC ratio = 1.33 (not 1.25) — most Nigerian market hybrid inverters
-  // (Deye, Growatt, Felicity) accept 130–150% DC oversizing. Using 1.33 reduces
-  // unnecessary inverter upgrades that over-price systems without adding value.
+  // DC:AC ratio = 1.5 — most Nigerian market hybrid inverters (Deye, Growatt,
+  // Felicity, Victron) accept 130–150% DC oversizing. Using 1.5 means a 5kVA
+  // inverter can accept up to 7.5kWp, avoiding unnecessary and expensive upgrades.
+  //
+  // Inverter upgrade only happens for COMMERCIAL loads (>10kVA load-based) where
+  // large PV genuinely needs a larger inverter to avoid significant clipping (>20%).
 
-  const DC_AC_RATIO = 1.33;
+  const DC_AC_RATIO = 1.5;
   let maxAllowedPvKwp = inverterKva * DC_AC_RATIO;
 
   if (actualPvKwp > maxAllowedPvKwp) {
-    // Calculate what inverter kVA is needed to accommodate the required PV
-    const pvRequiredInverterKva = actualPvKwp / DC_AC_RATIO;
+    const clippingPct = (actualPvKwp - maxAllowedPvKwp) / actualPvKwp;
 
-    // Round up to next standard inverter size
-    // Extended to 30kVA for large commercial loads
-    const upgradedInverterKva =
-      pvRequiredInverterKva <= 3 ? 3
-        : pvRequiredInverterKva <= 5 ? 5
+    // Upgrade inverter if clipping would waste >28% of array output
+    // This covers heavy residential (2x AC, high loads) AND commercial
+    // Below 28% clipping → keep load-based inverter, clip panels (cheaper, still effective)
+    if (clippingPct > 0.28) {
+      const pvRequiredInverterKva = actualPvKwp / DC_AC_RATIO;
+      const upgradedInverterKva =
+        pvRequiredInverterKva <= 5 ? 5
           : pvRequiredInverterKva <= 8 ? 8
             : pvRequiredInverterKva <= 10 ? 10
               : pvRequiredInverterKva <= 12 ? 12
@@ -1445,16 +1450,18 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
                     : pvRequiredInverterKva <= 25 ? 25
                       : 30;
 
-    if (upgradedInverterKva > inverterKva) {
-      inverterKva = upgradedInverterKva;
-      maxAllowedPvKwp = inverterKva * DC_AC_RATIO;
+      if (upgradedInverterKva > inverterKva) {
+        inverterKva = upgradedInverterKva;
+        maxAllowedPvKwp = inverterKva * DC_AC_RATIO;
+      }
     }
 
-    // If panels still exceed the upgraded inverter's cap, clip to match
+    // Clip panels to fit inverter
     if (actualPvKwp > maxAllowedPvKwp) {
       actualPvKwp = maxAllowedPvKwp;
       const rawPanelCount = (actualPvKwp * 1000) / panelSizeWatts;
       panelsNeeded = Math.floor(rawPanelCount / 2) * 2;
+      panelsNeeded = Math.max(panelsNeeded, 2);
       actualPvKwp = (panelsNeeded * panelSizeWatts) / 1000;
     }
   }
@@ -2208,7 +2215,8 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   type SystemClass = 'FULL_SOLAR' | 'GRID_ASSISTED' | 'GRID_DEPENDENT';
   let systemClass: SystemClass;
 
-  if (pvCoverage >= 1.05 && batteryCoversNight && pvCanChargeBattery) {
+  if (pvCoverage >= 1.05 && batteryCoversNight && pvCanChargeBattery && rainySeasonCoverage >= 0.75) {
+    // True full solar: covers load year-round including rainy season
     systemClass = 'FULL_SOLAR';
   } else if (pvCoverage >= 0.75) {
     // Even if annual avg looks good, rainy season < 60% means grid-dependent in practice
