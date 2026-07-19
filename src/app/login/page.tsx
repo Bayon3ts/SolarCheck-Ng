@@ -154,6 +154,10 @@ export default function LoginPage() {
           50%  { background-position: 50% 55%; }
           100% { background-position: 50% 45%; }
         }
+        @keyframes spin {
+          from { transform: rotate(0deg);   }
+          to   { transform: rotate(360deg); }
+        }
 
         /* ── Utility classes ── */
         .anim-up         { animation: fadeSlideUp 0.6s cubic-bezier(0.22,1,0.36,1) both; }
