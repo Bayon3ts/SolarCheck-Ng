@@ -1478,8 +1478,24 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // usableBattery = batteryKwh × LFP_DOD  (same formula — no RT_EFF).
   const LFP_DOD = 0.80;
   const RT_EFF = 0.92;
-  const BATT_INCREMENT = 1.2; // kWh per module (100Ah@12V)
-  const BATT_MIN = 2.4; // kWh minimum (200Ah@12V)
+  const BATT_MIN = 2.56; // kWh minimum — smallest standard pack
+
+  // ── BATTERY STANDARD SIZE LADDER — exact Nigerian market pack sizes only ──
+  // These are the ONLY battery bank sizes actually available for sale.
+  // Every prior increment scheme (1.2kWh, 4.8kWh) produced sizes that don't
+  // match real inventory. Fixed June 2026 per installer-confirmed stock list.
+  const BATTERY_SIZES = [2.56, 5.12, 10.24, 15.36, 20.48, 25.6, 30.72];
+
+  function roundToStandardBattery(kwh: number): number {
+    for (const size of BATTERY_SIZES) {
+      if (kwh <= size) return size;
+    }
+    // Beyond the largest single-bank size, snap to the nearest 5.12kWh
+    // increment above the largest standard size (parallel banks).
+    const largest = BATTERY_SIZES[BATTERY_SIZES.length - 1];
+    const increment = 5.12;
+    return largest + Math.ceil((kwh - largest) / increment) * increment;
+  }
 
   let requiredUsableKwh = 0;
   let batterySufficiency: 'INSUFFICIENT ⚠️' | 'TIGHT ⚠️' | 'ADEQUATE ✅' | 'MINIMAL STORAGE (day-use focused)' = 'ADEQUATE ✅';
@@ -1502,70 +1518,56 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
   if (systemMode !== 'grid-tied') {
     if (batteryKwh > 0) {
-      // Snap directly to 4.8kWh LFP pack increments (standard Nigerian market pack size).
-      // Allow up to 10% undersize — battery sufficiency check will flag as TIGHT.
-      // This prevents jumping from 4.8kWh to 9.6kWh when 5.0kWh is needed —
-      // one 4.8kWh pack (3.84kWh usable) is flagged TIGHT, not auto-doubled.
-      const PACK_SIZE = 4.8;
-      const UNDERSIZE_TOLERANCE = 1.10; // allow up to 10% over needed before adding a pack
-      if (batteryKwh <= PACK_SIZE * UNDERSIZE_TOLERANCE) {
-        batteryKwh = PACK_SIZE; // single pack, may be flagged TIGHT
-      } else {
-        batteryKwh = Math.ceil(batteryKwh / PACK_SIZE) * PACK_SIZE;
-      }
+      // Snap to the nearest standard pack size at or above what's needed.
+      // No more silent under-tolerance snap-down — every standard size step
+      // is small enough (2.56→5.12 is 2x, but 5.12→10.24→15.36... is finer
+      // further up) that rounding up to the next real size is always correct.
+      batteryKwh = roundToStandardBattery(batteryKwh);
     }
 
     // Engineering minimum floors — take the largest of three constraints:
     //   1. Hardware minimum: any hybrid/off-grid system needs a physical bank to operate.
     //   2. Night-load minimum: battery MUST cover the FULL requested autonomy window
-    //      (nightLoadKwh × autonomyDays), not just a single night — otherwise a
-    //      2-night autonomy request can be silently downgraded to ~1.9 nights by
-    //      the earlier pack-size tolerance snap. Confirmed bug, fixed June 2026.
+    //      (nightLoadKwh × autonomyDays), not just a single night.
     //   3. Inverter AC-to-DC bus alignment: large inverters need large batteries to prevent sag.
     const nightLoadMinBattery = nightLoadKwh > 0
       ? (nightLoadKwh * autonomyDays) / LFP_DOD
       : 0;
-    const hardwareMin = hasAC || hasWaterPump ? 4.8 : BATT_MIN;
+    const hardwareMin = hasAC || hasWaterPump ? 5.12 : BATT_MIN;
 
-    // Inverter bus minimum — scaled to inverter size, not flat 4.8kWh for all.
-    // Battery bus minimum — uses loadBasedInverterKva (not PV-upgraded inverterKva)
-    // and only applies meaningful floors when there is significant night load.
+    // Inverter bus minimum — scaled to inverter size using the same standard
+    // battery ladder, not a flat increment. Only applies meaningful floors
+    // when there is significant night load.
     // CRITICAL: night usage drives battery, not inverter size.
-    // A daytime-dominant user (e.g. 98% day load) with a 20kVA inverter upgraded for
-    // large PV should NOT get 14.4kWh battery — they only need 1-2kWh for overnight.
-    // Field audit rule June 2026: battery bus min only meaningful for overnight users.
     const hasSignificantNightLoad = nightLoadKwh > 2.0;
     let inverterBusMin: number;
     if (!hasSignificantNightLoad) {
       // Daytime-dominant: minimal bus floor — don't over-battery
-      inverterBusMin = loadBasedInverterKva >= 5 ? 2.4 : 1.2;
+      inverterBusMin = loadBasedInverterKva >= 5 ? 2.56 : 2.56;
     } else if (loadBasedInverterKva >= 10) {
-      inverterBusMin = 14.4;  // 10kVA+ overnight → 3 × 4.8kWh packs
+      inverterBusMin = 15.36; // 10kVA+ overnight
     } else if (loadBasedInverterKva >= 8) {
-      inverterBusMin = 9.6;   // 8kVA overnight → 2 × 4.8kWh packs
+      inverterBusMin = 10.24; // 8kVA overnight
     } else if (loadBasedInverterKva >= 5) {
-      inverterBusMin = 4.8;   // 5kVA overnight → 1 × 4.8kWh pack
+      inverterBusMin = 5.12;  // 5kVA overnight
     } else if (loadBasedInverterKva >= 3) {
-      inverterBusMin = 2.4;   // 3kVA → 200Ah@12V minimum
+      inverterBusMin = 2.56;  // 3kVA
     } else {
-      inverterBusMin = 1.2;   // 1–2kVA → 100Ah@12V minimum
+      inverterBusMin = 2.56;  // 1–2kVA minimum
     }
 
     let minBattery = Math.max(hardwareMin, nightLoadMinBattery, inverterBusMin);
 
-    // If the battery floor is pushed above 4.8kWh, snap it to standard 4.8kWh module increments
-    if (minBattery > 4.8) {
-      minBattery = Math.ceil(minBattery / 4.8) * 4.8;
-    }
+    // Snap the floor itself to the standard ladder
+    minBattery = roundToStandardBattery(minBattery);
 
     batteryKwh = Math.max(batteryKwh, minBattery);
 
-    // Snap final total to 4.8kWh increments if it grew beyond 4.8
-    if (batteryKwh > 4.8) {
-      batteryKwh = Math.ceil(batteryKwh / 4.8) * 4.8;
-    }
+    // Final snap — batteryKwh may have grown past its own rounded value
+    // via Math.max against minBattery, so round once more to stay on-ladder.
+    batteryKwh = roundToStandardBattery(batteryKwh);
 
-    batteryKwh = Math.round(batteryKwh * 10) / 10;
+    batteryKwh = Math.round(batteryKwh * 100) / 100;
   }
 
   // Usable battery capacity — LFP_DOD only (RT_EFF excluded per spec, see note above)
