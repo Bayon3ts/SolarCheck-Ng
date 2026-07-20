@@ -305,10 +305,14 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               <div className="text-2xl font-black text-slate-700 leading-none">{r.autonomyHours.toFixed(1)}<span className="text-base font-semibold">hrs</span></div>
               <div className="text-xs text-text-muted mt-1">Night autonomy</div>
               <div className="mt-2">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.autonomyHours >= 12 ? 'bg-green-100 text-green-700' :
-                  r.autonomyHours >= 8 ? 'bg-amber-100 text-amber-700' :
+                {/* Badge driven by nightCoverageRatio, not capped autonomyHours —
+                    autonomyHours hits a 12h ceiling (or multi-night uncapped values)
+                    regardless of true safety margin, which previously caused
+                    "Full night covered" / "Limited night backup" mislabels. */}
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.nightCoverageRatio >= 1.3 ? 'bg-green-100 text-green-700' :
+                  r.nightCoverageRatio >= 1.1 ? 'bg-amber-100 text-amber-700' :
                     'bg-red-100 text-red-700'
-                  }`}>{r.autonomyHours >= 12 ? 'Full night covered' : r.autonomyHours >= 8 ? 'Most night' : 'Limited night backup'}</span>
+                  }`}>{r.nightCoverageRatio >= 1.3 ? 'Full night covered' : r.nightCoverageRatio >= 1.1 ? 'Tight — expect drops' : 'Limited night backup'}</span>
               </div>
             </>
           ) : (

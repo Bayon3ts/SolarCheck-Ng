@@ -1318,30 +1318,21 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // Source: Luminous, Felicity, Mercury, Deye, Growatt Nigerian market ranges.
   // Previously started at 3kVA min — small loads (lights/phone/router) were
   // massively oversized. Fixed June 2026.
-  let recommendedInverterKva: number;
-  if (targetCapacity <= 1000) {
-    recommendedInverterKva = 1.0;    // ultra-light: LEDs, phone, router
-  } else if (targetCapacity <= 1500) {
-    recommendedInverterKva = 1.5;    // light: fan + TV + laptop
-  } else if (targetCapacity <= 2000) {
-    recommendedInverterKva = 2.0;    // basic: fans + TV + fridge (no AC)
-  } else if (targetCapacity <= 3000) {
-    recommendedInverterKva = 3.0;    // standard small home (no AC)
-  } else if (targetCapacity <= 5000) {
-    recommendedInverterKva = 5.0;    // AC-capable: 1HP AC + base loads
-  } else if (targetCapacity <= 8000) {
-    recommendedInverterKva = 8.0;    // heavy: 1.5–2HP AC + full home
-  } else if (targetCapacity <= 10000) {
-    recommendedInverterKva = 10.0;
-  } else if (targetCapacity <= 12000) {
-    recommendedInverterKva = 12.0;
-  } else if (targetCapacity <= 15000) {
-    recommendedInverterKva = 15.0;
-  } else if (targetCapacity <= 20000) {
-    recommendedInverterKva = 20.0;
-  } else {
-    recommendedInverterKva = 30.0;
+  // ── INVERTER STANDARD SIZE LADDER — exact Nigerian market sizes only ─────────
+  // These are the ONLY sizes actually sold in the Nigerian market. Using any
+  // other value (e.g. 8kVA, 25kVA) means recommending hardware that doesn't
+  // exist for sale, forcing installers to round up anyway.
+  // Source: installer-confirmed available stock, June 2026.
+  const INVERTER_SIZES = [1, 1.5, 2, 3, 3.5, 4, 4.2, 5, 6.2, 7.5, 10, 12, 15, 20];
+
+  function roundToStandardInverter(kva: number): number {
+    for (const size of INVERTER_SIZES) {
+      if (kva <= size) return size;
+    }
+    return INVERTER_SIZES[INVERTER_SIZES.length - 1];
   }
+
+  let recommendedInverterKva: number = roundToStandardInverter(targetCapacity / 1000);
 
   // ── UPGRADE BLOCK A: Mode-Aware Inverter Hardware Floor ───────────────────────────────
   // optimizationMode is read here — AFTER the appliance loop has fully populated
@@ -1416,45 +1407,40 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // ========================================================
   // FIX: Inverter PV Input Cap (DC:AC Ratio Clamp)
   // ========================================================
-  // Standard hybrid inverters cap max PV input at ~125% of AC capacity.
-  // BUT: if the load's required PV exceeds what the current inverter can accept,
-  // upgrade the inverter first — don't silently clip panels and show "UNDER SIZED".
-  // An undersized inverter causes panel clipping and wasted investment.
+  // Rule: LOAD drives inverter size. SOLAR fills the inverter's input capacity.
+  // If solar needs exceed what the load-based inverter can accept, prefer clipping
+  // panels over upgrading the inverter for typical residential loads — upgrading
+  // the inverter just because panels are large forces users to overpay for AC
+  // capacity they don't actually need.
   //
-  // DC:AC ratio = 1.33 (not 1.25) — most Nigerian market hybrid inverters
-  // (Deye, Growatt, Felicity) accept 130–150% DC oversizing. Using 1.33 reduces
-  // unnecessary inverter upgrades that over-price systems without adding value.
+  // DC:AC ratio = 1.5 — most Nigerian market hybrid inverters (Deye, Growatt,
+  // Felicity, Victron) accept 130–150% DC oversizing. A 5kVA inverter can accept
+  // up to 7.5kWp before any upgrade is considered.
 
-  const DC_AC_RATIO = 1.33;
+  const DC_AC_RATIO = 1.5;
   let maxAllowedPvKwp = inverterKva * DC_AC_RATIO;
 
   if (actualPvKwp > maxAllowedPvKwp) {
-    // Calculate what inverter kVA is needed to accommodate the required PV
-    const pvRequiredInverterKva = actualPvKwp / DC_AC_RATIO;
+    const clippingPct = (actualPvKwp - maxAllowedPvKwp) / actualPvKwp;
 
-    // Round up to next standard inverter size
-    // Extended to 30kVA for large commercial loads
-    const upgradedInverterKva =
-      pvRequiredInverterKva <= 3 ? 3
-        : pvRequiredInverterKva <= 5 ? 5
-          : pvRequiredInverterKva <= 8 ? 8
-            : pvRequiredInverterKva <= 10 ? 10
-              : pvRequiredInverterKva <= 12 ? 12
-                : pvRequiredInverterKva <= 15 ? 15
-                  : pvRequiredInverterKva <= 20 ? 20
-                    : pvRequiredInverterKva <= 25 ? 25
-                      : 30;
+    // Only upgrade the inverter if clipping would waste >28% of array output.
+    // Below that threshold, clip panels instead — cheaper and still effective.
+    if (clippingPct > 0.28) {
+      const pvRequiredInverterKva = actualPvKwp / DC_AC_RATIO;
+      const upgradedInverterKva = roundToStandardInverter(pvRequiredInverterKva);
 
-    if (upgradedInverterKva > inverterKva) {
-      inverterKva = upgradedInverterKva;
-      maxAllowedPvKwp = inverterKva * DC_AC_RATIO;
+      if (upgradedInverterKva > inverterKva) {
+        inverterKva = upgradedInverterKva;
+        maxAllowedPvKwp = inverterKva * DC_AC_RATIO;
+      }
     }
 
-    // If panels still exceed the upgraded inverter's cap, clip to match
+    // Clip panels to fit whichever inverter capacity we ended up with
     if (actualPvKwp > maxAllowedPvKwp) {
       actualPvKwp = maxAllowedPvKwp;
       const rawPanelCount = (actualPvKwp * 1000) / panelSizeWatts;
       panelsNeeded = Math.floor(rawPanelCount / 2) * 2;
+      panelsNeeded = Math.max(panelsNeeded, 2); // never below 2 panels
       actualPvKwp = (panelsNeeded * panelSizeWatts) / 1000;
     }
   }
@@ -2202,13 +2188,19 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     : 1;
   // Simpler: rainy season coverage = rainyProduction / dailyLoadKwh
   const rainySeasonCoverage = dailyLoadKwh > 0 ? rainyProduction / dailyLoadKwh : 1;
-  const batteryCoversNight = nightLoadKwh <= 0 || (usableBattery / Math.max(nightLoadKwh, 0.1)) >= 1.0;
+  const batteryCoversNight = nightLoadKwh <= 0 || (usableBattery / Math.max(nightLoadKwh, 0.1)) >= 1.1;
+  // Threshold raised from 1.0 to 1.1 — a battery at exactly 1.0x ratio has zero
+  // margin for inverter losses, battery degradation, or a cloudy evening.
   const pvCanChargeBattery = batteryPvBalance !== 'MISMATCH';
 
   type SystemClass = 'FULL_SOLAR' | 'GRID_ASSISTED' | 'GRID_DEPENDENT';
   let systemClass: SystemClass;
 
-  if (pvCoverage >= 1.05 && batteryCoversNight && pvCanChargeBattery) {
+  if (pvCoverage >= 1.05 && batteryCoversNight && pvCanChargeBattery && rainySeasonCoverage >= 0.90) {
+    // True full solar: covers load year-round including rainy season.
+    // Threshold raised from 0.75 to 0.90 — Nigeria's rainy season (Jun-Sep) is
+    // a real 4-month event; a system dropping to 80% for a third of the year
+    // is grid-assisted, not full solar.
     systemClass = 'FULL_SOLAR';
   } else if (pvCoverage >= 0.75) {
     // Even if annual avg looks good, rainy season < 60% means grid-dependent in practice
@@ -2529,6 +2521,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     monthlyGridSavings,
     monthlyGeneratorSavings,
     batterySufficiency,
+    nightCoverageRatio,
     energyOffsetPct: coveragePct,
     coverageLabel,
     actualSolarCoveragePct,

@@ -254,6 +254,8 @@ export interface CalculatorResults {
   surgeFailureWarning?: string;
   dynamicApplianceInsights: string[];
   batterySufficiency: 'INSUFFICIENT ⚠️' | 'TIGHT ⚠️' | 'ADEQUATE ✅' | 'MINIMAL STORAGE (day-use focused)';
+  /** Ratio of usable battery to night load — the real number behind sufficiency badges */
+  nightCoverageRatio: number;
   systemConsistencyWarnings: string[];
   // Cost
   systemCostMin: number;
