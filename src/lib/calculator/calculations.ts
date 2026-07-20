@@ -1569,7 +1569,13 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // Fragile battery warning: only meaningful when there IS a real night load
   // that the battery struggles to cover. Zero/near-zero night load means the
   // battery is correctly sized for daytime-only use — not a warning scenario.
-  const isFragileBatteryWarning = nightLoadKwh > 0.5 && nightLoadKwh <= 1.0 && usableBattery <= 5.0;
+  // Fragile battery warning: only fire when the battery has genuinely thin margin
+  // (ratio < 1.3), not just because night load happens to be small. A 0.9kWh
+  // night load against a 4.8kWh battery (4x+ margin) is NOT fragile — it has
+  // huge headroom. Previously fired on night load range alone, contradicting
+  // a "Full night covered" badge shown right above it.
+  const isFragileBatteryWarning = nightLoadKwh > 0.5 && usableBattery > 0
+    && (usableBattery / nightLoadKwh) < 1.3;
 
   // Autonomy hours — capped to prevent nonsensical values from tiny night loads
   // e.g. 0.2 kWh night load + 4.8 kWh battery (AC floor) → uncapped = 288h (impossible)
