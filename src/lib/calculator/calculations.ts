@@ -1517,9 +1517,14 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
     // Engineering minimum floors — take the largest of three constraints:
     //   1. Hardware minimum: any hybrid/off-grid system needs a physical bank to operate.
-    //   2. Night-load minimum: battery MUST cover at least 1 full night of load at LFP_DOD.
+    //   2. Night-load minimum: battery MUST cover the FULL requested autonomy window
+    //      (nightLoadKwh × autonomyDays), not just a single night — otherwise a
+    //      2-night autonomy request can be silently downgraded to ~1.9 nights by
+    //      the earlier pack-size tolerance snap. Confirmed bug, fixed June 2026.
     //   3. Inverter AC-to-DC bus alignment: large inverters need large batteries to prevent sag.
-    const nightLoadMinBattery = nightLoadKwh > 0 ? nightLoadKwh / LFP_DOD : 0;
+    const nightLoadMinBattery = nightLoadKwh > 0
+      ? (nightLoadKwh * autonomyDays) / LFP_DOD
+      : 0;
     const hardwareMin = hasAC || hasWaterPump ? 4.8 : BATT_MIN;
 
     // Inverter bus minimum — scaled to inverter size, not flat 4.8kWh for all.
