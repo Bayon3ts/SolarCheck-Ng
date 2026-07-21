@@ -86,6 +86,18 @@ export default function TrustToolsSection() {
 
           </div>
         </ScrollReveal>
+
+        {/* Already installed? — warranty registration link (additive, separate from the pre-purchase checks above) */}
+        <ScrollReveal delay={0.25}>
+          <div className="text-center mt-8">
+            <p className="text-white/50 text-sm">
+              Already had your system installed?{" "}
+              <Link href="/warranty-register" className="text-accent font-semibold hover:underline">
+                Register your warranty free →
+              </Link>
+            </p>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );

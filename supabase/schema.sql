@@ -1,4 +1,4 @@
-  -- ═══════════════════════════════════════
+-- ═══════════════════════════════════════
   -- SolarCheck Nigeria — Complete Database Schema
   -- Run this in your Supabase SQL Editor
   -- ═══════════════════════════════════════
@@ -294,3 +294,36 @@ CREATE INDEX IF NOT EXISTS idx_installers_user_id
 
 -- Reload schema cache so PostgREST picks up the new column immediately
 NOTIFY pgrst, 'reload schema';
+
+  -- ═══════════════════════════════════════
+  -- TABLE: warranty_registrations
+  -- Added June 2026: retention mechanism — homeowner registers their
+  -- installed system through SolarCheck (not directly with the installer),
+  -- giving SolarCheck a legitimate reason to re-engage post-install and
+  -- feeding real, verified reviews into the reviews table.
+  -- ═══════════════════════════════════════
+  CREATE TABLE IF NOT EXISTS warranty_registrations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+    installer_id UUID REFERENCES installers(id) ON DELETE SET NULL,
+    homeowner_name TEXT NOT NULL,
+    homeowner_phone TEXT NOT NULL,
+    homeowner_email TEXT,
+    state TEXT NOT NULL,
+    installer_name_manual TEXT, -- filled if installer_id lookup fails / not on platform
+    system_size_kva TEXT,
+    battery_kwh TEXT,
+    panel_count INTEGER,
+    install_date DATE NOT NULL,
+    warranty_years INTEGER DEFAULT 2,
+    total_paid_naira NUMERIC,
+    photo_url TEXT, -- optional proof-of-install photo
+    review_prompted_at TIMESTAMPTZ,
+    review_id UUID REFERENCES reviews(id) ON DELETE SET NULL,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'expired', 'claim_pending')),
+    created_at TIMESTAMPTZ DEFAULT now()
+  );
+
+  CREATE INDEX idx_warranty_installer ON warranty_registrations(installer_id);
+  CREATE INDEX idx_warranty_phone ON warranty_registrations(homeowner_phone);
+  CREATE INDEX idx_warranty_install_date ON warranty_registrations(install_date);
