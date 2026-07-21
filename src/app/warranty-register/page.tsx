@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ShieldCheck, CheckCircle, ArrowRight } from "lucide-react";
+import { ShieldCheck, CheckCircle, ArrowRight, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
@@ -75,38 +75,44 @@ export default function WarrantyRegisterPage() {
   return (
     <>
       <Navbar />
-      <main className="max-w-2xl mx-auto px-4 py-12">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#1A5C38]/10 mb-4">
-            <ShieldCheck className="w-7 h-7 text-[#1A5C38]" />
+      <main className="max-w-2xl mx-auto px-4 pt-32 pb-12">
+        {!done && (
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#1A5C38]/10 mb-4">
+              <ShieldCheck className="w-7 h-7 text-[#1A5C38]" />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
+              Register Your Solar Warranty
+            </h1>
+            <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
+              Just had your system installed? Register it with SolarCheck — free — so
+              you always have a record, even if you lose your paperwork or switch phones.
+            </p>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-            Register Your Solar Warranty
-          </h1>
-          <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
-            Just had your system installed? Register it with SolarCheck — free — so
-            you always have a record, even if you lose your paperwork or switch phones.
-          </p>
-        </div>
+        )}
 
         {done ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-slate-800 mb-2">You&apos;re all set!</h2>
-            <p className="text-sm text-slate-500 max-w-sm mx-auto">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center max-w-md mx-auto mt-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-50 mb-6">
+              <CheckCircle className="w-8 h-8 text-green-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800 mb-3">You&apos;re all set!</h2>
+            <p className="text-sm text-slate-500 leading-relaxed mb-8">
               We&apos;ve saved your warranty details and sent a confirmation to your
               WhatsApp. We&apos;ll check in with you in a few weeks to see how your
               system is performing.
             </p>
-            <Link href="/" className="inline-flex mt-6">
-              <Button variant="outline">Back to home</Button>
+            <Link href="/" className="inline-flex w-full">
+              <Button className="w-full bg-[#1A5C38] hover:bg-[#1A5C38]/90 text-white py-6 rounded-xl">Back to home</Button>
             </Link>
           </div>
+
         ) : (
           <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl">
-                {error}
+              <div className="p-4 text-sm text-red-600 bg-red-50/50 border border-red-200 rounded-xl flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
 
