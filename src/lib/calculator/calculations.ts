@@ -2132,7 +2132,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     qaWarnings.push(
       `Battery-PV imbalance: your ${actualPvKwp.toFixed(1)} kWp array delivers ` +
       `~${dailyChargeableKwh.toFixed(1)} kWh/day chargeable energy but your battery ` +
-      `bank is ${batteryKwh.toFixed(1)} kWh. Battery will only reach ` +
+      `bank is ${batteryKwh.toFixed(2)} kWh. Battery will only reach ` +
       `~${Math.round(batteryPvRatio * 100)}% charge daily — consider reducing battery ` +
       `to ${(dailyChargeableKwh * 0.8).toFixed(1)} kWh or increasing panels.`
     );
@@ -2141,7 +2141,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     qaScore -= 20;
     qaWarnings.push(
       `\u26a0\ufe0f Battery-PV mismatch: your ${actualPvKwp.toFixed(1)} kWp array can only charge ` +
-      `~${Math.round(batteryPvRatio * 100)}% of your ${batteryKwh.toFixed(1)} kWh battery daily. ` +
+      `~${Math.round(batteryPvRatio * 100)}% of your ${batteryKwh.toFixed(2)} kWh battery daily. ` +
       `Chronic undercharging will significantly reduce battery lifespan. ` +
       `Increase panels to at least ${(batteryKwh / CHARGE_EFFICIENCY).toFixed(1)} kWp ` +
       `or reduce battery to ${(dailyChargeableKwh * 0.8).toFixed(1)} kWh.`

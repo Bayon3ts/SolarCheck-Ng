@@ -292,7 +292,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
         {/* Battery */}
         <div className="bg-gradient-to-br from-violet-50 to-violet-100/50 border border-violet-200/60 rounded-2xl p-4">
           <div className="text-2xl mb-1">🔋</div>
-          <div className="text-2xl font-black text-violet-700 leading-none">{r.batteryKwh.toFixed(1)}<span className="text-base font-semibold">kWh</span></div>
+          <div className="text-2xl font-black text-violet-700 leading-none">{r.batteryKwh.toFixed(2)}<span className="text-base font-semibold">kWh</span></div>
           <div className="text-xs text-text-muted mt-1">LFP · {r.batteryVoltage ?? 48}V bank</div>
           <div className="mt-2"><SufficiencyBadge val={r.batterySufficiency} /></div>
         </div>
@@ -339,7 +339,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
             ⚠️ Real-World Battery Limitation Warning
           </h3>
           <p className="mt-2 text-sm text-gray-700">
-            <strong>The Mirage:</strong> The system includes a {r.batteryKwh.toFixed(1)} kWh battery bank. While this sounds substantial on paper, it represents a highly restricted, minimal storage pool.
+            <strong>The Mirage:</strong> The system includes a {r.batteryKwh.toFixed(2)} kWh battery bank. While this sounds substantial on paper, it represents a highly restricted, minimal storage pool.
           </p>
           <p className="text-sm text-gray-700 mt-1">
             <strong>The Hardware Reality:</strong> To prevent rapid cell degradation, the system enforces an 80% Depth of Discharge (DoD) buffer. Your true usable nighttime energy is only <strong>{(r.batteryKwh * 0.8).toFixed(2)} kWh</strong>.
@@ -360,7 +360,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           <h4 className="font-semibold text-gray-900 text-sm mb-2">💡 Strategic Engineering Paths</h4>
           <ul className="space-y-1 text-sm text-gray-700 list-disc pl-4">
             <li><strong>Option A (Budget Layout):</strong> Maintain the current hardware footprint. Enforce strict behavioral management: zero high-inductive cooling loads after 6:00 PM.</li>
-            <li><strong>Option B (Storage Expansion Upgrade):</strong> Scale the battery bank footprint from {r.batteryKwh.toFixed(1)} kWh up to 7.5 kWh – 10 kWh to transition the system from a fragile daytime-offset layout into a true, resilient nocturnal home-comfort setup.</li>
+            <li><strong>Option B (Storage Expansion Upgrade):</strong> Scale the battery bank footprint from {r.batteryKwh.toFixed(2)} kWh up to 7.5 kWh – 10 kWh to transition the system from a fragile daytime-offset layout into a true, resilient nocturnal home-comfort setup.</li>
           </ul>
         </div>
       )}
@@ -884,7 +884,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
                     : ' — rounded up to next standard size.'}
                 </div>
               )}
-              <Row label="Battery" value={`${r.batteryKwh.toFixed(1)} kWh`} accent />
+              <Row label="Battery" value={`${r.batteryKwh.toFixed(2)} kWh`} accent />
               <Row label="Battery sufficiency" value={<SufficiencyBadge val={r.batterySufficiency} />} />
               <Row label="Night autonomy" value={`${r.autonomyHours.toFixed(1)} hrs`} />
               <Row label="System mode" value={<span className="capitalize">{inputs.systemMode}</span>} />
