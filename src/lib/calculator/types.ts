@@ -284,6 +284,14 @@ export interface CalculatorResults {
 
   // Sub-analyses
   chargeController: ChargeControllerSpec;
+  cableSpecReport?: {
+    batteryToInverter: { label: string; gaugeMm2: number; ratedAmps: number; requiredAmps: number; runLengthM: number; voltageDropPct: number; totalCostNaira: { min: number; max: number }; warning?: string };
+    panelsToMppt: { label: string; gaugeMm2: number; ratedAmps: number; requiredAmps: number; runLengthM: number; voltageDropPct: number; totalCostNaira: { min: number; max: number }; warning?: string };
+    inverterToDb: { label: string; gaugeMm2: number; ratedAmps: number; requiredAmps: number; runLengthM: number; voltageDropPct: number; totalCostNaira: { min: number; max: number }; warning?: string };
+    earthing: { label: string; gaugeMm2: number; color: string; note: string };
+    totalCableCostNaira: { min: number; max: number };
+    copperOnlyWarning: string;
+  };
   daytimeAnalysis: DaytimeHeavyAnalysis;
   truthQAReport: TruthQAReport;
 

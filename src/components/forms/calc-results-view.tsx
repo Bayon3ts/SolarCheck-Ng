@@ -919,6 +919,45 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
         </Section>
       )}
 
+      {/* ── 6.5 CABLE SPECIFICATIONS (Market Spec Report differentiator) ────── */}
+      {r.cableSpecReport && (
+        <Section title="Cable Specifications" icon="🔌" defaultOpen={false}>
+          <div className="space-y-3">
+            {[r.cableSpecReport.batteryToInverter, r.cableSpecReport.panelsToMppt, r.cableSpecReport.inverterToDb].map((cable, i) => (
+              <div key={i} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold text-slate-700">{cable.label}</span>
+                  <span className="text-sm font-black text-primary">{cable.gaugeMm2}mm² copper ({cable.ratedAmps}A)</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Carries {cable.requiredAmps}A over ~{cable.runLengthM}m · {cable.voltageDropPct}% drop</span>
+                  <span>{fmt(cable.totalCostNaira.min)}–{fmt(cable.totalCostNaira.max)}</span>
+                </div>
+                {cable.warning && (
+                  <p className="text-xs text-amber-600 mt-1.5">⚠️ {cable.warning}</p>
+                )}
+              </div>
+            ))}
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-700">{r.cableSpecReport.earthing.label}</span>
+                <span className="text-sm font-black text-primary">{r.cableSpecReport.earthing.gaugeMm2}mm² {r.cableSpecReport.earthing.color}</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">{r.cableSpecReport.earthing.note}</p>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <span className="text-sm font-bold text-slate-700">Total cable cost</span>
+              <span className="text-sm font-black text-primary">
+                {fmt(r.cableSpecReport.totalCableCostNaira.min)}–{fmt(r.cableSpecReport.totalCableCostNaira.max)}
+              </span>
+            </div>
+            <p className="text-xs text-red-600 bg-red-50 rounded-lg p-2.5 leading-relaxed">
+              🚫 {r.cableSpecReport.copperOnlyWarning}
+            </p>
+          </div>
+        </Section>
+      )}
+
       {/* ── 7. DAYTIME ANALYSIS ─────────────────────────────────────────────── */}
       {dt?.isDaytimeHeavy && (
         <Section title="Daytime-Heavy Load Detected" icon="🌤️" defaultOpen={false}>

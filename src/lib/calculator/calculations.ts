@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { CalculatorInputs, CalculatorResults } from './types';
 import { MONTHLY_PSH, DEFAULT_MONTHLY_PSH } from './irradiance';
 import { enforceTruth } from './truth-engine';
+import { buildCableSpecReport, FullCableSpecReport } from '@/lib/cable-sizing/engine';
 
 // ── Live fuel price (fetched from Supabase, falls back to constant) ────────
 let _fuelPriceCache: number = 1350; // updated by getFuelPrice()
@@ -1022,7 +1023,7 @@ export function getApplianceKwh(appDef: typeof APPLIANCES[0], dayHrs: number, ni
   return ((appDef.watts * (dayHrs + nightHrs) * (appDef.dutyCycle || 1)) / 1000);
 }
 
-export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResults & { chargeController: ChargeControllerSpec; daytimeAnalysis: DaytimeHeavyAnalysis } {
+export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResults & { chargeController: ChargeControllerSpec; cableSpecReport: FullCableSpecReport; daytimeAnalysis: DaytimeHeavyAnalysis } {
   const {
     state, monthlyBill, generatorSpend,
     appliances, coveragePct, systemMode, autonomyDays,
@@ -1824,6 +1825,24 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   systemCostMin += chargeController.estimatedCost;
   systemCostMax += chargeController.estimatedCost;
 
+  // ── CABLE SPEC REPORT (Market Spec Report differentiator) ──────────────────
+  // Real ampacity-based copper cable sizing for all 4 runs an installer needs:
+  // Battery↔Inverter, Panels↔MPPT, Inverter↔DB Board, Earth/Grounding.
+  // For hybrid inverters the MPPT is built-in (chargeController.amps === 0),
+  // so panel-side current is computed directly from panel watts ÷ battery
+  // voltage with a 25% margin, matching the same formula used inside
+  // getChargeControllerSpec for off-grid systems — keeps both paths consistent.
+  const panelSideAmps = chargeController.amps > 0
+    ? chargeController.amps
+    : Math.ceil((totalPanelWatts / batteryVoltage) * 1.25);
+
+  const cableSpecReport = buildCableSpecReport({
+    batteryVoltage,
+    inverterKva,
+    totalPanelWatts,
+    mpptAmps: panelSideAmps,
+  });
+
   const monthlyCurrentSpend = monthlyBill + generatorSpend;
 
   let monthlyGridSavingsExpected = 0;
@@ -2558,6 +2577,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     pvClassification,
     seasonalRisk,
     chargeController,
+    cableSpecReport,
     daytimeAnalysis,
     truthQAReport,
     // ── Installer-grade analyses ──
