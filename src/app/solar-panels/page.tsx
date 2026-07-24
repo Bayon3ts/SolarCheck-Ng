@@ -33,6 +33,7 @@ export default function SolarPanelsPage() {
           description="Compare prices, specs, and real reviews of solar panels sold by Nigerian installers — with Naira pricing."
           updatedText="Last updated: June 2026 · Prices from Lagos market"
           bgImage="/solar-panels-hero.jpg"
+          bgVideo="/Solarchek_img/solar-hero-animation.mp4"
         />
 
         {/* Quick brand links */}
