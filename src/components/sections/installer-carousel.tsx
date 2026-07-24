@@ -23,6 +23,7 @@ export interface InstallerRow {
   is_verified: boolean;
   services: string[] | null;
   logo_url: string | null;
+  cover_image_url: string | null;
 }
 
 interface InstallerCarouselProps {
@@ -37,8 +38,16 @@ export default function InstallerCarousel({ installers }: InstallerCarouselProps
         {installers.map((installer) => (
           <StaggerItem key={installer.slug} className="min-w-[280px] md:min-w-0">
             <div className="card overflow-hidden transition-all duration-300 hover:shadow-card-hover hover:scale-[1.02]">
-              {/* Cover image placeholder */}
-              <div className="relative aspect-video bg-gradient-to-br from-primary/20 to-primary/5">
+              {/* Cover image: use cover_image_url if present, else gradient fallback */}
+              <div className="relative aspect-video bg-gradient-to-br from-primary/20 to-primary/5 overflow-hidden">
+                {installer.cover_image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={installer.cover_image_url}
+                    alt={`${installer.company_name} banner`}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                )}
                 {/* Verified badge */}
                 {installer.is_verified && (
                   <span className="absolute right-3 top-3 badge-verified">
@@ -51,7 +60,7 @@ export default function InstallerCarousel({ installers }: InstallerCarouselProps
               {/* Card content */}
               <div className="p-6">
                 {/* Logo: use logo_url if present, else initial-letter circle */}
-                <div className="-mt-12 mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-white bg-primary shadow-md overflow-hidden">
+                <div className="-mt-12 mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-white bg-primary shadow-md overflow-hidden relative z-10">
                   {installer.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

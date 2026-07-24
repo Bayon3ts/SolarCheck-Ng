@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return {
     title: `${installer.company_name} | Solar Installer in ${installer.city}, ${installer.state}`,
-    description: installer.description.substring(0, 160) + "...",
+    description: installer.description ? installer.description.substring(0, 160) + "..." : `View ${installer.company_name}'s profile and reviews on SolarCheck.`,
   };
 }
 
@@ -117,6 +117,7 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                       src={installer.cover_image_url}
                       alt={`${installer.company_name} cover`}
                       fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw, 50vw"
                       className="object-cover"
                     />
                   )}

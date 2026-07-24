@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { LogOut, Loader2, Eye, EyeOff } from 'lucide-react';
+import { InstallerMediaUpload } from '@/components/ui/installer-media-upload';
 
 /* ─────────────────── helpers ─────────────────── */
 
@@ -31,6 +32,7 @@ interface Installer {
   states_covered: string[];
   years_in_business: string;
   logo_url: string;
+  cover_image_url: string;
   subscription_tier: string;
   subscription_expires_at: string | null;
   slug: string;
@@ -126,10 +128,10 @@ function LoginOverlay() {
     /* Full-screen overlay with blur */
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', background: 'rgba(13,27,18,0.55)' }}>
-      
+
       {/* Card */}
       <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
-        
+
         {/* Green header strip */}
         <div className="bg-[#0A5C36] px-8 pt-8 pb-6">
           <Link href="/" className="text-2xl font-black text-white block mb-4">
@@ -151,9 +153,8 @@ function LoginOverlay() {
               { id: 'whatsapp', label: '💬 WhatsApp OTP' },
             ] as const).map(t => (
               <button key={t.id} onClick={() => { setTab(t.id); setError(''); setInfo(''); }}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
-                  tab === t.id ? 'bg-white text-[#0A5C36] shadow-sm' : 'text-gray-400 hover:text-gray-600'
-                }`}>
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${tab === t.id ? 'bg-white text-[#0A5C36] shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                  }`}>
                 {t.label}
               </button>
             ))}
@@ -319,9 +320,8 @@ export default function DashboardClient({ installer, leads: initialLeads, review
             { id: 'settings', icon: '⚙️', label: 'Settings' },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
-                activeTab === tab.id ? 'bg-[#0A5C36]/10 text-[#0A5C36]' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-700'
-              }`}>
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${activeTab === tab.id ? 'bg-[#0A5C36]/10 text-[#0A5C36]' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-700'
+                }`}>
               <span className="text-base w-5 text-center">{tab.icon}</span>
               {tab.label}
               {tab.id === 'leads' && newLeadsCount > 0 && (
@@ -353,9 +353,8 @@ export default function DashboardClient({ installer, leads: initialLeads, review
           { id: 'settings', icon: '⚙️', label: 'Settings', badge: 0 },
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex flex-col items-center py-3 gap-0.5 relative ${
-              activeTab === tab.id ? 'text-[#0A5C36]' : 'text-gray-400'
-            }`}>
+            className={`flex-1 flex flex-col items-center py-3 gap-0.5 relative ${activeTab === tab.id ? 'text-[#0A5C36]' : 'text-gray-400'
+              }`}>
             <span className="text-lg relative">
               {tab.icon}
               {tab.badge > 0 && (
@@ -466,9 +465,8 @@ function LeadsTab({ installer, leads, updateLeadStatus, setActiveTab, isLoggedIn
       </div>
 
       {/* WhatsApp delivery banner */}
-      <div className={`flex items-center justify-between p-3.5 rounded-2xl ${
-        installer.whatsapp ? 'bg-green-50 border border-green-100' : 'bg-amber-50 border border-amber-100'
-      }`}>
+      <div className={`flex items-center justify-between p-3.5 rounded-2xl ${installer.whatsapp ? 'bg-green-50 border border-green-100' : 'bg-amber-50 border border-amber-100'
+        }`}>
         <div className="flex items-center gap-2.5">
           <span className="text-lg">{installer.whatsapp ? '✅' : '⚠️'}</span>
           <div>
@@ -567,16 +565,16 @@ function LeadsTab({ installer, leads, updateLeadStatus, setActiveTab, isLoggedIn
 ═══════════════════════════════════════════════ */
 
 const NIGERIAN_STATES = [
-  'Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno',
-  'Cross River','Delta','Ebonyi','Edo','Ekiti','Enugu','FCT - Abuja','Gombe',
-  'Imo','Jigawa','Kaduna','Kano','Katsina','Kebbi','Kogi','Kwara','Lagos',
-  'Nasarawa','Niger','Ogun','Ondo','Osun','Oyo','Plateau','Rivers','Sokoto','Taraba','Yobe','Zamfara'
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
+  'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT - Abuja', 'Gombe',
+  'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos',
+  'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
 ];
 
 const SERVICES_LIST = [
-  'Residential Installation','Commercial Installation','Maintenance & Servicing',
-  'System Audit','Battery Replacement','Inverter Repair','Solar Panel Cleaning',
-  'Off-Grid Systems','Hybrid Systems'
+  'Residential Installation', 'Commercial Installation', 'Maintenance & Servicing',
+  'System Audit', 'Battery Replacement', 'Inverter Repair', 'Solar Panel Cleaning',
+  'Off-Grid Systems', 'Hybrid Systems'
 ];
 
 function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLoggedIn: boolean }) {
@@ -589,6 +587,8 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
     services: installer.services || [],
     states_covered: installer.states_covered || [],
     years_in_business: installer.years_in_business || '',
+    logo_url: installer.logo_url || '',
+    cover_image_url: installer.cover_image_url || '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -636,9 +636,35 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
         {/* Company Info */}
         <section className="space-y-4">
           <h3 className="font-bold text-sm border-b border-gray-100 pb-2">Company Info</h3>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+              Profile Banner
+            </label>
+            <p className="text-xs text-gray-400 mb-2">
+              This is the image shown at the top of your listing card in the installer directory.
+            </p>
+            <InstallerMediaUpload
+              kind="cover"
+              currentImage={form.cover_image_url || null}
+              onUpload={(url) => setForm({ ...form, cover_image_url: url })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+              Company Logo
+            </label>
+            <InstallerMediaUpload
+              kind="logo"
+              currentImage={form.logo_url || null}
+              onUpload={(url) => setForm({ ...form, logo_url: url })}
+            />
+          </div>
+
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Company Name</label>
-            <input type="text" value={form.company_name} onChange={e => setForm({...form, company_name: e.target.value})}
+            <input type="text" value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })}
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#0A5C36] outline-none" />
           </div>
           <div>
@@ -646,12 +672,12 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
               <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide">Description</label>
               <span className="text-xs text-gray-300">{form.description.length}/300</span>
             </div>
-            <textarea rows={3} maxLength={300} value={form.description} onChange={e => setForm({...form, description: e.target.value})}
+            <textarea rows={3} maxLength={300} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#0A5C36] outline-none resize-none" />
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Years in Business</label>
-            <select value={form.years_in_business} onChange={e => setForm({...form, years_in_business: e.target.value})}
+            <select value={form.years_in_business} onChange={e => setForm({ ...form, years_in_business: e.target.value })}
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#0A5C36] outline-none bg-white">
               <option value="">Select...</option>
               <option value="0-2">0 – 2 Years</option>
@@ -667,18 +693,18 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
           <h3 className="font-bold text-sm border-b border-gray-100 pb-2">Contact & Lead Delivery</h3>
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">WhatsApp (receives leads)</label>
-            <input type="tel" value={form.whatsapp} onChange={e => setForm({...form, whatsapp: e.target.value})}
+            <input type="tel" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
               placeholder="+234 XXX XXXX"
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#0A5C36] outline-none" />
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Business Phone</label>
-            <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
+            <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#0A5C36] outline-none" />
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Website URL</label>
-            <input type="url" value={form.website} onChange={e => setForm({...form, website: e.target.value})} placeholder="https://"
+            <input type="url" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} placeholder="https://"
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#0A5C36] outline-none" />
           </div>
         </section>

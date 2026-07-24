@@ -18,8 +18,8 @@ export default async function FeaturedInstallersSection() {
     .from("installers")
     .select(
       "id, slug, company_name, city, state, " +
-        "average_rating, total_reviews, " +
-        "is_verified, services, logo_url"
+      "average_rating, total_reviews, " +
+      "is_verified, services, logo_url, cover_image_url"
     )
     .eq("is_verified", true)
     .eq("is_active", true)

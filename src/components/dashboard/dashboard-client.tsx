@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { InstallerMediaUpload } from '@/components/ui/installer-media-upload';
+
 
 import { SidebarNav } from './sidebar-nav';
 import { StatCard } from './stat-card';
@@ -23,6 +25,7 @@ interface Installer {
   states_covered: string[];
   years_in_business: string;
   logo_url: string;
+  cover_image_url: string;
   subscription_tier: string;
   subscription_expires_at: string | null;
   slug: string;
@@ -252,9 +255,13 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
     services: installer.services || [],
     states_covered: installer.states_covered || [],
     years_in_business: installer.years_in_business || '',
+    logo_url: installer.logo_url || '',
+    cover_image_url: installer.cover_image_url || '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const router = useRouter();
 
   const toggle = (key: 'services' | 'states_covered', val: string) =>
     setForm(p => ({
@@ -271,7 +278,11 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
     );
     const { error } = await supabase.from('installers').update({ ...form }).eq('id', installer.id);
     setSaving(false);
-    if (!error) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    if (!error) { 
+      setSaved(true); 
+      router.refresh(); // Invalidate Next.js router cache to get fresh installer data
+      setTimeout(() => setSaved(false), 3000); 
+    }
   };
 
   return (
@@ -296,6 +307,32 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
       <div className="bg-[#FFFFFF] rounded-2xl border border-[#E5E5E0] shadow-sm p-8 space-y-8">
         <section className="space-y-4">
           <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Company Info</h3>
+
+          <div>
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">
+              Profile Banner
+            </label>
+            <p className="text-xs text-gray-400 mb-2">
+              This is the image shown at the top of your listing card in the installer directory.
+            </p>
+            <InstallerMediaUpload
+              kind="cover"
+              currentImage={form.cover_image_url || null}
+              onUpload={(url) => setForm({ ...form, cover_image_url: url })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">
+              Company Logo
+            </label>
+            <InstallerMediaUpload
+              kind="logo"
+              currentImage={form.logo_url || null}
+              onUpload={(url) => setForm({ ...form, logo_url: url })}
+            />
+          </div>
+
           <div>
             <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Company Name</label>
             <input type="text" value={form.company_name} onChange={e => setForm({...form, company_name: e.target.value})}
