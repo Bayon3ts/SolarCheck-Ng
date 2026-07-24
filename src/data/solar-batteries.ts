@@ -40,6 +40,7 @@ export const SOLAR_BATTERIES: SolarBattery[] = [
     priceMax: 950000,
     origin: 'CN',
     isFeatured: true,
+    imageUrl: '/Solarchek_img/felicity-lithium-battery.png',
     description: 'Felicity Solar is one of the most recognized solar battery brands in Nigeria. Their 51.2V lithium batteries are installed in thousands of Nigerian homes and are widely considered the standard for residential solar storage. Strong local distributor and technical support network.',
     pros: [
       'Most widely distributed battery in Nigeria',
@@ -70,6 +71,7 @@ export const SOLAR_BATTERIES: SolarBattery[] = [
     priceMax: 850000,
     origin: 'IN',
     isFeatured: true,
+    imageUrl: '/Solarchek_img/luminous-battery.webp',
     description: "Luminous is India's largest power solutions brand, with deep roots in the Nigerian market through their inverter business. Their lithium batteries are trusted by Nigerians who already use Luminous inverters, benefiting from native compatibility and a strong service network.",
     pros: [
       'Pairs perfectly with Luminous inverters',
@@ -99,6 +101,7 @@ export const SOLAR_BATTERIES: SolarBattery[] = [
     priceMax: 1800000,
     origin: 'CN',
     isFeatured: true,
+    imageUrl: '/Solarchek_img/huawei-luna2000.png',
     description: "Huawei's LUNA2000 is the premium battery option in Nigeria — used primarily in commercial and high-end residential installations. Best-in-class 10-year warranty, modular design, and seamless integration with Huawei's SUN2000 hybrid inverters. The Tesla Powerwall equivalent for the Nigerian market.",
     pros: [
       '10-year warranty — longest in Nigerian market',
@@ -130,6 +133,7 @@ export const SOLAR_BATTERIES: SolarBattery[] = [
     priceMax: 720000,
     origin: 'CN',
     isFeatured: false,
+    imageUrl: '/Solarchek_img/bsl-battery-1.jpg',
     description: 'BSL is an increasingly popular budget LFP option among Nigerian installers offering competitive packages. Solid value for cost-conscious homeowners who want lithium technology without paying the Felicity premium.',
     pros: [
       'Most affordable LFP option in Nigeria',
@@ -159,6 +163,7 @@ export const SOLAR_BATTERIES: SolarBattery[] = [
     priceMax: 800000,
     origin: 'CN',
     isFeatured: false,
+    imageUrl: '/Solarchek_img/shoto-battery.jpg',
     description: 'Shoto is a well-established Chinese battery brand with a growing Nigerian presence. Popular with installers for reliable performance and consistent manufacturing quality.',
     pros: [
       'Consistent manufacturing quality',
@@ -187,6 +192,7 @@ export const SOLAR_BATTERIES: SolarBattery[] = [
     priceMax: 1250000,
     origin: 'CN',
     isFeatured: false,
+    imageUrl: '/Solarchek_img/itel-battery-2.jpg',
     description: 'Itel Energy offers industrial-grade LiFePO4 batteries known for reliability. The IPW-51100 is a 5.12kWh system with an integrated smart BMS, supporting parallel connections for scalable residential and commercial solar installations in Nigeria.',
     pros: [
       'Built-in intelligent Battery Management System (BMS)',
