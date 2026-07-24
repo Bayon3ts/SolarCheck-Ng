@@ -36,6 +36,7 @@ export const SOLAR_PANELS: SolarPanel[] = [
     priceMax: 120000,
     origin: 'CN',
     isFeatured: true,
+    imageUrl: '/Solarchek_img/jinko-panel.jpg',
     description: "Jinko Solar is the world's largest solar panel manufacturer. The Tiger Neo N-Type is their premium TOPCon panel — extremely popular with Nigerian installers for its high efficiency and excellent heat tolerance, which matters in Lagos and Abuja climates.",
     pros: [
       'Best-in-class efficiency for Nigerian budget',
@@ -63,6 +64,7 @@ export const SOLAR_PANELS: SolarPanel[] = [
     priceMax: 130000,
     origin: 'CN',
     isFeatured: true,
+    imageUrl: '/Solarchek_img/longi-panel.jpg',
     description: 'Longi is consistently rated among the top 3 solar manufacturers globally. The Hi-MO 6 uses their proprietary HPBC cell technology and has excellent reviews from Nigerian homeowners for consistent output and minimal degradation over time.',
     pros: [
       'Highest efficiency in its class',
@@ -90,6 +92,7 @@ export const SOLAR_PANELS: SolarPanel[] = [
     priceMax: 100000,
     origin: 'CN',
     isFeatured: false,
+    imageUrl: '/Solarchek_img/canadian-solar-hiku_1.png',
     description: 'Canadian Solar is a trusted Tier 1 brand with strong availability across Nigeria. The HiKu6 is the go-to mid-range panel for budget-conscious homeowners who still want a bankable, warranted product from a global manufacturer.',
     pros: [
       'Best price-to-performance ratio',
@@ -117,6 +120,7 @@ export const SOLAR_PANELS: SolarPanel[] = [
     priceMax: 90000,
     origin: 'CN',
     isFeatured: false,
+    imageUrl: '/Solarchek_img/risen-energy.jpg',
     description: 'Risen Energy is one of the fastest-growing Tier 1 panel manufacturers. Budget-friendly pricing makes it popular with installers doing high-volume residential work across Lagos and Abuja.',
     pros: [
       'Most affordable Tier 1 option',
@@ -143,6 +147,7 @@ export const SOLAR_PANELS: SolarPanel[] = [
     priceMax: 110000,
     origin: 'CN',
     isFeatured: false,
+    imageUrl: '/Solarchek_img/astro-energy.jpg',
     description: "Astronergy is Chint's solar brand — backed by one of China's largest industrial groups. Growing rapidly in Nigeria as installers discover their TOPCon performance at competitive prices.",
     pros: [
       'N-type TOPCon performance at PERC pricing',

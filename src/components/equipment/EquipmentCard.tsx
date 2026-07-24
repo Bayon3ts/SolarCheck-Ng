@@ -62,13 +62,13 @@ export default function EquipmentCard({ product, reviewCount = 0, rating = 0 }: 
       )}
 
       {/* Image / Brand placeholder */}
-      <div className="relative flex h-44 items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
+      <div className="relative flex h-44 items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden border-b border-border">
         {product.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={product.imageUrl}
             alt={`${product.brand} ${product.model}`}
-            className="h-full w-full object-contain p-6"
+            className="h-full w-full object-cover"
           />
         ) : (
           <div className="flex flex-col items-center gap-2">
