@@ -50,7 +50,7 @@ export default function InstallerCarousel({ installers }: InstallerCarouselProps
                 )}
                 {/* Verified badge */}
                 {installer.is_verified && (
-                  <span className="absolute right-3 top-3 badge-verified">
+                  <span className="absolute right-3 top-3 badge-verified bg-white shadow-sm">
                     <BadgeCheck className="h-3.5 w-3.5" />
                     Verified
                   </span>
