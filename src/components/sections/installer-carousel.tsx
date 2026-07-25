@@ -24,6 +24,7 @@ export interface InstallerRow {
   services: string[] | null;
   logo_url: string | null;
   cover_image_url: string | null;
+  subscription_tier: string | null;
 }
 
 interface InstallerCarouselProps {
@@ -48,9 +49,17 @@ export default function InstallerCarousel({ installers }: InstallerCarouselProps
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                 )}
-                {/* Verified badge */}
+                
+                {/* Featured Badge - Top Left */}
+                {(installer.subscription_tier === 'featured' || installer.subscription_tier === 'premium') && (
+                  <span className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 px-2.5 py-1 text-xs font-bold text-amber-900 shadow-md">
+                    ⭐ Featured
+                  </span>
+                )}
+
+                {/* Verified badge - Top Right */}
                 {installer.is_verified && (
-                  <span className="absolute right-3 top-3 badge-verified bg-white shadow-sm">
+                  <span className="absolute right-3 top-3 z-10 badge-verified bg-white shadow-sm">
                     <BadgeCheck className="h-3.5 w-3.5" />
                     Verified
                   </span>

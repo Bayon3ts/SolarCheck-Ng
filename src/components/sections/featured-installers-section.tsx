@@ -14,17 +14,40 @@ import InstallerCarousel, { type InstallerRow } from "@/components/sections/inst
 export default async function FeaturedInstallersSection() {
   const supabase = await createServerClient();
 
-  const { data: installers } = await supabase
+  // 1. Fetch featured/premium installers first
+  const { data: featuredData } = await supabase
     .from("installers")
     .select(
-      "id, slug, company_name, city, state, " +
-      "average_rating, total_reviews, " +
-      "is_verified, services, logo_url, cover_image_url"
+      "id, slug, company_name, city, state, average_rating, total_reviews, is_verified, services, logo_url, cover_image_url, subscription_tier"
     )
     .eq("is_verified", true)
     .eq("is_active", true)
+    .in("subscription_tier", ["featured", "premium"])
     .order("total_reviews", { ascending: false })
     .limit(6);
+
+  let installers = featuredData || [];
+
+  // 2. If we need more to fill the 6 spots, fetch top overall installers
+  if (installers.length < 6) {
+    const { data: extraData } = await supabase
+      .from("installers")
+      .select(
+        "id, slug, company_name, city, state, average_rating, total_reviews, is_verified, services, logo_url, cover_image_url, subscription_tier"
+      )
+      .eq("is_verified", true)
+      .eq("is_active", true)
+      .order("total_reviews", { ascending: false })
+      .limit(12);
+      
+    if (extraData) {
+      // Filter out any featured installers we already have
+      const existingIds = new Set(installers.map((i) => i.id));
+      const newInstallers = extraData.filter((i) => !existingIds.has(i.id));
+      
+      installers = [...installers, ...newInstallers].slice(0, 6);
+    }
+  }
 
   /* ── Empty state: no verified+active installers yet ── */
   if (!installers || installers.length === 0) {

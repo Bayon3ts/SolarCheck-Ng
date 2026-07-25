@@ -29,7 +29,7 @@ interface Installer {
   subscription_tier: string;
   subscription_expires_at: string | null;
   slug: string;
-  is_approved: boolean;
+  is_verified: boolean;
 }
 
 interface Props {
@@ -125,9 +125,8 @@ function LoginOverlay() {
               { id: 'whatsapp', label: '💬 WhatsApp OTP' },
             ] as const).map(t => (
               <button key={t.id} onClick={() => { setTab(t.id); setError(''); setInfo(''); }}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
-                  tab === t.id ? 'bg-white text-[#1A5E38] shadow-sm' : 'text-gray-400 hover:text-gray-600'
-                }`}>
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${tab === t.id ? 'bg-white text-[#1A5E38] shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                  }`}>
                 {t.label}
               </button>
             ))}
@@ -233,16 +232,16 @@ function LoginOverlay() {
 ═══════════════════════════════════════════════ */
 
 const NIGERIAN_STATES = [
-  'Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno',
-  'Cross River','Delta','Ebonyi','Edo','Ekiti','Enugu','FCT - Abuja','Gombe',
-  'Imo','Jigawa','Kaduna','Kano','Katsina','Kebbi','Kogi','Kwara','Lagos',
-  'Nasarawa','Niger','Ogun','Ondo','Osun','Oyo','Plateau','Rivers','Sokoto','Taraba','Yobe','Zamfara'
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
+  'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT - Abuja', 'Gombe',
+  'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos',
+  'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
 ];
 
 const SERVICES_LIST = [
-  'Residential Installation','Commercial Installation','Maintenance & Servicing',
-  'System Audit','Battery Replacement','Inverter Repair','Solar Panel Cleaning',
-  'Off-Grid Systems','Hybrid Systems'
+  'Residential Installation', 'Commercial Installation', 'Maintenance & Servicing',
+  'System Audit', 'Battery Replacement', 'Inverter Repair', 'Solar Panel Cleaning',
+  'Off-Grid Systems', 'Hybrid Systems'
 ];
 
 function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLoggedIn: boolean }) {
@@ -278,10 +277,10 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
     );
     const { error } = await supabase.from('installers').update({ ...form }).eq('id', installer.id);
     setSaving(false);
-    if (!error) { 
-      setSaved(true); 
+    if (!error) {
+      setSaved(true);
       router.refresh(); // Invalidate Next.js router cache to get fresh installer data
-      setTimeout(() => setSaved(false), 3000); 
+      setTimeout(() => setSaved(false), 3000);
     }
   };
 
@@ -335,7 +334,7 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
 
           <div>
             <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Company Name</label>
-            <input type="text" value={form.company_name} onChange={e => setForm({...form, company_name: e.target.value})}
+            <input type="text" value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })}
               className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none" />
           </div>
           <div>
@@ -343,12 +342,12 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
               <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">Description</label>
               <span className="text-[10px] text-[#6B6B6B]">{form.description.length}/300</span>
             </div>
-            <textarea rows={3} maxLength={300} value={form.description} onChange={e => setForm({...form, description: e.target.value})}
+            <textarea rows={3} maxLength={300} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
               className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none resize-none" />
           </div>
           <div>
             <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Years in Business</label>
-            <select value={form.years_in_business} onChange={e => setForm({...form, years_in_business: e.target.value})}
+            <select value={form.years_in_business} onChange={e => setForm({ ...form, years_in_business: e.target.value })}
               className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none bg-white">
               <option value="">Select...</option>
               <option value="0-2">0 – 2 Years</option>
@@ -363,18 +362,18 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
           <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Contact & Lead Delivery</h3>
           <div>
             <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">WhatsApp (receives leads)</label>
-            <input type="tel" value={form.whatsapp} onChange={e => setForm({...form, whatsapp: e.target.value})}
+            <input type="tel" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
               placeholder="+234 XXX XXXX"
               className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none" />
           </div>
           <div>
             <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Business Phone</label>
-            <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
+            <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
               className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none" />
           </div>
           <div>
             <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Website URL</label>
-            <input type="url" value={form.website} onChange={e => setForm({...form, website: e.target.value})} placeholder="https://"
+            <input type="url" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} placeholder="https://"
               className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none" />
           </div>
         </section>
@@ -427,7 +426,7 @@ export default function DashboardClient({ installer, leads: initialLeads, review
   const [activeTab, setActiveTab] = useState('leads');
   const [localLeads, setLocalLeads] = useState<Lead[]>(initialLeads);
   const [statusFilter, setStatusFilter] = useState('all');
-  
+
   const router = useRouter();
 
   const newLeadsCount = localLeads.filter(l => l.status === 'new').length;
@@ -455,15 +454,15 @@ export default function DashboardClient({ installer, leads: initialLeads, review
   const thisMonthCount = localLeads.filter(l => now - new Date(l.created_at).getTime() < 30 * 86400000).length;
   const wonCount = localLeads.filter(l => l.status === 'won').length;
 
-  const filteredLeads = statusFilter === 'all' 
-    ? localLeads 
+  const filteredLeads = statusFilter === 'all'
+    ? localLeads
     : localLeads.filter(l => (l.status || 'new') === statusFilter);
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] flex flex-col md:flex-row relative font-sans">
       {!isLoggedIn && <LoginOverlay />}
 
-      <SidebarNav 
+      <SidebarNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         newLeadsCount={newLeadsCount}
@@ -474,7 +473,7 @@ export default function DashboardClient({ installer, leads: initialLeads, review
 
       <main className="flex-1 md:ml-64 p-5 md:p-10 pb-32 md:pb-10 min-h-screen">
         <div className="max-w-4xl mx-auto space-y-10">
-          
+
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-black text-[#1A1A1A] tracking-tight">
               {isLoggedIn ? `Welcome, ${installer.company_name.split(' ')[0]}` : installer.company_name}
@@ -484,13 +483,13 @@ export default function DashboardClient({ installer, leads: initialLeads, review
             </div>
           </div>
 
-          {isLoggedIn && !installer.is_approved && (
+          {isLoggedIn && !installer.is_verified && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-4">
               <div className="text-3xl">⏳</div>
               <div>
                 <h4 className="text-amber-900 font-bold text-lg mb-1">Your account is pending verification</h4>
                 <p className="text-amber-800 text-sm">
-                  Welcome to SolarCheck! We are currently reviewing your registration. 
+                  Welcome to SolarCheck! We are currently reviewing your registration.
                   Your profile is not yet visible to the public, and you won't receive leads until approved.
                   This usually takes 24-48 hours.
                 </p>
@@ -499,7 +498,7 @@ export default function DashboardClient({ installer, leads: initialLeads, review
           )}
 
           <div className={!isLoggedIn ? 'pointer-events-none select-none' : ''}>
-            
+
             {/* ── LEADS TAB ── */}
             {activeTab === 'leads' && (
               <div className="space-y-10">
@@ -533,14 +532,13 @@ export default function DashboardClient({ installer, leads: initialLeads, review
                     { id: 'won', label: 'Won' },
                     { id: 'lost', label: 'Lost' },
                   ].map(tab => (
-                    <button 
+                    <button
                       key={tab.id}
                       onClick={() => setStatusFilter(tab.id)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                        statusFilter === tab.id 
-                          ? 'bg-[#FFFFFF] text-[#1A5E38] shadow-sm' 
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${statusFilter === tab.id
+                          ? 'bg-[#FFFFFF] text-[#1A5E38] shadow-sm'
                           : 'text-[#6B6B6B] hover:text-[#1A1A1A]'
-                      }`}
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -564,12 +562,12 @@ export default function DashboardClient({ installer, leads: initialLeads, review
                 ) : (
                   <div className="space-y-4">
                     {filteredLeads.map(lead => (
-                      <LeadCard 
-                        key={lead.id} 
-                        lead={lead} 
-                        isFree={installer.subscription_tier === 'free'} 
+                      <LeadCard
+                        key={lead.id}
+                        lead={lead}
+                        isFree={installer.subscription_tier === 'free'}
                         isLoggedIn={isLoggedIn}
-                        updateLeadStatus={updateLeadStatus} 
+                        updateLeadStatus={updateLeadStatus}
                       />
                     ))}
                   </div>

@@ -84,7 +84,7 @@ export default async function DashboardPage() {
     const { data: previewInstaller } = await adminDb
       .from('installers')
       .select('*')
-      .eq('is_approved', true)
+      .eq('is_verified', true)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
