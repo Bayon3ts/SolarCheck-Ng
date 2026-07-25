@@ -583,6 +583,32 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
             ⚠️ {r.validationError.replace('WARNINGS IN SYSTEM DESIGN\n\n', '')}
           </div>
         )}
+
+        {/* ── FINANCING / "CAN I AFFORD THIS?" ─────────────────────────────── */}
+        {r.financingOptions && (
+          <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-xl p-4">
+            <p className="text-white/70 text-xs uppercase tracking-wide font-semibold mb-1">
+              Can I afford this? Monthly instalment options
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+              {[
+                { label: '12 months', amount: r.financingOptions.months12 },
+                { label: '18 months', amount: r.financingOptions.months18 },
+                { label: '24 months', amount: r.financingOptions.months24 },
+                { label: '36 months', amount: r.financingOptions.months36 },
+              ].map((opt) => (
+                <div key={opt.label} className="bg-white/10 rounded-lg p-2.5 text-center">
+                  <p className="text-white/60 text-[10px]">{opt.label}</p>
+                  <p className="text-white font-bold text-sm">{fmt(opt.amount)}<span className="text-white/50 text-[10px] font-normal">/mo</span></p>
+                </div>
+              ))}
+            </div>
+            <p className="text-white/45 text-[10px] mt-2.5 leading-relaxed">
+              Illustrative estimate only (~{r.financingOptions.illustrativeAnnualRatePct}% p.a.) — not a loan offer.
+              SolarCheck does not currently provide financing directly; confirm actual rates with a licensed lender.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── 3. LEAD CAPTURE FORM (right after cost — SolarReviews position) ── */}

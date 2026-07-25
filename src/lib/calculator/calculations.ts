@@ -1825,6 +1825,36 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   systemCostMin += chargeController.estimatedCost;
   systemCostMax += chargeController.estimatedCost;
 
+  // ── FINANCING / INSTALLMENT ESTIMATE ────────────────────────────────────
+  // Illustrative monthly payment math only — SolarCheck has no lending
+  // partner integrated yet. This answers "can I afford this?" with real
+  // numbers instead of dropping the user straight to a quote form after
+  // showing a scary upfront price. Uses the midpoint of the cost range.
+  // Rate is a labeled ESTIMATE, not a real loan offer — must be displayed
+  // with "illustrative, not a loan offer" framing in the UI, never as a
+  // guaranteed rate. Source: representative Nigerian consumer-asset-finance
+  // range for solar equipment, June 2026 — always confirm with an actual
+  // lender before committing.
+  const FINANCING_ANNUAL_RATE = 0.28; // 28% p.a. — representative illustrative rate
+  const financingPrincipal = (systemCostMin + systemCostMax) / 2;
+  const monthlyRate = FINANCING_ANNUAL_RATE / 12;
+
+  function calcMonthlyInstallment(months: number): number {
+    if (monthlyRate === 0) return financingPrincipal / months;
+    const factor = Math.pow(1 + monthlyRate, months);
+    return (financingPrincipal * monthlyRate * factor) / (factor - 1);
+  }
+
+  const financingOptions = {
+    principal: Math.round(financingPrincipal),
+    illustrativeAnnualRatePct: FINANCING_ANNUAL_RATE * 100,
+    months12: Math.round(calcMonthlyInstallment(12)),
+    months18: Math.round(calcMonthlyInstallment(18)),
+    months24: Math.round(calcMonthlyInstallment(24)),
+    months36: Math.round(calcMonthlyInstallment(36)),
+    isIllustrativeOnly: true, // no lender integrated — UI must label this clearly
+  };
+
   // ── CABLE SPEC REPORT (Market Spec Report differentiator) ──────────────────
   // Real ampacity-based copper cable sizing for all 4 runs an installer needs:
   // Battery↔Inverter, Panels↔MPPT, Inverter↔DB Board, Earth/Grounding.
@@ -2545,6 +2575,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     systemCostMin,
     systemCostMax,
     costBreakdown,
+    financingOptions,
     systemVerdict,
     paybackMonths,
     fiveYearSavings,

@@ -243,6 +243,16 @@ export interface CalculatorResults {
     mounting: { min: number; max: number; label: string };
     accessories: { min: number; max: number; label: string };
   };
+  /** Illustrative monthly installment options — no lender integrated, display as estimate only */
+  financingOptions: {
+    principal: number;
+    illustrativeAnnualRatePct: number;
+    months12: number;
+    months18: number;
+    months24: number;
+    months36: number;
+    isIllustrativeOnly: boolean;
+  };
   batteryVoltage: 12 | 24 | 48;
   batteryType: string;
   realUsableBattery: number;
