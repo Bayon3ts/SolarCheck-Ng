@@ -602,22 +602,35 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
   const save = async () => {
     if (!isLoggedIn) return;
     setSaving(true);
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { error } = await supabase.from('installers').update({ ...form }).eq('id', installer.id);
-    setSaving(false);
-    if (!error) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    try {
+      // Strip out fields that don't yet exist as columns in the DB
+      const { states_covered, years_in_business, ...validUpdates } = form;
+      const res = await fetch('/api/installers/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ installerId: installer.id, updates: validUpdates }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      } else {
+        throw new Error(data.error || 'Failed to update profile');
+      }
+    } catch (err: any) {
+      console.error('Update failed:', err);
+      alert(`Failed to save changes: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
-
   return (
     <div className="space-y-4">
       {/* Subscription banner */}
       <div className="bg-[#0A5C36]/5 border border-[#0A5C36]/10 rounded-2xl p-4 flex items-center justify-between">
         <div>
           <p className="font-bold text-sm text-gray-900">
-            {installer.subscription_tier === 'pro' ? '🏆 Pro Plan' : installer.subscription_tier === 'featured' ? '⭐ Featured Plan' : '🆓 Free Plan'}
+            {installer.subscription_tier === 'pro' ? '?? Pro Plan' : installer.subscription_tier === 'featured' ? '? Featured Plan' : '?? Free Plan'}
           </p>
           <p className="text-xs text-gray-400 mt-0.5">
             {installer.subscription_expires_at
@@ -647,7 +660,22 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
             <InstallerMediaUpload
               kind="cover"
               currentImage={form.cover_image_url || null}
-              onUpload={(url) => setForm({ ...form, cover_image_url: url })}
+              onUpload={async (url) => {
+                setForm((prev) => ({ ...prev, cover_image_url: url }));
+                try {
+                  const res = await fetch('/api/installers/update-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ installerId: installer.id, updates: { cover_image_url: url } }),
+                  });
+                  if (!res.ok) {
+                    const d = await res.json();
+                    console.error('Auto-save banner failed:', d.error);
+                  }
+                } catch (e) {
+                  console.error('Auto-save banner error:', e);
+                }
+              }}
             />
           </div>
 
@@ -658,7 +686,22 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
             <InstallerMediaUpload
               kind="logo"
               currentImage={form.logo_url || null}
-              onUpload={(url) => setForm({ ...form, logo_url: url })}
+              onUpload={async (url) => {
+                setForm((prev) => ({ ...prev, logo_url: url }));
+                try {
+                  const res = await fetch('/api/installers/update-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ installerId: installer.id, updates: { logo_url: url } }),
+                  });
+                  if (!res.ok) {
+                    const d = await res.json();
+                    console.error('Auto-save logo failed:', d.error);
+                  }
+                } catch (e) {
+                  console.error('Auto-save logo error:', e);
+                }
+              }}
             />
           </div>
 
@@ -680,9 +723,9 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
             <select value={form.years_in_business} onChange={e => setForm({ ...form, years_in_business: e.target.value })}
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#0A5C36] outline-none bg-white">
               <option value="">Select...</option>
-              <option value="0-2">0 – 2 Years</option>
-              <option value="3-5">3 – 5 Years</option>
-              <option value="6-10">6 – 10 Years</option>
+              <option value="0-2">0 - 2 Years</option>
+              <option value="3-5">3 - 5 Years</option>
+              <option value="6-10">6 - 10 Years</option>
               <option value="10+">10+ Years</option>
             </select>
           </div>
@@ -690,7 +733,7 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
 
         {/* Contact */}
         <section className="space-y-4">
-          <h3 className="font-bold text-sm border-b border-gray-100 pb-2">Contact & Lead Delivery</h3>
+          <h3 className="font-bold text-sm border-b border-gray-100 pb-2">Contact &amp; Lead Delivery</h3>
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">WhatsApp (receives leads)</label>
             <input type="tel" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
@@ -744,7 +787,7 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
             className="w-full bg-[#0A5C36] text-white font-bold py-3.5 rounded-xl hover:bg-[#0D1B12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
-          {saved && <p className="text-center text-xs font-bold text-green-600 mt-3">✓ Profile updated!</p>}
+          {saved && <p className="text-center text-xs font-bold text-green-600 mt-3">Profile updated!</p>}
           {!isLoggedIn && <p className="text-center text-xs text-gray-400 mt-2">Sign in to save changes</p>}
         </div>
       </div>

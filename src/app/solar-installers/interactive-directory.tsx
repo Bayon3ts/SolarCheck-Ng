@@ -53,10 +53,10 @@ export default function InteractiveDirectory({ initialInstallers }: Props) {
   const filteredInstallers = useMemo(() => {
     return initialInstallers.filter(inst => {
       const matchesState = selectedState === "All" || inst.state === selectedState;
-      const matchesSearch = inst.company_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            inst.city.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = inst.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        inst.city.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesRating = minRating === 0 || inst.average_rating >= minRating;
-      
+
       return matchesState && matchesSearch && matchesRating;
     });
   }, [initialInstallers, selectedState, searchQuery, minRating]);
@@ -65,11 +65,11 @@ export default function InteractiveDirectory({ initialInstallers }: Props) {
     <div className="flex flex-col gap-8 lg:flex-row">
       {/* LEFT COLUMN: Map & Controls */}
       <div className="w-full lg:w-2/3 space-y-6">
-        
+
         {/* Search & Regions */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-border">
           <div className="flex flex-col md:flex-row gap-4 mb-6">
-            
+
             {/* Search input */}
             <div className="space-y-2 flex-1">
               <label htmlFor="q" className="text-sm font-medium text-text-primary">
@@ -124,9 +124,9 @@ export default function InteractiveDirectory({ initialInstallers }: Props) {
                 <option value="3">3+ Stars</option>
               </select>
             </div>
-            
+
           </div>
-          
+
           <div className="flex flex-wrap gap-2 pt-2 border-t border-border mt-2">
             <span className="text-sm font-medium text-text-muted flex items-center mr-2">Regions:</span>
             {Object.keys(REGIONS).map(region => (
@@ -148,9 +148,9 @@ export default function InteractiveDirectory({ initialInstallers }: Props) {
 
         {/* The SVG Map */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-border">
-          <NigeriaMap 
-            selectedState={selectedState} 
-            onSelectState={setSelectedState} 
+          <NigeriaMap
+            selectedState={selectedState}
+            onSelectState={setSelectedState}
             stateCounts={stateCounts}
           />
           <p className="text-center text-sm text-text-muted mt-4">
@@ -162,7 +162,7 @@ export default function InteractiveDirectory({ initialInstallers }: Props) {
       {/* RIGHT COLUMN: Installer List */}
       <div className="w-full lg:w-1/3">
         <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden sticky top-24 max-h-[calc(100vh-8rem)] flex flex-col">
-          
+
           {/* Header */}
           <div className="p-6 border-b border-border bg-gray-50/50">
             <h2 className="text-2xl font-bold text-text-primary">
@@ -197,18 +197,18 @@ export default function InteractiveDirectory({ initialInstallers }: Props) {
                         <span className="badge-verified shrink-0 text-[10px] px-1.5 py-0.5">Verified</span>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center gap-1 text-xs text-text-muted mb-3">
                       <MapPin className="h-3 w-3" />
                       {installer.city}, {installer.state}
                     </div>
-                    
+
                     <StarRating
                       rating={installer.average_rating}
                       reviewCount={installer.total_reviews}
                       showValue
                     />
-                    
+
                     <div className="mt-4">
                       <Button variant="outline" size="sm" className="w-full text-xs h-8" asChild>
                         <Link href={`/installers/${installer.slug}`}>
