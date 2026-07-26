@@ -19,6 +19,7 @@ export default async function AdminInstallersPage() {
             <tr className="bg-gray-50 border-b border-border">
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Company</th>
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Location</th>
+              <th className="px-6 py-4 text-sm font-semibold text-text-muted">Score</th>
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Status</th>
               <th className="px-6 py-4 text-sm font-semibold text-text-muted text-right">Actions</th>
             </tr>
@@ -32,6 +33,12 @@ export default async function AdminInstallersPage() {
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-text-primary">{installer.city}, {installer.state}</div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-1">
+                    <span className="font-semibold text-text-primary">{installer.ranking_score || 0}</span>
+                    <span className="text-xs text-text-muted">/ 100</span>
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">

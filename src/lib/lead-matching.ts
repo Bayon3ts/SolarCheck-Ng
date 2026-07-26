@@ -46,7 +46,7 @@ export async function findInstallersForState(
 
   const { data: installers, error } = await query
     .order("subscription_tier", { ascending: false })
-    .order("average_rating", { ascending: false })
+    .order("ranking_score", { ascending: false })
     .limit(limit);
 
   if (error) {
