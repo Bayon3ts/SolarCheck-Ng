@@ -71,6 +71,7 @@ export async function sendInstallerLeadNotification(
     timeline?: string;
     whatsapp?: string;
     phone: string;
+    intent_score?: number;
   }
 ): Promise<boolean> {
   const acceptLink = `https://solarcheckng.com/api/installers/leads/${lead.id}/accept?installer=${installerId}`;
@@ -81,6 +82,7 @@ Name: ${lead.full_name}
 Location: ${lead.city}, ${lead.state}
 Bill Range: ${lead.monthly_bill_range}
 Timeline: ${lead.timeline || "Not specified"}
+🔥 Intent Score: ${lead.intent_score || 0}/100
 Phone: 08** *** **** (Hidden)
 
 ⚠️ You have 10 minutes to accept this lead before it is given to another installer.

@@ -67,24 +67,35 @@ export function getStarArray(rating: number): ("full" | "half" | "empty")[] {
   return stars;
 }
 
-/** Score a lead based on timeline and bill range */
-export function scoreLeadIntent(
-  timeline?: string,
-  monthlyBillRange?: string
-): "high" | "medium" | "low" {
-  const highBillRanges = [
-    "₦100,000 - ₦200,000",
-    "₦200,000 - ₦500,000",
-    "₦500,000+",
-  ];
+/** Score a lead based on form inputs (0 - 100) */
+export function scoreLeadIntent(params: {
+  timeline?: string | null;
+  monthlyBillRange?: string | null;
+  ownershipStatus?: string | null;
+  leadType?: string | null;
+}): number {
+  let score = 0;
 
-  if (timeline === "asap" && monthlyBillRange && highBillRanges.includes(monthlyBillRange)) {
-    return "high";
-  }
-  if (timeline === "asap" || (monthlyBillRange && highBillRanges.includes(monthlyBillRange))) {
-    return "medium";
-  }
-  return "low";
+  // Timeline (max 40 pts)
+  if (params.timeline === "asap") score += 40;
+  else if (params.timeline === "1-3months") score += 20;
+  else if (params.timeline === "researching") score += 5;
+
+  // Monthly Bill (max 30 pts)
+  if (params.monthlyBillRange === "₦500,000+") score += 30;
+  else if (params.monthlyBillRange === "₦200,000 - ₦500,000") score += 20;
+  else if (params.monthlyBillRange === "₦100,000 - ₦200,000") score += 10;
+  else if (params.monthlyBillRange === "Below ₦100,000") score += 5;
+
+  // Ownership Status (max 15 pts)
+  if (params.ownershipStatus === "own") score += 15;
+  else if (params.ownershipStatus === "rent") score += 5;
+
+  // Lead Type / Exclusivity (max 15 pts)
+  if (params.leadType === "exclusive") score += 15;
+  else if (params.leadType === "shared") score += 5;
+
+  return Math.min(score, 100);
 }
 
 /** Absolute URL helper */

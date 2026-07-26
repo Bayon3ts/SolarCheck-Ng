@@ -28,7 +28,12 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
 
     // 2. Score the lead
-    const intentScore = scoreLeadIntent(data.timeline, data.monthly_bill_range);
+    const intentScore = scoreLeadIntent({
+      timeline: data.timeline,
+      monthlyBillRange: data.monthly_bill_range,
+      ownershipStatus: data.ownership_status,
+      leadType: data.lead_type,
+    });
 
     // 3. Match installers
     //    WHERE state matches AND is_verified = true AND is_active = true
@@ -64,6 +69,7 @@ export async function POST(request: NextRequest) {
         status: "new",
         whatsapp_sent: false,
         email_sent: false,
+        intent_score: intentScore,
       });
 
       if (error) console.error("Error saving unmatched lead:", error);
@@ -95,6 +101,7 @@ export async function POST(request: NextRequest) {
       status: "new" as const,
       whatsapp_sent: false,
       email_sent: false,
+      intent_score: intentScore,
     }));
 
     const { data: insertedLeads, error: insertError } = await supabase
@@ -126,6 +133,7 @@ export async function POST(request: NextRequest) {
             timeline: data.timeline,
             whatsapp: data.whatsapp,
             phone: data.phone,
+            intent_score: intentScore,
           }
         );
       }
@@ -144,6 +152,7 @@ export async function POST(request: NextRequest) {
           monthly_bill_range: data.monthly_bill_range,
           timeline: data.timeline,
           phone: data.phone,
+          intent_score: intentScore,
         });
       }
       return false;

@@ -31,6 +31,7 @@ export default async function AdminLeadsPage() {
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Customer</th>
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Location</th>
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Matched Installer</th>
+              <th className="px-6 py-4 text-sm font-semibold text-text-muted">Intent</th>
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Type</th>
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Status</th>
             </tr>
@@ -60,6 +61,20 @@ export default async function AdminLeadsPage() {
                       Unmatched
                     </span>
                   )}
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  <span
+                    className={`inline-flex items-center gap-1 whitespace-nowrap text-xs font-bold px-2.5 py-1 rounded-full ${
+                      (lead.intent_score || 0) >= 80
+                        ? "text-red-700 bg-red-100" // Hot
+                        : (lead.intent_score || 0) >= 50
+                        ? "text-orange-700 bg-orange-100" // Warm
+                        : "text-blue-700 bg-blue-100" // Cold
+                    }`}
+                  >
+                    <span>🔥</span>
+                    <span>{lead.intent_score || 0}</span>
+                  </span>
                 </td>
                 <td className="px-6 py-4 text-sm">
                   <span

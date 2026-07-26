@@ -64,6 +64,7 @@ export async function sendInstallerLeadEmail(
     monthly_bill_range: string;
     timeline?: string;
     phone: string;
+    intent_score?: number;
   }
 ): Promise<boolean> {
   const acceptLink = `https://solarcheckng.com/api/installers/leads/${lead.id}/accept?installer=${installerId}`;
@@ -82,6 +83,7 @@ export async function sendInstallerLeadEmail(
           <tr><td style="padding: 8px 0; color: #6B7280;">Location</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">${lead.city}, ${lead.state}</td></tr>
           <tr><td style="padding: 8px 0; color: #6B7280;">Bill Range</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">${lead.monthly_bill_range}</td></tr>
           <tr><td style="padding: 8px 0; color: #6B7280;">Timeline</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">${lead.timeline || "Not specified"}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6B7280;">Intent Score</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">🔥 ${lead.intent_score || 0}/100</td></tr>
           <tr><td style="padding: 8px 0; color: #6B7280;">Phone</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">08** *** **** (Hidden)</td></tr>
         </table>
         <a href="${acceptLink}" style="display: inline-block; background: #0A5C36; color: white; padding: 12px 32px; border-radius: 999px; text-decoration: none; font-weight: 600; margin-top: 16px;">Accept Lead & View Contact Info →</a>
