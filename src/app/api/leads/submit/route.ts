@@ -97,9 +97,12 @@ export async function POST(request: NextRequest) {
       email_sent: false,
     }));
 
-    const { error: insertError } = await supabase.from("leads").insert(leadInserts);
+    const { data: insertedLeads, error: insertError } = await supabase
+      .from("leads")
+      .insert(leadInserts)
+      .select();
 
-    if (insertError) {
+    if (insertError || !insertedLeads) {
       console.error("[Lead Submit] Insert error:", insertError);
       return NextResponse.json(
         { success: false, error: "Failed to save lead" },
@@ -109,10 +112,13 @@ export async function POST(request: NextRequest) {
 
     // 5. Send WhatsApp notifications to each matched installer
     const whatsappPromises = installers.map(async (installer) => {
-      if (installer.whatsapp || installer.phone) {
+      const assignedLead = insertedLeads.find(l => l.installer_id === installer.id);
+      if (assignedLead && (installer.whatsapp || installer.phone)) {
         return sendInstallerLeadNotification(
           installer.whatsapp || installer.phone!,
+          installer.id,
           {
+            id: assignedLead.id,
             full_name: data.full_name,
             city: data.city || data.state,
             state: data.state,
@@ -128,8 +134,10 @@ export async function POST(request: NextRequest) {
 
     // 6. Send email notifications
     const emailPromises = installers.map(async (installer) => {
-      if (installer.email) {
-        return sendInstallerLeadEmail(installer.email, installer.company_name, {
+      const assignedLead = insertedLeads.find(l => l.installer_id === installer.id);
+      if (assignedLead && installer.email) {
+        return sendInstallerLeadEmail(installer.email, installer.company_name, installer.id, {
+          id: assignedLead.id,
           full_name: data.full_name,
           city: data.city || data.state,
           state: data.state,

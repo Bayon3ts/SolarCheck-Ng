@@ -55,7 +55,9 @@ export async function sendEmail({ to, subject, html }: EmailPayload): Promise<bo
 export async function sendInstallerLeadEmail(
   installerEmail: string,
   companyName: string,
+  installerId: string,
   lead: {
+    id: string;
     full_name: string;
     city: string;
     state: string;
@@ -64,6 +66,8 @@ export async function sendInstallerLeadEmail(
     phone: string;
   }
 ): Promise<boolean> {
+  const acceptLink = `https://solarcheckng.com/api/installers/leads/${lead.id}/accept?installer=${installerId}`;
+
   const html = `
     <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: #0A5C36; padding: 32px; border-radius: 16px 16px 0 0;">
@@ -72,23 +76,22 @@ export async function sendInstallerLeadEmail(
       </div>
       <div style="background: white; padding: 32px; border: 1px solid #E5E7EB; border-top: none; border-radius: 0 0 16px 16px;">
         <p style="color: #1A1A1A; font-size: 16px;">Hi ${companyName},</p>
-        <p style="color: #6B7280;">A new lead has been matched to your company:</p>
+        <p style="color: #6B7280;">A new lead has been matched to your company. You have <strong>10 minutes</strong> to accept it before it is passed to another installer.</p>
         <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
           <tr><td style="padding: 8px 0; color: #6B7280;">Name</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">${lead.full_name}</td></tr>
           <tr><td style="padding: 8px 0; color: #6B7280;">Location</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">${lead.city}, ${lead.state}</td></tr>
           <tr><td style="padding: 8px 0; color: #6B7280;">Bill Range</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">${lead.monthly_bill_range}</td></tr>
           <tr><td style="padding: 8px 0; color: #6B7280;">Timeline</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">${lead.timeline || "Not specified"}</td></tr>
-          <tr><td style="padding: 8px 0; color: #6B7280;">Phone</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">${lead.phone}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6B7280;">Phone</td><td style="padding: 8px 0; color: #1A1A1A; font-weight: 600;">08** *** **** (Hidden)</td></tr>
         </table>
-        <a href="https://solarcheckng.com/dashboard" style="display: inline-block; background: #0A5C36; color: white; padding: 12px 32px; border-radius: 999px; text-decoration: none; font-weight: 600; margin-top: 16px;">View in Dashboard →</a>
-        <p style="color: #6B7280; font-size: 13px; margin-top: 24px;">Please respond to this lead within 2 hours for the best results.</p>
+        <a href="${acceptLink}" style="display: inline-block; background: #0A5C36; color: white; padding: 12px 32px; border-radius: 999px; text-decoration: none; font-weight: 600; margin-top: 16px;">Accept Lead & View Contact Info →</a>
       </div>
     </div> 
   `;
 
   return sendEmail({
     to: installerEmail,
-    subject: `New Solar Lead in ${lead.city} — ${lead.full_name}`,
+    subject: `[Action Required] New Solar Lead in ${lead.city}`,
     html,
   });
 }

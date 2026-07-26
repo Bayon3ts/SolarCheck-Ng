@@ -61,7 +61,9 @@ export async function sendWhatsAppMessage({ to, text }: WhatsAppMessagePayload):
  */
 export async function sendInstallerLeadNotification(
   installerPhone: string,
+  installerId: string,
   lead: {
+    id: string;
     full_name: string;
     city: string;
     state: string;
@@ -71,16 +73,20 @@ export async function sendInstallerLeadNotification(
     phone: string;
   }
 ): Promise<boolean> {
+  const acceptLink = `https://solarcheckng.com/api/installers/leads/${lead.id}/accept?installer=${installerId}`;
+  
   const message = `🔔 New Solar Lead - SolarCheck Nigeria
 
 Name: ${lead.full_name}
 Location: ${lead.city}, ${lead.state}
 Bill Range: ${lead.monthly_bill_range}
 Timeline: ${lead.timeline || "Not specified"}
-WhatsApp: ${lead.whatsapp || lead.phone}
+Phone: 08** *** **** (Hidden)
 
-Reply to this lead immediately.
-View dashboard: https://solarcheckng.com/dashboard`;
+⚠️ You have 10 minutes to accept this lead before it is given to another installer.
+
+👉 Click here to accept & view contact info:
+${acceptLink}`;
 
   return sendWhatsAppMessage({ to: installerPhone, text: message });
 }
