@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { RematchButton } from "./rematch-button-ui";
 
 export default async function AdminLeadsPage() {
   const supabase = createAdminClient();
@@ -7,9 +8,20 @@ export default async function AdminLeadsPage() {
     .select("*, installers(company_name)")
     .order("created_at", { ascending: false });
 
+  const unmatchedCount = leads?.filter((l) => !l.installer_id).length ?? 0;
+  const matchedCount = leads?.filter((l) => l.installer_id).length ?? 0;
+
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold text-text-primary mb-8">All Leads</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">All Leads</h1>
+          <p className="text-sm text-text-muted mt-1">
+            {matchedCount} matched · {unmatchedCount} unmatched · {leads?.length ?? 0} total
+          </p>
+        </div>
+        {unmatchedCount > 0 && <RematchButton unmatchedCount={unmatchedCount} />}
+      </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -19,7 +31,8 @@ export default async function AdminLeadsPage() {
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Customer</th>
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Location</th>
               <th className="px-6 py-4 text-sm font-semibold text-text-muted">Matched Installer</th>
-              <th className="px-6 py-4 text-sm font-semibold text-text-muted">System Size</th>
+              <th className="px-6 py-4 text-sm font-semibold text-text-muted">Type</th>
+              <th className="px-6 py-4 text-sm font-semibold text-text-muted">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -29,17 +42,50 @@ export default async function AdminLeadsPage() {
                   {new Date(lead.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4">
-                  <div className="font-medium text-text-primary">{lead.name}</div>
-                  <div className="text-sm text-text-muted">{lead.email} • {lead.phone}</div>
+                  <div className="font-medium text-text-primary">{lead.full_name}</div>
+                  <div className="text-sm text-text-muted">
+                    {lead.email} · {lead.phone}
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-text-primary">
                   {lead.city}, {lead.state}
                 </td>
-                <td className="px-6 py-4 text-sm font-medium text-primary">
-                  {lead.installers?.company_name || "Unmatched"}
+                <td className="px-6 py-4 text-sm">
+                  {lead.installers?.company_name ? (
+                    <span className="font-medium text-primary">
+                      {lead.installers.company_name}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                      Unmatched
+                    </span>
+                  )}
                 </td>
-                <td className="px-6 py-4 text-sm text-text-primary">
-                  {lead.estimated_system_size || lead.property_type}
+                <td className="px-6 py-4 text-sm">
+                  <span
+                    className={`inline-flex items-center text-xs font-medium px-2 py-1 rounded-full ${
+                      lead.lead_type === "exclusive"
+                        ? "text-purple-700 bg-purple-100"
+                        : "text-blue-700 bg-blue-100"
+                    }`}
+                  >
+                    {lead.lead_type === "exclusive" ? "Exclusive" : "Shared"}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  <span
+                    className={`inline-flex items-center text-xs font-medium px-2 py-1 rounded-full ${
+                      lead.status === "converted"
+                        ? "text-green-700 bg-green-100"
+                        : lead.status === "quoted"
+                        ? "text-blue-700 bg-blue-100"
+                        : lead.status === "contacted"
+                        ? "text-indigo-700 bg-indigo-100"
+                        : "text-gray-700 bg-gray-100"
+                    }`}
+                  >
+                    {lead.status}
+                  </span>
                 </td>
               </tr>
             ))}
