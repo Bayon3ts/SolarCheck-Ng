@@ -55,6 +55,7 @@ export default async function InstallerProfilePage({ params }: { params: Promise
     .select("*")
     .eq("installer_id", installer.id)
     .eq("is_published", true)
+    .eq("is_deleted", false)
     .order("created_at", { ascending: false });
 
   return (

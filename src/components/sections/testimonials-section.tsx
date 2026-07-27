@@ -18,6 +18,7 @@ async function fetchTestimonials(): Promise<TestimonialData[]> {
       .from("reviews")
       .select("reviewer_name, reviewer_city, rating, body, system_size")
       .eq("is_published", true)
+      .eq("is_deleted", false)
       .order("rating", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(5);

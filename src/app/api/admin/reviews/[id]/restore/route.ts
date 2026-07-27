@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /* ═══════════════════════════════════════════ */
-/* POST /api/admin/reviews/[id]/delete          */
-/* Soft-deletes a review (is_deleted = true)    */
-/* so it's hidden from public but auditable     */
+/* POST /api/admin/reviews/[id]/restore          */
+/* Restores a soft-deleted review (is_deleted = false) */
 /* ════════════════════════════════════════════ */
 
 export async function POST(
@@ -15,7 +14,7 @@ export async function POST(
     const supabase = createAdminClient();
     const { id } = await params;
 
-    // Fetch review to get installer_id before deleting
+    // Fetch review to get installer_id before restoring
     const { data: review, error: fetchError } = await supabase
       .from("reviews")
       .select("id, installer_id, is_published")
@@ -31,16 +30,15 @@ export async function POST(
 
     const installerId = review.installer_id;
 
-    // Soft-delete: mark as deleted and unpublish so it's hidden publicly
-    // but still visible to admins for audit purposes
-    const { error: deleteError } = await supabase
+    // Restore the review
+    const { error: restoreError } = await supabase
       .from("reviews")
-      .update({ is_deleted: true, is_published: false })
+      .update({ is_deleted: false })
       .eq("id", id);
 
-    if (deleteError) {
+    if (restoreError) {
       return NextResponse.json(
-        { success: false, error: deleteError.message },
+        { success: false, error: restoreError.message },
         { status: 500 }
       );
     }
@@ -70,7 +68,7 @@ export async function POST(
     // Redirect back to reviews admin page
     return NextResponse.redirect(new URL("/admin/reviews", request.url));
   } catch (error) {
-    console.error("[Admin Review Delete] Error:", error);
+    console.error("[Admin Review Restore] Error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
