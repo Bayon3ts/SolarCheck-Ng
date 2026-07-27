@@ -47,6 +47,7 @@ function MiniQuoteForm({
 }) {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     full_name: "",
@@ -88,7 +89,7 @@ function MiniQuoteForm({
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        onSuccess();
+        setIsSuccess(true);
       } else {
         setError(data.error || "Failed to submit. Please try again.");
       }
@@ -107,56 +108,109 @@ function MiniQuoteForm({
         className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="bg-primary-dark text-white px-6 py-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold">Request a Free Quote</h3>
+        {/* ── SUCCESS SCREEN ── */}
+        {isSuccess ? (
+          <div className="flex flex-col items-center text-center px-8 py-10">
+            {/* Animated checkmark ring */}
+            <div className="relative mb-6">
+              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center animate-in zoom-in-50 duration-500">
+                <CheckCircle2 className="h-10 w-10 text-primary" />
+              </div>
+              {/* Pulsing outer ring */}
+              <span className="absolute inset-0 rounded-full border-4 border-primary/30 animate-ping" />
+            </div>
+
+            <h3 className="text-xl font-bold text-text-primary mb-2">
+              Request Sent! 🎉
+            </h3>
+            <p className="text-sm text-text-muted leading-relaxed mb-1">
+              Your quote request has been sent to{" "}
+              <span className="font-semibold text-text-primary">{installerName}</span>.
+            </p>
+            <p className="text-sm text-text-muted leading-relaxed">
+              They&apos;ll contact you shortly via <strong>phone or WhatsApp</strong> with a customised solar proposal.
+            </p>
+
+            {/* What happens next */}
+            <div className="w-full mt-6 rounded-xl bg-primary/5 border border-primary/10 p-4 text-left space-y-2">
+              <p className="text-xs font-bold text-primary uppercase tracking-wide mb-1">What happens next</p>
+              {[
+                { icon: "📞", text: "Installer reviews your request" },
+                { icon: "💬", text: "They call or WhatsApp you within 24 hrs" },
+                { icon: "📋", text: "You receive a customised quote" },
+              ].map(({ icon, text }) => (
+                <div key={text} className="flex items-center gap-2.5">
+                  <span className="text-base">{icon}</span>
+                  <span className="text-xs text-text-muted">{text}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Contact details now unlocked */}
+            <p className="text-xs text-primary font-medium mt-5 flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Contact details below are now unlocked for you.
+            </p>
+
             <button
-              onClick={onClose}
-              className="text-white/60 hover:text-white transition-colors rounded-lg p-1"
-              aria-label="Close"
+              onClick={onSuccess}
+              className="btn-primary w-full mt-6 text-sm py-3"
             >
-              <X className="h-5 w-5" />
+              Done
             </button>
           </div>
-          <p className="text-sm text-white/70">
-            Get a customized solar proposal from{" "}
-            <span className="font-semibold text-white">{installerName}</span>
-          </p>
-
-          {/* Step indicator */}
-          <div className="mt-4 flex items-center gap-2">
-            {stepLabels.map((label, i) => (
-              <div key={label} className="flex items-center gap-2 flex-1">
-                <div
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                    i + 1 < step
-                      ? "bg-accent text-text-primary"
-                      : i + 1 === step
-                      ? "bg-white text-primary-dark"
-                      : "bg-white/20 text-white/50"
-                  }`}
+        ) : (
+          <>
+            {/* ── FORM HEADER ── */}
+            <div className="bg-primary-dark text-white px-6 py-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold">Request a Free Quote</h3>
+                <button
+                  onClick={onClose}
+                  className="text-white/60 hover:text-white transition-colors rounded-lg p-1"
+                  aria-label="Close"
                 >
-                  {i + 1 < step ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
-                </div>
-                <span
-                  className={`text-xs font-medium ${
-                    i + 1 === step ? "text-white" : "text-white/50"
-                  }`}
-                >
-                  {label}
-                </span>
-                {i < stepLabels.length - 1 && (
-                  <div
-                    className={`h-px flex-1 transition-colors ${
-                      i + 1 < step ? "bg-accent" : "bg-white/20"
-                    }`}
-                  />
-                )}
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-            ))}
-          </div>
-        </div>
+              <p className="text-sm text-white/70">
+                Get a customized solar proposal from{" "}
+                <span className="font-semibold text-white">{installerName}</span>
+              </p>
+
+              {/* Step indicator */}
+              <div className="mt-4 flex items-center gap-2">
+                {stepLabels.map((label, i) => (
+                  <div key={label} className="flex items-center gap-2 flex-1">
+                    <div
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                        i + 1 < step
+                          ? "bg-accent text-text-primary"
+                          : i + 1 === step
+                          ? "bg-white text-primary-dark"
+                          : "bg-white/20 text-white/50"
+                      }`}
+                    >
+                      {i + 1 < step ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
+                    </div>
+                    <span
+                      className={`text-xs font-medium ${
+                        i + 1 === step ? "text-white" : "text-white/50"
+                      }`}
+                    >
+                      {label}
+                    </span>
+                    {i < stepLabels.length - 1 && (
+                      <div
+                        className={`h-px flex-1 transition-colors ${
+                          i + 1 < step ? "bg-accent" : "bg-white/20"
+                        }`}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
 
         {/* Form body */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
@@ -301,6 +355,83 @@ function MiniQuoteForm({
                   ))}
                 </div>
               </div>
+
+              {/* Quote preference */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-text-primary uppercase tracking-wide">
+                  How many quotes do you want? *
+                </label>
+                <div className="flex flex-col gap-2">
+                  {/* Option 1 — Exclusive */}
+                  <label
+                    className={`flex items-start gap-3 border rounded-xl p-3 cursor-pointer transition-all ${
+                      formData.lead_type === "exclusive"
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border hover:border-gray-400"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="lead_type"
+                      value="exclusive"
+                      className="sr-only"
+                      checked={formData.lead_type === "exclusive"}
+                      onChange={(e) => update("lead_type", e.target.value)}
+                    />
+                    <span className="text-base leading-none mt-0.5">⚡</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-semibold ${formData.lead_type === "exclusive" ? "text-primary" : "text-text-primary"}`}>
+                        1 quote — this installer only
+                      </p>
+                      <p className="text-[11px] text-text-muted mt-0.5 leading-snug">
+                        Dedicated attention &amp; faster response from a single premium installer.
+                      </p>
+                    </div>
+                    {formData.lead_type === "exclusive" && (
+                      <span className="shrink-0 text-[10px] font-bold bg-primary text-white rounded-full px-2 py-0.5">
+                        Selected
+                      </span>
+                    )}
+                  </label>
+
+                  {/* Option 2 — Shared / multiple */}
+                  <label
+                    className={`flex items-start gap-3 border rounded-xl p-3 cursor-pointer transition-all ${
+                      formData.lead_type === "shared"
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border hover:border-gray-400"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="lead_type"
+                      value="shared"
+                      className="sr-only"
+                      checked={formData.lead_type === "shared"}
+                      onChange={(e) => update("lead_type", e.target.value)}
+                    />
+                    <span className="text-base leading-none mt-0.5">⚖️</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className={`text-xs font-semibold ${formData.lead_type === "shared" ? "text-primary" : "text-text-primary"}`}>
+                          2–3 quotes from multiple installers
+                        </p>
+                        <span className="text-[10px] font-bold bg-accent/20 text-amber-700 rounded-full px-1.5 py-0.5 shrink-0">
+                          Recommended
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-text-muted mt-0.5 leading-snug">
+                        Compare options &amp; get the most competitive pricing. Max 3 installers.
+                      </p>
+                    </div>
+                    {formData.lead_type === "shared" && (
+                      <span className="shrink-0 text-[10px] font-bold bg-primary text-white rounded-full px-2 py-0.5">
+                        Selected
+                      </span>
+                    )}
+                  </label>
+                </div>
+              </div>
             </div>
           )}
 
@@ -409,6 +540,8 @@ function MiniQuoteForm({
         <p className="text-center text-[11px] text-text-muted pb-4 px-6">
           By submitting, you agree to SolarCheck&apos;s Terms of Service.
         </p>
+          </>
+        )}
       </div>
     </div>
   );
