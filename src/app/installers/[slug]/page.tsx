@@ -2,13 +2,14 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronRight, MapPin, BadgeCheck, Globe, Phone, CheckCircle2, Star } from "lucide-react";
+import { ChevronRight, MapPin, BadgeCheck, CheckCircle2, Star } from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import StarRating from "@/components/ui/star-rating";
+import InstallerSidebar from "./installer-sidebar";
 
 export async function generateStaticParams() {
   // Use the cookie-free admin client — cookies() cannot be called at build time
@@ -212,86 +213,20 @@ export default async function InstallerProfilePage({ params }: { params: Promise
               </div>
             </div>
 
-            {/* Sidebar (Right) */}
-            <div className="space-y-6">
-              {/* CTA Card */}
-              <div className="card p-6 bg-primary-dark text-white text-center">
-                <h3 className="text-xl font-bold mb-2">Request a Free Quote</h3>
-                <p className="text-sm text-white/70 mb-6">
-                  Get a customized solar proposal directly from {installer.company_name}.
-                </p>
-                <Button variant="secondary" className="w-full" asChild>
-                  <Link href={`/get-quotes?installer=${installer.id}`}>
-                    Get Quote Now
-                  </Link>
-                </Button>
-                <p className="text-xs text-white/50 mt-4">Takes less than 60 seconds</p>
-              </div>
-
-              {/* Contact Info Card */}
-              <div className="card p-6 space-y-4">
-                <h3 className="font-bold text-text-primary">Contact Information</h3>
-
-                {installer.phone && (
-                  <div className="flex items-center gap-3 text-text-muted">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Phone className="h-4 w-4 text-primary" />
-                    </div>
-                    <span>{installer.phone}</span>
-                  </div>
-                )}
-
-                {installer.website && (
-                  <div className="flex items-center gap-3 text-text-muted">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Globe className="h-4 w-4 text-primary" />
-                    </div>
-                    <a href={installer.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary underline-offset-4 hover:underline">
-                      Visit Website
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Details Card */}
-              <div className="card p-6">
-                <h3 className="font-bold text-text-primary mb-4">Company Details</h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Services</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {installer.services.map((service: string) => (
-                        <span key={service} className="tag">{service.replace("-", " ")}</span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">System Sizes</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {installer.system_sizes.map((size: string) => (
-                        <span key={size} className="tag bg-gray-100 text-gray-700">{size}</span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {installer.brands_used && installer.brands_used.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Brands Used</h4>
-                      <p className="text-sm text-text-primary">{installer.brands_used.join(", ")}</p>
-                    </div>
-                  )}
-
-                  {installer.cac_number && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">CAC Registration</h4>
-                      <p className="text-sm text-text-primary font-mono">{installer.cac_number}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            {/* Sidebar (Right) — blur-gated client component */}
+            <InstallerSidebar
+              installer={{
+                id: installer.id,
+                company_name: installer.company_name,
+                phone: installer.phone,
+                website: installer.website,
+                services: installer.services,
+                system_sizes: installer.system_sizes,
+                brands_used: installer.brands_used,
+                cac_number: installer.cac_number,
+                slug: installer.slug,
+              }}
+            />
           </div>
         </div>
       </main>
