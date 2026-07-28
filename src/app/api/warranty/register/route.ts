@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerClient } from "@/lib/supabase/server";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { z } from "zod";
 
@@ -31,11 +32,23 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
     const supabase = createAdminClient();
 
+    // Optional: link to the signed-in homeowner's account, if any.
+    // Anonymous warranty registration (no login) continues to work as before.
+    let authUserId: string | null = null;
+    try {
+      const sessionClient = await createServerClient();
+      const { data: { user } } = await sessionClient.auth.getUser();
+      authUserId = user?.id ?? null;
+    } catch {
+      // Not logged in — fine.
+    }
+
     const { data: inserted, error } = await supabase
       .from("warranty_registrations")
       .insert({
         lead_id: data.lead_id || null,
         installer_id: data.installer_id || null,
+        user_id: authUserId,
         homeowner_name: data.homeowner_name,
         homeowner_phone: data.homeowner_phone,
         homeowner_email: data.homeowner_email || null,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerClient } from "@/lib/supabase/server";
 import { leadSubmitSchema } from "@/lib/validations";
 import { sendInstallerLeadNotification, sendConsumerConfirmation } from "@/lib/whatsapp";
 import { sendInstallerLeadEmail } from "@/lib/resend";
@@ -26,6 +27,19 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
     const supabase = createAdminClient();
+
+    // Optional: if the homeowner is signed in (Google/Facebook), link this
+    // lead to their account so it shows up in "My Account". Anonymous
+    // submission (no session) continues to work exactly as before —
+    // authUserId simply stays null in that case.
+    let authUserId: string | null = null;
+    try {
+      const sessionClient = await createServerClient();
+      const { data: { user } } = await sessionClient.auth.getUser();
+      authUserId = user?.id ?? null;
+    } catch {
+      // No session / not logged in — fine, leads work anonymously.
+    }
 
     // 2. Score the lead
     const intentScore = scoreLeadIntent({
@@ -70,6 +84,7 @@ export async function POST(request: NextRequest) {
         whatsapp_sent: false,
         email_sent: false,
         intent_score: intentScore,
+        user_id: authUserId,
       });
 
       if (error) console.error("Error saving unmatched lead:", error);
@@ -98,6 +113,7 @@ export async function POST(request: NextRequest) {
       lead_type: data.lead_type,
       fraud_check_source: data.fraud_check_source || null,
       phone_verified: data.phone_verified ?? false,
+      user_id: authUserId,
       status: "new" as const,
       whatsapp_sent: false,
       email_sent: false,

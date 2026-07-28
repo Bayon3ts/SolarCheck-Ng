@@ -327,3 +327,16 @@ NOTIFY pgrst, 'reload schema';
   CREATE INDEX idx_warranty_installer ON warranty_registrations(installer_id);
   CREATE INDEX idx_warranty_phone ON warranty_registrations(homeowner_phone);
   CREATE INDEX idx_warranty_install_date ON warranty_registrations(install_date);
+
+-- ═══════════════════════════════════════
+-- Homeowner accounts (optional, social login)
+-- Added June 2026: lets a homeowner who signs in with Google/Facebook see
+-- their own leads and warranty registrations in one place. Purely additive —
+-- anonymous lead/warranty submission (no login) continues to work exactly
+-- as before. user_id is nullable on both tables for that reason.
+-- ═══════════════════════════════════════
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_leads_user_id ON leads(user_id);
+
+ALTER TABLE warranty_registrations ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_warranty_user_id ON warranty_registrations(user_id);
