@@ -710,7 +710,20 @@ export const APPLIANCES = [
   },
 ];
 
+// ── Custom appliance runtime registry ──────────────────────────
+// Allows user-defined appliances to be resolved by the calculation engine
+// without mutating the static APPLIANCES export or changing any formulas.
+let _customAppliances: typeof APPLIANCES = [];
 
+/** Register user-defined custom appliances so the engine can resolve them by id. */
+export function registerCustomAppliances(customs: typeof APPLIANCES): void {
+  _customAppliances = customs;
+}
+
+/** Returns APPLIANCES + any registered custom appliances. */
+export function getFullApplianceList(): typeof APPLIANCES {
+  return [...APPLIANCES, ..._customAppliances];
+}
 
 
 
@@ -1063,7 +1076,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
   if (appliances.length > 0) {
     appliances.forEach(appSelection => {
-      const appDef = APPLIANCES.find(a => a.id === appSelection.id);
+      const appDef = getFullApplianceList().find(a => a.id === appSelection.id);
       if (!appDef) return;
 
       const qty = appSelection.qty;
@@ -2060,7 +2073,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // Therefore: totalHoursPerDay === daytimeHours, nighttimeHours === 0.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const appliancesWithDaytimeHours = inputs.appliances.map(appSelection => {
-    const appDef = APPLIANCES.find(a => a.id === appSelection.id);
+    const appDef = getFullApplianceList().find(a => a.id === appSelection.id);
     const watts = appDef?.watts || 0;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let daytimeHours: number;

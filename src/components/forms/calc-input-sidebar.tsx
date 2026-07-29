@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ChevronDown, Minus, Plus } from "lucide-react";
 import { CalculatorInputs, OwnershipStatus, RoofType, RoofDirection, RoofPitch, PropertyType } from "@/lib/calculator/types";
 import { NIGERIAN_STATES } from "@/lib/validations";
-import { DISCO_BY_STATE, APPLIANCES, IKEDC_BANDS, getEffectiveTariff, getFuelPrice, updateFuelPriceCache, getApplianceKwh } from "@/lib/calculator/calculations";
+import { DISCO_BY_STATE, APPLIANCES, IKEDC_BANDS, getEffectiveTariff, getFuelPrice, updateFuelPriceCache, getApplianceKwh, registerCustomAppliances, getFullApplianceList } from "@/lib/calculator/calculations";
+import { X } from "lucide-react";
 
 // ── NairaInput ───────────────────────────────────────────────────
 interface NairaInputProps {
@@ -144,6 +145,75 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
     source: "",
   });
 
+  // ── Custom Appliance State ────────────────────────────────────
+  const [customAppliances, setCustomAppliances] = useState<typeof APPLIANCES>([]);
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customWatts, setCustomWatts] = useState<number>(0);
+  const [customQty, setCustomQty] = useState<number>(0);
+  const [customHours, setCustomHours] = useState<number>(0);
+  const [customErrors, setCustomErrors] = useState<string[]>([]);
+
+  // Keep the engine's runtime registry in sync with local custom appliances
+  useEffect(() => {
+    registerCustomAppliances(customAppliances);
+  }, [customAppliances]);
+
+  const validateCustomAppliance = (): string[] => {
+    const errors: string[] = [];
+    if (!customName.trim()) errors.push("Appliance name cannot be empty.");
+    if (customWatts <= 0) errors.push("Watts must be greater than 0.");
+    if (customQty <= 0 || !Number.isInteger(customQty)) errors.push("Quantity must be a positive whole number.");
+    if (customHours < 0 || customHours > 24) errors.push("Hours of use must be between 0 and 24.");
+    if (customHours === 0) errors.push("Hours of use must be greater than 0.");
+    return errors;
+  };
+
+  const handleAddCustomAppliance = () => {
+    const errors = validateCustomAppliance();
+    if (errors.length > 0) {
+      setCustomErrors(errors);
+      return;
+    }
+    const id = `custom-${Date.now()}`;
+    const newDef = {
+      id,
+      name: customName.trim(),
+      category: 'Custom' as const,
+      icon: '🔧',
+      kwhPerDay: (customWatts * customHours) / 1000,
+      typicalHours: customHours,
+      isInverter: false,
+      watts: customWatts,
+      dutyCycle: 1,
+    };
+    // Add to custom definitions list
+    const updatedCustoms = [...customAppliances, newDef];
+    setCustomAppliances(updatedCustoms);
+    registerCustomAppliances(updatedCustoms);
+
+    // Add to inputs.appliances selection
+    const newApps = [...inputs.appliances, { id, qty: customQty, daytimeHours: customHours }];
+    onChange({ appliances: newApps });
+
+    // Reset form
+    setCustomName("");
+    setCustomWatts(0);
+    setCustomQty(0);
+    setCustomHours(0);
+    setCustomErrors([]);
+    setShowCustomForm(false);
+  };
+
+  const handleRemoveCustomAppliance = (id: string) => {
+    setCustomAppliances(prev => {
+      const updated = prev.filter(a => a.id !== id);
+      registerCustomAppliances(updated);
+      return updated;
+    });
+    onChange({ appliances: inputs.appliances.filter(a => a.id !== id) });
+  };
+
   useEffect(() => {
     getFuelPrice().then(data => {
       setFuelData(data);
@@ -158,7 +228,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   const getQty = (id: string) => inputs.appliances.find(a => a.id === id)?.qty || 0;
 
   const updateApplianceQty = (id: string, delta: number) => {
-    const appDef = APPLIANCES.find(a => a.id === id);
+    const appDef = getFullApplianceList().find(a => a.id === id);
     if (!appDef) return;
 
     const current = getQty(id);
@@ -184,7 +254,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
     const existingIdx = inputs.appliances.findIndex(a => a.id === id);
     if (existingIdx !== -1) {
       const newApps = [...inputs.appliances];
-      const appDef = APPLIANCES.find(a => a.id === id);
+      const appDef = getFullApplianceList().find(a => a.id === id);
       const validHours = hours < 0 ? 0 : hours > 24 ? 24 : hours;
       // typicalHours is the suggested default, not an enforced ceiling.
       newApps[existingIdx] = { ...newApps[existingIdx], daytimeHours: validHours };
@@ -193,8 +263,10 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   };
 
   // Bug fix: use live W×h÷1000 formula, NOT static catalog kwhPerDay which is a single default
+  const allAppliances = getFullApplianceList();
+
   const totalApplianceKwh = inputs.appliances.reduce((sum, app) => {
-    const def = APPLIANCES.find(a => a.id === app.id);
+    const def = allAppliances.find(a => a.id === app.id);
     if (!def) return sum;
     const DAY_WINDOW = 12;
     const totalUserHours = app.daytimeHours ?? Math.min(def.typicalHours, 24);
@@ -210,13 +282,13 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   // dayKwh:    energy consumed 6am–6pm (mirrors engine's daytimeHours logic)
   // nightKwh:  remaining load that requires battery backup in a hybrid system
   const totalWatts = inputs.appliances.reduce((sum, app) => {
-    const def = APPLIANCES.find(a => a.id === app.id);
+    const def = allAppliances.find(a => a.id === app.id);
     if (!def || app.qty <= 0) return sum;
     return sum + def.watts * app.qty;
   }, 0);
 
   const applianceDayKwh = inputs.appliances.reduce((sum, app) => {
-    const def = APPLIANCES.find(a => a.id === app.id);
+    const def = allAppliances.find(a => a.id === app.id);
     if (!def || app.qty <= 0) return sum;
     const DAY_WINDOW = 12;
     const totalUserHours = app.daytimeHours ?? Math.min(def.typicalHours, 24);
@@ -225,7 +297,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   }, 0);
 
   const applianceNightKwh = inputs.appliances.reduce((sum, app) => {
-    const def = APPLIANCES.find(a => a.id === app.id);
+    const def = allAppliances.find(a => a.id === app.id);
     if (!def || app.qty <= 0) return sum;
     const DAY_WINDOW = 12;
     const totalUserHours = app.daytimeHours ?? Math.min(def.typicalHours, 24);
@@ -236,7 +308,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
   // True daily total = day + night (totalApplianceKwh only tracks day portion)
   const applianceTotalKwh = applianceDayKwh + applianceNightKwh;
 
-  const CATEGORIES = Array.from(new Set(APPLIANCES.map(a => a.category)));
+  const CATEGORIES = Array.from(new Set(allAppliances.map(a => a.category)));
 
 
 
@@ -363,6 +435,129 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
               </div>
             );
           })}
+
+          {/* ── Custom Appliances Section ── */}
+          {customAppliances.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">🔧 Custom</h4>
+              <div className="space-y-2">
+                {customAppliances.map(app => {
+                  const sel = inputs.appliances.find(a => a.id === app.id);
+                  const qty = sel?.qty || 0;
+                  return (
+                    <div
+                      key={app.id}
+                      className="flex items-center justify-between p-3 rounded-xl border bg-amber-50 border-amber-200 transition-opacity opacity-100"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xl flex-shrink-0">🔧</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-text-primary leading-tight truncate">
+                            {app.name}
+                            <span className="ml-2 text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase">Custom</span>
+                          </p>
+                          <p className="text-xs text-text-muted">
+                            {app.kwhPerDay.toFixed(2)} kWh/day • {app.watts}W • {qty}×
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveCustomAppliance(app.id)}
+                        className="p-1.5 hover:bg-red-100 rounded-lg text-red-500 transition-colors flex-shrink-0"
+                        title="Remove custom appliance"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Add Custom Appliance Button / Form ── */}
+          <div className="pt-2">
+            {!showCustomForm ? (
+              <button
+                onClick={() => setShowCustomForm(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-primary/30 text-primary text-sm font-semibold hover:bg-primary/5 hover:border-primary/50 transition-all"
+              >
+                <Plus className="w-4 h-4" /> Add Custom Appliance
+              </button>
+            ) : (
+              <div className="border border-primary/20 rounded-xl p-4 bg-primary/[0.02] space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-text-primary">Add Custom Appliance</h4>
+                  <button onClick={() => { setShowCustomForm(false); setCustomErrors([]); }} className="p-1 hover:bg-gray-100 rounded-md">
+                    <X className="w-4 h-4 text-text-muted" />
+                  </button>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-text-muted block mb-1">Appliance Name</label>
+                  <input
+                    type="text"
+                    placeholder="Enter appliance name"
+                    value={customName}
+                    onChange={e => setCustomName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-border text-sm outline-none focus:border-primary transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs font-medium text-text-muted block mb-1">Watts</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={customWatts || ''}
+                      onChange={e => setCustomWatts(Math.max(0, parseInt(e.target.value) || 0))}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg border border-border text-sm outline-none focus:border-primary transition-all text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-text-muted block mb-1">Quantity</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={customQty || ''}
+                      onChange={e => setCustomQty(Math.max(0, Math.floor(parseInt(e.target.value) || 0)))}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg border border-border text-sm outline-none focus:border-primary transition-all text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-text-muted block mb-1">Hours/day</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={24}
+                      value={customHours || ''}
+                      onChange={e => setCustomHours(Math.min(24, Math.max(0, parseFloat(e.target.value) || 0)))}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg border border-border text-sm outline-none focus:border-primary transition-all text-center"
+                    />
+                  </div>
+                </div>
+
+                {customErrors.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 space-y-1">
+                    {customErrors.map((err, i) => (
+                      <p key={i} className="text-xs text-red-600">• {err}</p>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleAddCustomAppliance}
+                  className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all"
+                >
+                  Add Appliance
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
