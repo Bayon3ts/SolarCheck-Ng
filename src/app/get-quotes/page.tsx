@@ -101,12 +101,12 @@ function GetQuotesForm() {
         <p className="mt-2 text-text-muted text-center">
           Takes less than 60 seconds. No obligation.
         </p>
-        
+
         {/* Progress Bar */}
         <div className="mt-8 flex gap-2">
           {[1, 2, 3].map((i) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               className={`h-2 flex-1 rounded-full transition-colors ${i <= step ? "bg-primary" : "bg-gray-200"}`}
             />
           ))}
@@ -126,12 +126,12 @@ function GetQuotesForm() {
                 className="space-y-5"
               >
                 <h3 className="text-xl font-bold text-text-primary mb-6">Energy Requirements</h3>
-                
+
                 <div className="grid md:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-text-primary">State *</label>
-                    <select 
-                      value={formData.state} 
+                    <select
+                      value={formData.state}
                       onChange={(e) => updateField("state", e.target.value)}
                       className="select-field w-full"
                       required
@@ -142,8 +142,8 @@ function GetQuotesForm() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-text-primary">City / Area *</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={formData.city}
                       onChange={(e) => updateField("city", e.target.value)}
                       placeholder="e.g. Lekki, Ikeja"
@@ -155,7 +155,7 @@ function GetQuotesForm() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-text-primary">Average Monthly Electricity Bill *</label>
-                  <select 
+                  <select
                     value={formData.monthly_bill_range}
                     onChange={(e) => updateField("monthly_bill_range", e.target.value)}
                     className="select-field w-full"
@@ -168,7 +168,7 @@ function GetQuotesForm() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-text-primary">Target System Size (Optional)</label>
-                  <select 
+                  <select
                     value={formData.system_size_interest}
                     onChange={(e) => updateField("system_size_interest", e.target.value)}
                     className="select-field w-full"
@@ -190,15 +190,15 @@ function GetQuotesForm() {
                 className="space-y-6"
               >
                 <h3 className="text-xl font-bold text-text-primary mb-6">Property Details</h3>
-                
+
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-text-primary">Do you own the property? *</label>
                   <div className="flex gap-4">
                     <label className={`flex-1 border rounded-xl p-4 cursor-pointer text-center transition-all ${formData.ownership_status === "own" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-gray-400"}`}>
-                      <input 
-                        type="radio" 
-                        name="ownership" 
-                        value="own" 
+                      <input
+                        type="radio"
+                        name="ownership"
+                        value="own"
                         className="sr-only"
                         checked={formData.ownership_status === "own"}
                         onChange={(e) => updateField("ownership_status", e.target.value)}
@@ -206,10 +206,10 @@ function GetQuotesForm() {
                       <span className="font-medium text-text-primary">Yes, I own it</span>
                     </label>
                     <label className={`flex-1 border rounded-xl p-4 cursor-pointer text-center transition-all ${formData.ownership_status === "rent" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-gray-400"}`}>
-                      <input 
-                        type="radio" 
-                        name="ownership" 
-                        value="rent" 
+                      <input
+                        type="radio"
+                        name="ownership"
+                        value="rent"
                         className="sr-only"
                         checked={formData.ownership_status === "rent"}
                         onChange={(e) => updateField("ownership_status", e.target.value)}
@@ -228,10 +228,10 @@ function GetQuotesForm() {
                       { val: "researching", label: "Just Researching" }
                     ].map((t) => (
                       <label key={t.val} className={`border rounded-xl p-3 cursor-pointer text-center transition-all text-sm ${formData.timeline === t.val ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-gray-400"}`}>
-                        <input 
-                          type="radio" 
-                          name="timeline" 
-                          value={t.val} 
+                        <input
+                          type="radio"
+                          name="timeline"
+                          value={t.val}
                           className="sr-only"
                           checked={formData.timeline === t.val}
                           onChange={(e) => updateField("timeline", e.target.value)}
@@ -246,10 +246,10 @@ function GetQuotesForm() {
                   <label className="text-sm font-medium text-text-primary">How many installer quotes do you want? *</label>
                   <div className="flex flex-col gap-3">
                     <label className={`border rounded-xl p-4 cursor-pointer transition-all ${formData.lead_type === "shared" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-gray-400"}`}>
-                      <input 
-                        type="radio" 
-                        name="lead_type" 
-                        value="shared" 
+                      <input
+                        type="radio"
+                        name="lead_type"
+                        value="shared"
                         className="sr-only"
                         checked={formData.lead_type === "shared"}
                         onChange={(e) => updateField("lead_type", e.target.value)}
@@ -263,10 +263,10 @@ function GetQuotesForm() {
                       </div>
                     </label>
                     <label className={`border rounded-xl p-4 cursor-pointer transition-all ${formData.lead_type === "exclusive" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-gray-400"}`}>
-                      <input 
-                        type="radio" 
-                        name="lead_type" 
-                        value="exclusive" 
+                      <input
+                        type="radio"
+                        name="lead_type"
+                        value="exclusive"
                         className="sr-only"
                         checked={formData.lead_type === "exclusive"}
                         onChange={(e) => updateField("lead_type", e.target.value)}
@@ -294,11 +294,11 @@ function GetQuotesForm() {
                 className="space-y-5"
               >
                 <h3 className="text-xl font-bold text-text-primary mb-6">Contact Details</h3>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-text-primary">Full Name *</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={formData.full_name}
                     onChange={(e) => updateField("full_name", e.target.value)}
                     placeholder="John Doe"
@@ -310,8 +310,8 @@ function GetQuotesForm() {
                 <div className="grid md:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-text-primary">Phone Number *</label>
-                    <input 
-                      type="tel" 
+                    <input
+                      type="tel"
                       value={formData.phone}
                       onChange={(e) => updateField("phone", e.target.value)}
                       placeholder="08012345678"
@@ -321,8 +321,8 @@ function GetQuotesForm() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-text-primary">WhatsApp Number</label>
-                    <input 
-                      type="tel" 
+                    <input
+                      type="tel"
                       value={formData.whatsapp}
                       onChange={(e) => updateField("whatsapp", e.target.value)}
                       placeholder="Optional, if different"
@@ -333,8 +333,8 @@ function GetQuotesForm() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-text-primary">Email Address</label>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     value={formData.email}
                     onChange={(e) => updateField("email", e.target.value)}
                     placeholder="Optional, for backup contact"
@@ -344,7 +344,7 @@ function GetQuotesForm() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-text-primary">Additional Message</label>
-                  <textarea 
+                  <textarea
                     value={formData.message}
                     onChange={(e) => updateField("message", e.target.value)}
                     placeholder="Any specific requests or constraints?"
@@ -369,7 +369,7 @@ function GetQuotesForm() {
             ) : (
               <div></div> // Spacer
             )}
-            
+
             <Button type="submit" variant="primary" size="lg" disabled={isSubmitting}>
               {isSubmitting ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
@@ -382,7 +382,7 @@ function GetQuotesForm() {
           </div>
         </form>
       </div>
-      
+
       <p className="text-center text-xs text-text-muted mt-6">
         By submitting, you agree to SolarCheck&apos;s Terms of Service and Privacy Policy.
       </p>
