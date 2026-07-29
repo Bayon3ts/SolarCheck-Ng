@@ -5,6 +5,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Mail, Eye, EyeOff, AlertTriangle, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function LoginPage() {
   const [loginMethod, setLoginMethod] = useState<'email' | 'whatsapp'>('email');
@@ -125,48 +126,36 @@ export default function LoginPage() {
   return (
     <>
       <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
         @keyframes subtlePulse {
           0% { transform: scale(1); opacity: 0.15; }
           50% { transform: scale(1.05); opacity: 0.25; }
           100% { transform: scale(1); opacity: 0.15; }
         }
-        .anim-fade-up {
-          animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          opacity: 0;
-        }
-        @keyframes slideLeft {
-          from { opacity: 0; transform: translateX(30px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .anim-slide-left {
-          animation: slideLeft 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          opacity: 0;
-        }
-        .delay-100 { animation-delay: 100ms; }
-        .delay-200 { animation-delay: 200ms; }
-        .delay-300 { animation-delay: 300ms; }
-        .delay-400 { animation-delay: 400ms; }
       `}</style>
 
       <div className="min-h-screen flex flex-col md:flex-row">
         {/* ── LEFT: Branding panel ── */}
         <div className="hidden md:flex flex-col justify-between bg-[#0A5C3A] w-[45%] p-12 overflow-hidden relative">
           {/* Logo */}
-          <Link href="/" className="z-10 anim-fade-up">
-            <span className="text-[22px] font-medium text-white">
-              Solar<span className="text-[#F5A623]">Check</span>
-            </span>
-          </Link>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
+            className="z-10"
+          >
+            <Link href="/">
+              <span className="text-[22px] font-medium text-white">
+                Solar<span className="text-[#F5A623]">Check</span>
+              </span>
+            </Link>
+          </motion.div>
 
           {/* Hero Section */}
           <div className="z-10 mt-16 mb-auto space-y-8">
-            <h1 className="text-[36px] font-medium text-white leading-[1.2] tracking-[-0.5px] anim-fade-up delay-100">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
+              className="text-[36px] font-medium text-white leading-[1.2] tracking-[-0.5px]"
+            >
               Your leads.<br />Your business.<br />Managed.
-            </h1>
+            </motion.h1>
 
             <div className="flex flex-col items-start gap-3">
               {[
@@ -174,19 +163,23 @@ export default function LoginPage() {
                 { icon: '📊', text: 'Track every lead to close' },
                 { icon: '⭐', text: 'Reviews that win customers' },
               ].map((feature, i) => (
-                <div 
+                <motion.div 
                   key={i}
-                  className={`inline-flex items-center gap-2 rounded-full border border-white border-opacity-20 px-[14px] py-[5px] bg-[#ffffff] bg-opacity-10 backdrop-blur-sm anim-fade-up delay-${200 + i * 100}`}
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 + i * 0.1 }}
+                  className="inline-flex items-center gap-2 rounded-full border border-white border-opacity-20 px-[14px] py-[5px] bg-[#ffffff] bg-opacity-10 backdrop-blur-sm"
                 >
                   <span className="text-sm rounded-full bg-white bg-opacity-0 flex items-center justify-center">{feature.icon}</span>
                   <span className="text-[13px] text-white">{feature.text}</span>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
 
           {/* Bottom decorative section */}
-          <div className="relative mt-12 z-10 anim-fade-up delay-500">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}
+            className="relative mt-12 z-10"
+          >
             {/* Concentric Decorative Rings */}
             <div className="absolute -bottom-32 -left-32 w-96 h-96 pointer-events-none">
               <div className="absolute inset-0 rounded-full border border-[#F5A623] opacity-[0.08]" />
@@ -202,11 +195,14 @@ export default function LoginPage() {
                 Lagos · Abuja · Port Harcourt · Ibadan
               </p>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* ── RIGHT: Login form ── */}
-        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-[#f8faf9] to-[#e4efeb] p-6 md:p-12 relative overflow-hidden anim-slide-left">
+        <motion.div 
+          initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="flex-1 flex items-center justify-center bg-gradient-to-br from-[#f8faf9] to-[#e4efeb] p-6 md:p-12 relative overflow-hidden"
+        >
           
           {/* Subtle animated blobs for glassmorphism background */}
           <div 
@@ -219,7 +215,10 @@ export default function LoginPage() {
           />
 
           {/* Container for form (Glassmorphism card) */}
-          <div className="w-full max-w-[440px] bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.06)] rounded-[24px] p-8 sm:p-10 anim-fade-up delay-200 z-10">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full max-w-[440px] bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.06)] rounded-[24px] p-8 sm:p-10 z-10"
+          >
             
             {/* Mobile logo */}
             <div className="md:hidden mb-8 text-center text-[22px] font-medium text-[#0A5C3A]">
@@ -255,7 +254,10 @@ export default function LoginPage() {
 
             {/* ── EMAIL/PASSWORD FORM ── */}
             {loginMethod === 'email' && (
-              <div className="space-y-[18px] anim-fade-up">
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                className="space-y-[18px]"
+              >
                 <div className="relative flex items-center">
                   <input
                     type="email"
@@ -312,12 +314,15 @@ export default function LoginPage() {
                   {loading ? 'Signing in...' : 'Sign In'}
                   {!loading && <ArrowRight className="w-4 h-4 ml-1" />}
                 </button>
-              </div>
+              </motion.div>
             )}
 
             {/* ── WHATSAPP OTP FORM ── */}
             {loginMethod === 'whatsapp' && (
-              <div className="space-y-[18px] anim-fade-up">
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                className="space-y-[18px]"
+              >
                 {!otpSent ? (
                   <>
                     <div className="relative flex items-center">
@@ -355,7 +360,7 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    <div className="text-center py-2 anim-fade-up">
+                    <div className="text-center py-2">
                       <p className="font-semibold text-gray-900 mb-1">
                         Check your WhatsApp
                       </p>
@@ -404,7 +409,7 @@ export default function LoginPage() {
                     </button>
                   </>
                 )}
-              </div>
+              </motion.div>
             )}
 
             {/* ── DIVIDER ── */}
@@ -421,8 +426,8 @@ export default function LoginPage() {
             >
               Apply for a free listing <ArrowRight className="w-4 h-4 ml-1" />
             </Link>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </>
   );
