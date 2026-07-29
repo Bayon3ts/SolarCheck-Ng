@@ -492,7 +492,7 @@ function LeadsTab({ installer, leads, updateLeadStatus, setActiveTab, isLoggedIn
           <div className="text-5xl mb-3">📭</div>
           <h3 className="font-bold text-gray-800 mb-1">No leads yet</h3>
           <p className="text-sm text-gray-400 max-w-xs mx-auto">
-            Leads appear when homeowners request quotes in your service area.
+            Lead appear when homeowners request quotes in your service area.
           </p>
         </div>
       ) : (
