@@ -953,33 +953,21 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               <div key={i} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-bold text-slate-700">{cable.label}</span>
-                  <span className="text-sm font-black text-primary">{cable.gaugeMm2}mm² copper ({cable.ratedAmps}A)</span>
+                  <span className="text-sm font-black text-primary">{cable.gaugeMm2}mm²</span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span>Carries {cable.requiredAmps}A over ~{cable.runLengthM}m · {cable.voltageDropPct}% drop</span>
-                  <span>{fmt(cable.totalCostNaira.min)}–{fmt(cable.totalCostNaira.max)}</span>
+                <div className="flex flex-col text-xs text-slate-500 space-y-1">
+                  <span>Total power: {cable.totalPowerW.toLocaleString()} W</span>
+                  <span>Voltage used: {cable.voltageV} V ({cable.systemType})</span>
+                  <span>Calculated current: {cable.calculatedAmps} A</span>
                 </div>
-                {cable.warning && (
-                  <p className="text-xs text-amber-600 mt-1.5">⚠️ {cable.warning}</p>
-                )}
               </div>
             ))}
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-700">{r.cableSpecReport.earthing.label}</span>
-                <span className="text-sm font-black text-primary">{r.cableSpecReport.earthing.gaugeMm2}mm² {r.cableSpecReport.earthing.color}</span>
-              </div>
-              <p className="text-xs text-slate-500 mt-1">{r.cableSpecReport.earthing.note}</p>
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 mt-3">
+              <p className="text-sm font-bold text-slate-700 mb-1">Installation Warning</p>
+              <p className="text-xs text-amber-600 leading-relaxed">
+                ⚠️ {r.cableSpecReport.installerWarning}
+              </p>
             </div>
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-              <span className="text-sm font-bold text-slate-700">Total cable cost</span>
-              <span className="text-sm font-black text-primary">
-                {fmt(r.cableSpecReport.totalCableCostNaira.min)}–{fmt(r.cableSpecReport.totalCableCostNaira.max)}
-              </span>
-            </div>
-            <p className="text-xs text-red-600 bg-red-50 rounded-lg p-2.5 leading-relaxed">
-              🚫 {r.cableSpecReport.copperOnlyWarning}
-            </p>
           </div>
         </Section>
       )}
