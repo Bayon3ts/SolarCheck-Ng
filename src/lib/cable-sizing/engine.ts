@@ -59,7 +59,7 @@ function buildCableSpec(
   const calculatedAmps = totalPowerW / voltageV;
   const gaugeMm2 = selectGauge(calculatedAmps);
   const pricePerMeter = COPPER_COST_PER_METER[gaugeMm2] ?? { min: 0, max: 0 };
-  
+
   let totalCostNaira: { min: number; max: number } | undefined;
   if (runLengthM != null) {
     totalCostNaira = {
@@ -144,7 +144,7 @@ export function buildCableSpecReport(input: CableSizingInput): FullCableSpecRepo
   );
 
   const earthPrice = COPPER_COST_PER_METER[6];
-  
+
   let costWarning: string | undefined = undefined;
   let totalEstimatedCostNaira: { min: number; max: number } | undefined = undefined;
 

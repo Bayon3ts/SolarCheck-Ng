@@ -970,7 +970,7 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
                   </div>
                   <div>
                     <span className="font-semibold block text-slate-800">Estimated Cost:</span>
-                    {cable.totalCostNaira 
+                    {cable.totalCostNaira
                       ? `${fmt(cable.totalCostNaira.min)} - ${fmt(cable.totalCostNaira.max)}`
                       : 'Requires length'}
                   </div>
@@ -996,8 +996,8 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm font-bold text-slate-800">Total Estimated Cost</span>
                 <span className="text-sm font-black text-primary">
-                  {r.cableSpecReport.totalEstimatedCostNaira 
-                    ? `${fmt(r.cableSpecReport.totalEstimatedCostNaira.min)} - ${fmt(r.cableSpecReport.totalEstimatedCostNaira.max)}` 
+                  {r.cableSpecReport.totalEstimatedCostNaira
+                    ? `${fmt(r.cableSpecReport.totalEstimatedCostNaira.min)} - ${fmt(r.cableSpecReport.totalEstimatedCostNaira.max)}`
                     : "See Warning"}
                 </span>
               </div>
