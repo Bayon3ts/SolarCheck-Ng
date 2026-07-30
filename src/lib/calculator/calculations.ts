@@ -1883,7 +1883,6 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     batteryVoltage,
     inverterKva,
     totalPanelWatts,
-    mpptAmps: panelSideAmps,
   });
 
   const monthlyCurrentSpend = monthlyBill + generatorSpend;

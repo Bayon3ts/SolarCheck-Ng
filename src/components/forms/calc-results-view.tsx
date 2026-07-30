@@ -951,22 +951,68 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
           <div className="space-y-3">
             {[r.cableSpecReport.batteryToInverter, r.cableSpecReport.panelsToMppt, r.cableSpecReport.inverterToDb].map((cable, i) => (
               <div key={i} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-200">
                   <span className="text-sm font-bold text-slate-700">{cable.label}</span>
-                  <span className="text-sm font-black text-primary">{cable.gaugeMm2}mm²</span>
+                  <span className="text-sm font-black text-primary">{cable.gaugeMm2}mm² ({cable.material})</span>
                 </div>
-                <div className="flex flex-col text-xs text-slate-500 space-y-1">
-                  <span>Total power: {cable.totalPowerW.toLocaleString()} W</span>
-                  <span>Voltage used: {cable.voltageV} V ({cable.systemType})</span>
-                  <span>Calculated current: {cable.calculatedAmps} A</span>
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+                  <div>
+                    <span className="font-semibold block text-slate-800">System:</span>
+                    {cable.systemType} ({cable.voltageV}V)
+                  </div>
+                  <div>
+                    <span className="font-semibold block text-slate-800">Power / Current:</span>
+                    {cable.totalPowerW.toLocaleString()} W / {cable.calculatedAmps} A
+                  </div>
+                  <div>
+                    <span className="font-semibold block text-slate-800">Main Cable Price:</span>
+                    {fmt(cable.pricePerMeterNaira.min)} - {fmt(cable.pricePerMeterNaira.max)} /m
+                  </div>
+                  <div>
+                    <span className="font-semibold block text-slate-800">Estimated Cost:</span>
+                    {cable.totalCostNaira 
+                      ? `${fmt(cable.totalCostNaira.min)} - ${fmt(cable.totalCostNaira.max)}`
+                      : 'Requires length'}
+                  </div>
                 </div>
               </div>
             ))}
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 mt-3">
-              <p className="text-sm font-bold text-slate-700 mb-1">Installation Warning</p>
-              <p className="text-xs text-amber-600 leading-relaxed">
-                ⚠️ {r.cableSpecReport.installerWarning}
-              </p>
+
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+              <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-200">
+                <span className="text-sm font-bold text-slate-700">{r.cableSpecReport.earthing.label}</span>
+                <span className="text-sm font-black text-primary">
+                  {r.cableSpecReport.earthing.gaugeMm2}mm² {r.cableSpecReport.earthing.color} ({r.cableSpecReport.earthing.material})
+                </span>
+              </div>
+              <div className="text-xs text-slate-600 mb-2">
+                <span className="font-semibold block text-slate-800">Ground Cable Price:</span>
+                {fmt(r.cableSpecReport.earthing.pricePerMeterNaira.min)} - {fmt(r.cableSpecReport.earthing.pricePerMeterNaira.max)} /m
+              </div>
+              <p className="text-xs text-slate-500 italic font-medium">{r.cableSpecReport.earthing.note}</p>
+            </div>
+
+            <div className="bg-slate-100 rounded-xl p-3 border border-slate-200 mt-2">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm font-bold text-slate-800">Total Estimated Cost</span>
+                <span className="text-sm font-black text-primary">
+                  {r.cableSpecReport.totalEstimatedCostNaira 
+                    ? `${fmt(r.cableSpecReport.totalEstimatedCostNaira.min)} - ${fmt(r.cableSpecReport.totalEstimatedCostNaira.max)}` 
+                    : "See Warning"}
+                </span>
+              </div>
+              {r.cableSpecReport.costWarning && (
+                <p className="text-xs text-slate-600 italic mt-1">{r.cableSpecReport.costWarning}</p>
+              )}
+            </div>
+
+            <div className="bg-red-50 rounded-xl p-3 border border-red-100 mt-3">
+              <p className="text-sm font-bold text-red-700 mb-2">Safety Notes</p>
+              <ul className="text-xs text-red-600 leading-relaxed list-disc list-inside space-y-1.5">
+                <li><strong>CRITICAL:</strong> {r.cableSpecReport.copperOnlyWarning}</li>
+                <li>{r.cableSpecReport.installerWarning}</li>
+                <li>All calculations strictly prioritize fire prevention, avoiding overheating, and minimizing energy loss.</li>
+              </ul>
             </div>
           </div>
         </Section>
