@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Quote } from "lucide-react";
+import { Quote, ChevronLeft, ChevronRight } from "lucide-react";
 import StarRating from "@/components/ui/star-rating";
 
 /* ═══════════════════════════════════════ */
@@ -34,12 +34,39 @@ export default function TestimonialsCarousel({ testimonials }: Props) {
     return () => clearInterval(interval);
   }, [isPaused, testimonials.length]);
 
+  const handleNext = () => {
+    setActiveIndex((prev) => (prev + 1) % testimonials.length);
+  };
+
+  const handlePrev = () => {
+    setActiveIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  };
+
   return (
     <div
-      className="mx-auto max-w-3xl"
+      className="relative mx-auto max-w-4xl px-10 md:px-16"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
+      {testimonials.length > 1 && (
+        <>
+          <button
+            onClick={handlePrev}
+            className="absolute left-0 top-1/2 z-10 -translate-y-1/2 md:left-2 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-gray-900 text-white shadow-lg transition-transform hover:scale-110 focus:outline-none"
+            aria-label="Previous testimonial"
+          >
+            <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
+          </button>
+          <button
+            onClick={handleNext}
+            className="absolute right-0 top-1/2 z-10 -translate-y-1/2 md:right-2 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-gray-900 text-white shadow-lg transition-transform hover:scale-110 focus:outline-none"
+            aria-label="Next testimonial"
+          >
+            <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
+          </button>
+        </>
+      )}
+
       {testimonials.map((testimonial, i) => (
         <div
           key={i}
