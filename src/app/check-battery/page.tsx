@@ -8,6 +8,7 @@ import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { detectBatteryFraud, BatteryClaim, FraudReport } from "@/lib/battery-fraud/detector";
 import { CHEMISTRY_PROFILES } from "@/lib/battery-fraud/chemistry-profiles";
+import ScrollDownIndicator from "@/components/ui/scroll-indicator";
 
 export default function CheckBatteryPage() {
   const [claim, setClaim] = useState<Partial<BatteryClaim>>({
@@ -251,6 +252,7 @@ export default function CheckBatteryPage() {
             </div>
           </div>
         </div>
+        <ScrollDownIndicator isVisible={!!report} />
       </main>
       <Footer />
     </>

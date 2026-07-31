@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { detectControllerFraud, ControllerClaim, FraudReport } from "@/lib/controller-fraud/detector";
+import ScrollDownIndicator from "@/components/ui/scroll-indicator";
 
 export default function CheckControllerPage() {
   const [claim, setClaim] = useState<Partial<ControllerClaim>>({
@@ -241,6 +242,7 @@ export default function CheckControllerPage() {
             </div>
           </div>
         </div>
+        <ScrollDownIndicator isVisible={!!report} />
       </main>
       <Footer />
     </>

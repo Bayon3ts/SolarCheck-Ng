@@ -44,6 +44,7 @@ export default function CalculatorDashboard() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [isRoofStepOpen, setIsRoofStepOpen] = useState(false);
+  const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
   const [geoCoords, setGeoCoords] = useState<LatLng | null>(null);
   const [fitAnalysis, setFitAnalysis] = useState<FitCheckResult | null>(null);
 
@@ -131,6 +132,7 @@ export default function CalculatorDashboard() {
       if (step >= CALC_STEPS.length) {
         setIsCalculating(false);
         setHasCalculated(true);
+        setIsMobileModalOpen(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
@@ -257,7 +259,16 @@ export default function CalculatorDashboard() {
               </div>
             )}
             {!isCalculating && hasCalculated && results ? (
-              <>
+              <div className={`
+                ${isMobileModalOpen ? "fixed inset-0 z-50 bg-gray-50 overflow-y-auto px-4 py-6" : "hidden"} 
+                lg:static lg:block lg:bg-transparent lg:overflow-visible lg:px-0 lg:py-0 lg:z-auto space-y-6
+              `}>
+                <div className="lg:hidden flex items-center justify-between mb-4 sticky top-0 bg-gray-50 z-10 py-2 border-b border-gray-200">
+                  <h2 className="text-xl font-bold">Your Results</h2>
+                  <button onClick={() => setIsMobileModalOpen(false)} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
                 {/* ROOFTOP FIT CHECK */}
                 <div className="border border-gray-200 bg-white rounded-2xl overflow-hidden shadow-sm">
                   <button
@@ -317,7 +328,7 @@ export default function CalculatorDashboard() {
                   leadSubmitted={leadSubmitted}
                   onLeadSubmit={handleLeadSubmit}
                 />
-              </>
+              </div>
             ) : !isCalculating ? (
               <div className="hidden lg:flex flex-col items-center justify-center h-full min-h-[500px] border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50 text-center p-12">
                 <div className="text-6xl mb-4 opacity-50">☀️</div>
@@ -328,6 +339,17 @@ export default function CalculatorDashboard() {
           </div>
         </div>
       </div>
+
+      {!isCalculating && hasCalculated && results && !isMobileModalOpen && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 lg:hidden animate-bounce">
+          <button 
+            onClick={() => setIsMobileModalOpen(true)}
+            className="flex items-center justify-center px-6 h-12 rounded-full bg-primary text-white shadow-xl font-bold hover:bg-primary-dark transition-colors focus:outline-none focus:ring-4 focus:ring-primary/30"
+          >
+            View Results
+          </button>
+        </div>
+      )}
     </div>
   );
 }
