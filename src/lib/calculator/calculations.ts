@@ -1218,12 +1218,14 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   else if (roofDirection === 'East' || roofDirection === 'West') directionFactor = 0.85;
   else if (roofDirection === 'North-East' || roofDirection === 'North-West') directionFactor = 0.80;
   else if (roofDirection === 'North') directionFactor = 0.75;
+  else if (roofDirection === 'I don\'t know') directionFactor = 0.90;
 
   let pitchFactor = 1.0;
   if (roofPitch === 'Flat (0°)') pitchFactor = 0.92;
   else if (roofPitch === 'Low (10-15°)') pitchFactor = 0.97;
   else if (roofPitch === 'Medium (20-30°)') pitchFactor = 1.00;
   else if (roofPitch === 'Steep (35-45°)') pitchFactor = 0.97;
+  else if (roofPitch === 'I don\'t know') pitchFactor = 0.97;
 
   const shadeFactor = 1 - (shadeObstruction / 100);
 

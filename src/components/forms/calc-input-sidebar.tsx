@@ -785,7 +785,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                   onChange={e => onChange({ roofDirection: e.target.value as RoofDirection })}
                   className="w-full px-3 py-2 rounded-lg border border-border text-sm outline-none focus:border-primary"
                 >
-                  {["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West"].map(d => (
+                  {["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West", "I don't know"].map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
@@ -797,7 +797,7 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                   onChange={e => onChange({ roofPitch: e.target.value as RoofPitch })}
                   className="w-full px-3 py-2 rounded-lg border border-border text-sm outline-none focus:border-primary"
                 >
-                  {["Flat (0°)", "Low (10-15°)", "Medium (20-30°)", "Steep (35-45°)"].map(p => (
+                  {["Flat (0°)", "Low (10-15°)", "Medium (20-30°)", "Steep (35-45°)", "I don't know"].map(p => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>

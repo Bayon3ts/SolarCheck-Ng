@@ -16,8 +16,8 @@ export type BatteryType = 'lithium' | 'lead-acid';
 export type PropertyType = 'home' | 'small-business' | 'large-business';
 export type OwnershipStatus = 'owner' | 'tenant';
 export type RoofType = 'flat_concrete' | 'corrugated_iron' | 'aluminum_deck' | 'clay_tiles' | 'not_sure';
-export type RoofDirection = 'North' | 'North-East' | 'East' | 'South-East' | 'South' | 'South-West' | 'West' | 'North-West';
-export type RoofPitch = 'Flat (0°)' | 'Low (10-15°)' | 'Medium (20-30°)' | 'Steep (35-45°)';
+export type RoofDirection = 'North' | 'North-East' | 'East' | 'South-East' | 'South' | 'South-West' | 'West' | 'North-West' | 'I don\'t know';
+export type RoofPitch = 'Flat (0°)' | 'Low (10-15°)' | 'Medium (20-30°)' | 'Steep (35-45°)' | 'I don\'t know';
 
 
 
