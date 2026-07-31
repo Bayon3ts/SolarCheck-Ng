@@ -90,9 +90,10 @@ export default function CheckBatteryPage() {
                     className="input-field w-full"
                     value={claim.claimedDod || ""}
                     onChange={(e) => setClaim({ ...claim, claimedDod: e.target.value ? Number(e.target.value) : undefined })}
-                    placeholder="e.g. 80 (what the seller/label claims)"
+                    placeholder="e.g. 80"
                     required
                   />
+                  <p className="text-[10px] text-text-muted mt-1 leading-tight">What the seller or label claims</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -103,8 +104,9 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.weightKg || ""}
                       onChange={(e) => setClaim({ ...claim, weightKg: e.target.value ? Number(e.target.value) : undefined })}
-                      placeholder="e.g. 45 — check the label or weigh it yourself"
+                      placeholder="e.g. 45"
                     />
+                    <p className="text-[10px] text-text-muted mt-1 leading-tight">Check label or weigh it</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text-primary mb-1">Usable Capacity (kWh)</label>
@@ -114,8 +116,9 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.claimedUsableKwh || ""}
                       onChange={(e) => setClaim({ ...claim, claimedUsableKwh: e.target.value ? Number(e.target.value) : undefined })}
-                      placeholder="e.g. 4 — leave blank if not stated separately"
+                      placeholder="e.g. 4"
                     />
+                    <p className="text-[10px] text-text-muted mt-1 leading-tight">Leave blank if not stated</p>
                   </div>
                 </div>
 
@@ -127,8 +130,9 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.claimedRtEff || ""}
                       onChange={(e) => setClaim({ ...claim, claimedRtEff: e.target.value ? Number(e.target.value) : undefined })}
-                      placeholder="e.g. 92 — leave blank if unknown"
+                      placeholder="e.g. 92"
                     />
+                    <p className="text-[10px] text-text-muted mt-1 leading-tight">Leave blank if unknown</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text-primary mb-1">Cycle Life</label>
@@ -137,8 +141,9 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.cycleLife || ""}
                       onChange={(e) => setClaim({ ...claim, cycleLife: e.target.value ? Number(e.target.value) : undefined })}
-                      placeholder="e.g. 4000 — number of charge cycles claimed"
+                      placeholder="e.g. 4000"
                     />
+                    <p className="text-[10px] text-text-muted mt-1 leading-tight">Claimed charge cycles</p>
                   </div>
                 </div>
 
@@ -151,8 +156,9 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.claimedAutonomyHours || ""}
                       onChange={(e) => setClaim({ ...claim, claimedAutonomyHours: e.target.value ? Number(e.target.value) : undefined })}
-                      placeholder="e.g. 8 — how long the seller says it'll run your load"
+                      placeholder="e.g. 8"
                     />
+                    <p className="text-[10px] text-text-muted mt-1 leading-tight">Claimed runtime</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text-primary mb-1">At Load (kW)</label>
@@ -162,8 +168,9 @@ export default function CheckBatteryPage() {
                       className="input-field w-full"
                       value={claim.claimedLoadKw || ""}
                       onChange={(e) => setClaim({ ...claim, claimedLoadKw: e.target.value ? Number(e.target.value) : undefined })}
-                      placeholder="e.g. 0.5 — your typical simultaneous load, for autonomy claims"
+                      placeholder="e.g. 0.5"
                     />
+                    <p className="text-[10px] text-text-muted mt-1 leading-tight">Simultaneous load</p>
                   </div>
                 </div>
 

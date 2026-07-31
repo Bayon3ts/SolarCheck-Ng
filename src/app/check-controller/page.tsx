@@ -127,8 +127,9 @@ export default function CheckControllerPage() {
                     value={claim.totalPanelWattsSTC || ""}
                     onChange={(e) => setClaim({ ...claim, totalPanelWattsSTC: e.target.value ? Number(e.target.value) : undefined })}
                     required
-                    placeholder="e.g. 1100 for 2x 550W panels"
+                    placeholder="e.g. 1100"
                   />
+                  <p className="text-[10px] text-text-muted mt-1 leading-tight">For example, 1100 for 2x 550W panels</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -140,8 +141,9 @@ export default function CheckControllerPage() {
                       className="input-field w-full"
                       value={claim.displayedChargingAmps || ""}
                       onChange={(e) => setClaim({ ...claim, displayedChargingAmps: e.target.value ? Number(e.target.value) : undefined })}
-                      placeholder="In strong sun"
+                      placeholder="e.g. 20"
                     />
+                    <p className="text-[10px] text-text-muted mt-1 leading-tight">In strong sun</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text-primary mb-1">Thermal Behavior</label>
