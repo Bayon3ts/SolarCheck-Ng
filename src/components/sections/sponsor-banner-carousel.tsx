@@ -26,6 +26,7 @@ interface Props {
 export default function SponsorBannerCarousel({ banners }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   // Fire impression when slide becomes active
   const fireImpression = useCallback((bannerId: string) => {
@@ -124,16 +125,41 @@ export default function SponsorBannerCarousel({ banners }: Props) {
           className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6"
         >
           {/* Logo */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={activeBanner.logo_url}
-            alt={`${activeBanner.company_name} logo`}
-            className="h-12 w-auto max-w-[120px] object-contain flex-shrink-0"
-            onError={(e) => {
-              // Hide broken logo gracefully
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-            }}
-          />
+          <div className="h-12 w-12 sm:w-[120px] flex-shrink-0 flex items-center sm:justify-start justify-center">
+            {failedImages.has(activeBanner.id) ? (
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <span className="text-sm font-bold text-primary">
+                  {activeBanner.company_name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={activeBanner.logo_url}
+                alt={`${activeBanner.company_name} logo`}
+                className="h-full w-full object-contain object-center sm:object-left"
+                ref={(img) => {
+                  // Catch images that are already cached as broken by the browser
+                  // before React attaches the onError handler
+                  if (img?.complete && img.naturalWidth === 0) {
+                    setFailedImages((prev) => {
+                      if (prev.has(activeBanner.id)) return prev;
+                      const next = new Set(prev);
+                      next.add(activeBanner.id);
+                      return next;
+                    });
+                  }
+                }}
+                onError={() => {
+                  setFailedImages((prev) => {
+                    const next = new Set(prev);
+                    next.add(activeBanner.id);
+                    return next;
+                  });
+                }}
+              />
+            )}
+          </div>
 
           {/* Text */}
           <div className="flex-1 text-center sm:text-left min-w-0">
