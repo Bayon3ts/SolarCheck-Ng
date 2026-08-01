@@ -41,12 +41,74 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { event, data } = validation.data;
+    const event = validation.data.event;
+    const data = validation.data.data;
 
     // 3. Handle charge.success event
     if (event === "charge.success" && data.status === "success") {
       const supabase = createAdminClient();
 
+      // ── Banner payment path ──────────────────────────────────────────────
+      const bannerId = data.metadata?.banner_id as string | undefined;
+      if (bannerId) {
+        const bannerPlan = data.metadata?.plan as string;
+
+        // Safety: validate amount matches expected plan price
+        const { BANNER_PLANS } = await import("@/lib/paystack");
+        const planConfig = bannerPlan in BANNER_PLANS
+          ? BANNER_PLANS[bannerPlan as keyof typeof BANNER_PLANS]
+          : null;
+
+        if (!planConfig) {
+          console.error("[Paystack Webhook] Unknown banner plan:", bannerPlan);
+          return NextResponse.json({ success: true, message: "Acknowledged but unknown plan" });
+        }
+
+        if (data.amount !== planConfig.priceKobo) {
+          console.error(
+            `[Paystack Webhook] Banner amount mismatch: got ${data.amount}, expected ${planConfig.priceKobo}`
+          );
+          return NextResponse.json({ success: true, message: "Acknowledged but amount mismatch" });
+        }
+
+        // Idempotency: fetch current status before updating
+        const { data: existingBanner } = await supabase
+          .from("sponsor_banners")
+          .select("payment_status")
+          .eq("id", bannerId)
+          .single();
+
+        if (existingBanner?.payment_status === "paid") {
+          console.log(`[Paystack Webhook] Banner ${bannerId} already processed — skipping`);
+          return NextResponse.json({ success: true, message: "Already processed" });
+        }
+
+        // Calculate run window (starts_at/ends_at driven by durationDays)
+        const startsAt = new Date();
+        const endsAt = new Date();
+        endsAt.setDate(endsAt.getDate() + planConfig.durationDays);
+
+        // Update banner: payment confirmed, but leave is_active = false for admin review
+        const { error: bannerUpdateError } = await supabase
+          .from("sponsor_banners")
+          .update({
+            payment_status: "paid",
+            // is_active intentionally stays false — admin must publish via dashboard
+            starts_at: startsAt.toISOString(),
+            ends_at: endsAt.toISOString(),
+          })
+          .eq("id", bannerId);
+
+        if (bannerUpdateError) {
+          console.error("[Paystack Webhook] Banner update error:", bannerUpdateError);
+        } else {
+          console.log(`[Paystack Webhook] Banner payment confirmed: ${bannerId} → awaiting admin review`);
+        }
+
+        return NextResponse.json({ success: true, message: "Webhook processed" });
+      }
+
+      // ── Installer subscription path (existing logic) ─────────────────────
       // Extract installer_id and plan from metadata
       const installerId = data.metadata?.installer_id as string;
       const plan = data.metadata?.plan as string;

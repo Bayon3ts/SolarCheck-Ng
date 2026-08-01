@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sun, LayoutDashboard, Users, MessageSquare, BookOpen, Activity, LogOut, Settings } from "lucide-react";
+import { Sun, LayoutDashboard, Users, MessageSquare, BookOpen, Activity, LogOut, Settings, Megaphone } from "lucide-react";
 import { createServerClient as createSSRClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -42,6 +42,12 @@ export default async function AdminLayout({
     .from("installer_applications")
     .select("*", { count: "exact", head: true })
     .eq("status", "pending");
+
+  const { count: bannersAwaitingReview } = await adminDb
+    .from("sponsor_banners")
+    .select("*", { count: "exact", head: true })
+    .eq("payment_status", "paid")
+    .eq("is_active", false);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -96,6 +102,15 @@ export default async function AdminLayout({
           <Link href="/admin/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">
             <Settings className="h-5 w-5 text-white/70" />
             <span>Settings</span>
+          </Link>
+          <Link href="/admin/sponsors" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">
+            <Megaphone className="h-5 w-5 text-white/70" />
+            <span>Sponsors</span>
+            {bannersAwaitingReview !== null && bannersAwaitingReview > 0 && (
+              <span className="ml-auto bg-amber-500 text-white text-xs rounded-full px-2 py-0.5 font-semibold">
+                {bannersAwaitingReview}
+              </span>
+            )}
           </Link>
         </nav>
 

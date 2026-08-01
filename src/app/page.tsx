@@ -9,6 +9,7 @@ import CalculatorTeaser from "@/components/sections/calculator-teaser";
 import VerificationSection from "@/components/sections/verification-section";
 import TestimonialsSection from "@/components/sections/testimonials-section";
 import TrustToolsSection from "@/components/sections/trust-tools-section";
+import SponsorBannerSection from "@/components/sections/sponsor-banner-section";
 
 export const revalidate = 0;
 
@@ -123,6 +124,7 @@ export default async function HomePage() {
         <HowItWorksSection />
         <StatsSection />
         <FeaturedInstallersSection />
+        <SponsorBannerSection />
         <CalculatorTeaser />
         <VerificationSection />
 

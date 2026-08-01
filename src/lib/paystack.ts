@@ -129,3 +129,34 @@ export const SUBSCRIPTION_PLANS = {
     ],
   },
 } as const;
+
+/**
+ * Banner advertising plan pricing (in Naira).
+ */
+
+
+export const BANNER_PLANS = {
+  standard: {
+    name: "Standard Banner",
+    price: 50000,
+    priceKobo: 5000000,
+    durationDays: 30,
+    features: [
+      "Rotates in homepage banner slot",
+      "Equal rotation weight with other active banners",
+      "Basic impressions + clicks report",
+    ],
+  },
+  featured: {
+    name: "Featured Banner",
+    price: 120000,
+    priceKobo: 12000000,
+    durationDays: 30,
+    features: [
+      "2x rotation weight vs standard banners",
+      "Priority placement (shown first in rotation)",
+      "Impressions + clicks report",
+      "\"Featured Partner\" badge on the banner",
+    ],
+  },
+} as const;
