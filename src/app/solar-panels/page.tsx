@@ -32,8 +32,6 @@ export default function SolarPanelsPage() {
           title="Best Solar Panels in Nigeria 2026"
           description="Compare prices, specs, and real reviews of solar panels sold by Nigerian installers — with Naira pricing."
           updatedText="Last updated: June 2026 · Prices from Lagos market"
-          bgImage="/solar-panels-hero.jpg"
-          bgVideo="/Solarchek_img/solar-hero-animation.mp4"
         />
 
         {/* Quick brand links */}
@@ -86,8 +84,13 @@ export default function SolarPanelsPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {SOLAR_PANELS.map((panel) => (
-                <div key={panel.slug} id={panel.brand.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}>
+              {SOLAR_PANELS.map((panel, index) => (
+                <div 
+                  key={panel.slug} 
+                  id={panel.brand.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}
+                  className="animate-slide-up opacity-0"
+                  style={{ animationDelay: `${index * 150}ms` }}
+                >
                   <EquipmentCard product={panel} rating={0} reviewCount={0} />
                 </div>
               ))}

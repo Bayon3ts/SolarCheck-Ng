@@ -1,13 +1,13 @@
+"use client";
+
+import { motion } from "framer-motion";
+
 interface EquipmentHeroProps {
   emoji: string
   badge: string
   title: string
   description: string
   updatedText: string
-  /** Optional photo background (serve from /public, e.g. "/solar-panels-hero.jpg") */
-  bgImage?: string
-  /** Optional video background (serve from /public, e.g. "/video.mp4") */
-  bgVideo?: string
 }
 
 export default function EquipmentHero({
@@ -16,73 +16,73 @@ export default function EquipmentHero({
   title,
   description,
   updatedText,
-  bgImage,
-  bgVideo,
 }: EquipmentHeroProps) {
   return (
-    <div
-      className={`text-white pt-32 md:pt-36 pb-16 text-center relative overflow-hidden ${!bgImage && !bgVideo ? 'bg-primary' : ''}`}
-      style={
-        bgImage && !bgVideo
-          ? {
-              backgroundImage: `url(${bgImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }
-          : undefined
-      }
-    >
-      {/* Video is no longer a background */}
-      {/* Dark gradient overlay — ensures text stays readable over any photo or video */}
-      {(bgImage || bgVideo) && (
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(to bottom, rgba(0,40,20,0.72) 0%, rgba(0,60,30,0.80) 60%, rgba(0,40,20,0.82) 100%)',
-          }}
-        />
-      )}
+    <div className="text-center pt-32 pb-12 bg-gradient-to-b from-primary to-primary-dark px-4 overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* Badge */}
+        <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white text-xs font-semibold px-4 py-2 rounded-full mb-6 backdrop-blur-sm">
+          <motion.span 
+            className="text-accent inline-block"
+            animate={{ 
+              rotate: [0, 15, -15, 0],
+              scale: [1, 1.2, 1]
+            }}
+            transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
+          >
+            {emoji}
+          </motion.span>
+          {badge}
+        </div>
+      </motion.div>
 
-      {/* Subtle diagonal pattern (shown without bgImage, softened with image) */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
-          backgroundSize: '20px 20px',
-          opacity: (bgImage || bgVideo) ? 0.03 : 0.05,
+      <motion.h1 
+        className="text-3xl md:text-5xl font-black mb-4 tracking-tight max-w-4xl mx-auto"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ 
+          duration: 0.7, 
+          type: "spring",
+          bounce: 0.4,
+          delay: 0.1 
         }}
-      />
-
-      <div className={`container-custom relative z-10 flex flex-col md:flex-row items-center gap-8 ${bgVideo ? 'md:text-left' : ''}`}>
-        {bgVideo && (
-          <div className="w-48 h-48 md:w-64 md:h-64 shrink-0 rounded-2xl overflow-hidden relative shadow-2xl border-4 border-white/10">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-              src={bgVideo}
-            />
-          </div>
-        )}
-        
-        <div className={bgVideo ? 'flex-1' : 'w-full'}>
-        <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-1.5 rounded-full text-sm font-semibold mb-4 backdrop-blur-sm">
-          <span>{emoji}</span>
-          <span>{badge}</span>
-        </div>
-        <h1 className={`text-4xl md:text-5xl font-bold mb-4 leading-tight drop-shadow-md ${!bgVideo ? 'max-w-3xl mx-auto' : ''}`}>
+      >
+        <motion.span
+          animate={{ 
+            color: ["#FFFFFF", "#F5A623", "#FFFFFF"],
+            textShadow: [
+              "0px 0px 0px rgba(255,255,255,0)", 
+              "0px 0px 25px rgba(245,166,35,0.6)", 
+              "0px 0px 0px rgba(255,255,255,0)"
+            ]
+          }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
           {title}
-        </h1>
-        <p className={`text-white/80 text-lg mb-4 drop-shadow ${!bgVideo ? 'max-w-2xl mx-auto' : 'max-w-xl'}`}>
-          {description}
-        </p>
-        <p className="text-white/55 text-sm">{updatedText}</p>
-        </div>
-      </div>
+        </motion.span>
+      </motion.h1>
+
+      <motion.p 
+        className="text-white/80 max-w-2xl mx-auto text-base md:text-lg leading-relaxed mb-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.7, delay: 0.3 }}
+      >
+        {description}
+      </motion.p>
+      
+      <motion.p 
+        className="text-white/55 text-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.7, delay: 0.5 }}
+      >
+        {updatedText}
+      </motion.p>
     </div>
   )
 }

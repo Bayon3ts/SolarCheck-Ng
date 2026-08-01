@@ -84,7 +84,7 @@ export default function SolarBatteriesPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {SOLAR_BATTERIES.map((battery) => {
+              {SOLAR_BATTERIES.map((battery, index) => {
                 const fraudReport = detectBatteryFraud({
                   chemistry: battery.chemistry,
                   capacityKwh: battery.capacityKwh,
@@ -92,7 +92,12 @@ export default function SolarBatteriesPage() {
                   claimedDod: battery.dod,
                 });
                 return (
-                  <div key={battery.slug} id={battery.brand.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')} className="flex flex-col gap-3">
+                  <div 
+                    key={battery.slug} 
+                    id={battery.brand.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')} 
+                    className="flex flex-col gap-3 animate-slide-up opacity-0"
+                    style={{ animationDelay: `${index * 150}ms` }}
+                  >
                     <EquipmentCard product={battery} rating={0} reviewCount={0} />
                     <BatteryFraudBadge report={fraudReport} />
                   </div>

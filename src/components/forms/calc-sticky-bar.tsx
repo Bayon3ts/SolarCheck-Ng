@@ -32,40 +32,29 @@ export default function CalcStickyBar({ inputs, results, onRecalculate }: Props)
           exit={{ y: -100 }}
           className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-border shadow-sm pt-[72px]" // Offset for main navbar
         >
-          <div className="container-custom py-3 flex items-center justify-between">
-            <div className="hidden md:flex items-center gap-3 overflow-x-auto text-sm text-text-muted">
-              {/* NEW — Load Analysis label */}
-              <span className="flex-shrink-0 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+          <div className="container-custom py-2 md:py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 overflow-x-auto text-xs md:text-sm text-text-muted flex-1 no-scrollbar pb-1 md:pb-0">
+              {/* Load Analysis label */}
+              <span className="flex-shrink-0 font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
                 📋 Load Analysis
               </span>
 
               {/* Divider */}
               <span className="text-border flex-shrink-0">|</span>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <span className="font-semibold text-text-primary">Location:</span> {inputs.state}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <span className="font-semibold text-text-primary">Current Spend:</span>
                 <span className="text-amber-600 font-bold">₦{(inputs.monthlyBill + inputs.generatorSpend).toLocaleString()}/mo</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <span className="font-semibold text-text-primary">Target:</span> {inputs.coveragePct}% Coverage
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <span className="font-semibold text-text-primary">System:</span>
                 <span className="text-primary font-bold">{results.pvKwp.toFixed(1)}kWp</span>
-              </div>
-            </div>
-
-            {/* Mobile View Summary */}
-            <div className="md:hidden flex items-center gap-3 overflow-x-auto">
-              <span className="flex-shrink-0 text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full whitespace-nowrap">
-                📋 Load Analysis
-              </span>
-              <div className="flex flex-col text-xs text-text-muted flex-shrink-0">
-                <div><span className="font-semibold">State:</span> {inputs.state}</div>
-                <div><span className="font-semibold">Spend:</span> ₦{(inputs.monthlyBill + inputs.generatorSpend).toLocaleString()}</div>
               </div>
             </div>
 
@@ -74,7 +63,7 @@ export default function CalcStickyBar({ inputs, results, onRecalculate }: Props)
                 onRecalculate();
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg font-semibold text-sm transition-colors"
+              className="flex-shrink-0 px-3 py-1.5 md:px-4 md:py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg font-semibold text-xs md:text-sm transition-colors whitespace-nowrap"
             >
               Adjust Inputs
             </button>

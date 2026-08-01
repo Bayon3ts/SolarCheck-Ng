@@ -82,8 +82,13 @@ export default function SolarInvertersPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {SOLAR_INVERTERS.map((inverter) => (
-                <div key={inverter.slug} id={inverter.brand.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}>
+              {SOLAR_INVERTERS.map((inverter, index) => (
+                <div 
+                  key={inverter.slug} 
+                  id={inverter.brand.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}
+                  className="animate-slide-up opacity-0"
+                  style={{ animationDelay: `${index * 150}ms` }}
+                >
                   <EquipmentCard product={inverter} rating={0} reviewCount={0} />
                 </div>
               ))}

@@ -208,7 +208,7 @@ export default function CalculatorDashboard() {
 
             {/* ── CALCULATION LOADING SCREEN ──────────────────────── */}
             {isCalculating && (
-              <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+              <div className="fixed inset-0 z-[100] bg-gray-50/95 backdrop-blur-sm lg:static lg:bg-transparent lg:backdrop-blur-none flex flex-col items-center justify-center min-h-screen lg:min-h-[60vh] space-y-8 px-4">
                 {/* Spinning solar ring */}
                 <div className="relative w-24 h-24">
                   <div className="absolute inset-0 rounded-full border-4 border-slate-100" />
