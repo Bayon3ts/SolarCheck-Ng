@@ -21,33 +21,41 @@ const nextConfig = {
     // production" surprises.
     const csp = [
       "default-src 'self'",
-      // 'unsafe-eval' and 'unsafe-inline' are
-      // required by Next.js itself (React
-      // hydration / inline chunk scripts) — not
-      // safe to remove without breaking the app.
-      // maps.googleapis.com + maps.gstatic.com
-      // are required for the Google Maps
-      // JavaScript API (Places Autocomplete +
-      // satellite roof tracer).
+
+      // 'unsafe-eval' and 'unsafe-inline' are required by Next.js / React hydration.
+      // maps.googleapis.com is required by Google Places Autocomplete (address-search.tsx).
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' " +
         "https://maps.googleapis.com https://maps.gstatic.com",
-      // Maps map tiles, icons, and marker images
-      // load from these domains.
+
+      // Esri World Imagery tile images, Google Satellite tiles (mt0-mt3),
+      // Leaflet marker PNGs from unpkg CDN,
+      // and any Supabase-hosted installer media.
       "img-src 'self' data: blob: " +
-        "https://maps.googleapis.com https://maps.gstatic.com " +
+        "https://server.arcgisonline.com https://*.arcgisonline.com " +
+        "https://mt0.google.com https://mt1.google.com " +
+        "https://mt2.google.com https://mt3.google.com " +
+        "https://*.tile.openstreetmap.org " +
+        "https://*.basemaps.cartocdn.com " +
+        "https://unpkg.com " +
         "https://*.supabase.co https://*.supabase.in " +
         "https://*.googleusercontent.com",
-      // Maps makes XHR/fetch calls to these
-      // domains for tile data and place lookups.
+
+      // connect-src: fetch() / XHR targets:
+      // – NASA POWER climatology API (solar metrics via server proxy)
+      // – Google Maps Places API (address autocomplete XHR)
+      // – Supabase REST + Realtime
+      // Note: Nominatim calls are now replaced by Google Places
       "connect-src 'self' " +
-        "https://maps.googleapis.com https://*.supabase.co " +
-        "https://*.supabase.in " +
-        "https://nominatim.openstreetmap.org",
-      // Google Fonts, if used anywhere in the app —
-      // included defensively since Maps' default
-      // UI controls can pull in Google-hosted fonts.
+        "https://power.larc.nasa.gov " +
+        "https://maps.googleapis.com " +
+        "https://*.supabase.co https://*.supabase.in",
+
       "font-src 'self' data: https://fonts.gstatic.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
     ].join('; ');
 
     return [

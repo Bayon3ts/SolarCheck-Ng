@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { CalculatorResults, CalculatorInputs, LeadCaptureData } from '@/lib/calculator/types';
+import { NasaSolarMetrics } from '@/lib/nasaSolar';
 
 interface Props {
   results: CalculatorResults;
@@ -12,6 +13,7 @@ interface Props {
   onChange?: (updates: Partial<CalculatorInputs>) => void;
   leadSubmitted?: boolean;
   onLeadSubmit: (data: LeadCaptureData) => Promise<void>;
+  nasaMetrics?: NasaSolarMetrics | null;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -124,7 +126,7 @@ function EquipmentCheckCTACard() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props) {
+export default function CalcResultsView({ results, inputs, onLeadSubmit, nasaMetrics }: Props) {
   const [name, setName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [timeline, setTimeline] = useState('ASAP');
@@ -430,6 +432,31 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit }: Props
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* ── NASA METRICS (if available) ────────────────────────────────────── */}
+      {nasaMetrics && (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mt-4">
+          <h4 className="text-slate-700 font-bold mb-3 flex items-center gap-2 text-sm">
+            <span>🛰️</span> NASA-Verified Engineering Breakdown
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-white p-3 rounded-xl border border-slate-100">
+              <div className="text-xs text-slate-500">Peak Sun Hours</div>
+              <div className="text-sm font-bold text-slate-800">{nasaMetrics.annualPeakSunHours.toFixed(2)} kWh/m²/day</div>
+            </div>
+            <div className="bg-white p-3 rounded-xl border border-slate-100">
+              <div className="text-xs text-slate-500">Optimal Roof Tilt</div>
+              <div className="text-sm font-bold text-slate-800">{nasaMetrics.optimalTiltAngle.toFixed(1)}°</div>
+            </div>
+            <div className="bg-white p-3 rounded-xl border border-slate-100">
+              <div className="text-xs text-slate-500">Est. Thermal Loss</div>
+              <div className="text-sm font-bold text-slate-800">
+                -{nasaMetrics.thermalLossPct.toFixed(1)}% <span className="text-[10px] text-slate-400 font-normal">(due to ~{nasaMetrics.avgTemperature.toFixed(1)}°C avg)</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

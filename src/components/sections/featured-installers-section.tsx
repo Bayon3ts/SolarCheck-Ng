@@ -39,12 +39,12 @@ export default async function FeaturedInstallersSection() {
       .eq("is_active", true)
       .order("total_reviews", { ascending: false })
       .limit(12);
-      
+
     if (extraData) {
       // Filter out any featured installers we already have
       const existingIds = new Set(installers.map((i) => i.id));
       const newInstallers = extraData.filter((i) => !existingIds.has(i.id));
-      
+
       installers = [...installers, ...newInstallers].slice(0, 6);
     }
   }
@@ -85,7 +85,7 @@ export default async function FeaturedInstallersSection() {
 
   /* ── Real installers found — render cards ── */
   return (
-    <section className="bg-background section-padding">
+    <section className="bg-background section-padding pb-12 md:pb-16">
       <div className="container-custom">
         <ScrollReveal className="mb-12">
           <h2 className="text-3xl font-bold tracking-tight text-primary-dark md:text-5xl">
@@ -99,7 +99,7 @@ export default async function FeaturedInstallersSection() {
         {/* Client wrapper handles the stagger animation */}
         <InstallerCarousel installers={(installers as unknown as InstallerRow[])} />
 
-        <ScrollReveal className="mt-10 text-center">
+        <ScrollReveal className="mt-8 text-center">
           <Button variant="primary" asChild>
             <Link href="/solar-installers">
               Browse All Installers

@@ -8,11 +8,21 @@ import CalcResultsView from "./calc-results-view";
 import CalcStickyBar from "./calc-sticky-bar";
 
 import { useSearchParams } from "next/navigation";
+import dynamic from 'next/dynamic';
 import { AddressSearch } from '@/components/rooftop/address-search';
-import { RoofTracer } from '@/components/rooftop/roof-tracer';
 import { FitCheckDisplay } from '@/components/rooftop/fit-check-result';
 import { checkPanelFit, FitCheckResult } from '@/lib/rooftop/panel-footprint';
 import { LatLng } from '@/lib/rooftop/roof-area';
+import { getNasaSolarMetrics, NasaSolarMetrics } from '@/lib/nasaSolar';
+
+const RoofCanvas = dynamic(() => import('@/components/rooftop/RoofCanvas'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-64 md:h-80 rounded-xl border border-gray-200 flex items-center justify-center bg-gray-50">
+      <p className="text-sm text-gray-500">Loading satellite view…</p>
+    </div>
+  ),
+});
 
 const DEFAULT_INPUTS: CalculatorInputs = {
   ownershipStatus: "owner",
@@ -47,6 +57,7 @@ export default function CalculatorDashboard() {
   const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
   const [geoCoords, setGeoCoords] = useState<LatLng | null>(null);
   const [fitAnalysis, setFitAnalysis] = useState<FitCheckResult | null>(null);
+  const [nasaMetrics, setNasaMetrics] = useState<NasaSolarMetrics | null>(null);
 
   const calcRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
@@ -286,30 +297,41 @@ export default function CalculatorDashboard() {
                     <div className="p-5 border-t border-gray-100 space-y-5">
                       {!geoCoords ? (
                         <AddressSearch
-                          onAddressSelect={(res) => setGeoCoords({ lat: res.lat, lng: res.lng })}
+                          onAddressSelect={async (res) => {
+                            setGeoCoords({ lat: res.lat, lng: res.lng });
+                            const metrics = await getNasaSolarMetrics(res.lat, res.lng);
+                            if (metrics) {
+                              setNasaMetrics(metrics);
+                            }
+                          }}
                         />
                       ) : (
                         <div className="space-y-5">
-                          <RoofTracer
+                          <RoofCanvas
                             lat={geoCoords.lat}
                             lng={geoCoords.lng}
-                            onAreaCalculated={(traceData) => {
-                              const assessment = checkPanelFit(
-                                results.panelsNeeded,
-                                results.panelSizeWatts,
-                                traceData.usableAreaM2
-                              );
-                              setFitAnalysis(assessment);
+                            onRoofDrawn={(traceData) => {
+                              if (traceData.areaSqm > 0) {
+                                const assessment = checkPanelFit(
+                                  results.panelsNeeded,
+                                  results.panelSizeWatts,
+                                  traceData.areaSqm
+                                );
+                                setFitAnalysis(assessment);
+                              } else {
+                                setFitAnalysis(null);
+                              }
                             }}
                           />
 
-                          {fitAnalysis && <FitCheckDisplay result={fitAnalysis} />}
+                          {fitAnalysis && <FitCheckDisplay result={fitAnalysis} nasaMetrics={nasaMetrics} />}
 
                           <button
                             type="button"
                             onClick={() => {
                               setGeoCoords(null);
                               setFitAnalysis(null);
+                              setNasaMetrics(null);
                             }}
                             className="text-xs text-gray-500 underline hover:text-gray-800 block pt-1"
                           >
@@ -327,6 +349,7 @@ export default function CalculatorDashboard() {
                   onChange={updateInputs}
                   leadSubmitted={leadSubmitted}
                   onLeadSubmit={handleLeadSubmit}
+                  nasaMetrics={nasaMetrics}
                 />
               </div>
             ) : !isCalculating ? (

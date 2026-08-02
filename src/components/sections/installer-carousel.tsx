@@ -47,9 +47,12 @@ export default function InstallerCarousel({ installers }: InstallerCarouselProps
                     src={installer.cover_image_url}
                     alt={`${installer.company_name} banner`}
                     className="absolute inset-0 h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
                   />
                 )}
-                
+
                 {/* Featured Badge - Top Left */}
                 {(installer.subscription_tier === 'featured' || installer.subscription_tier === 'premium') && (
                   <span className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-200 to-yellow-400 px-2.5 py-1 text-xs font-bold text-amber-900 shadow-md">
@@ -70,17 +73,19 @@ export default function InstallerCarousel({ installers }: InstallerCarouselProps
               <div className="p-6">
                 {/* Logo: use logo_url if present, else initial-letter circle */}
                 <div className="-mt-12 mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-white bg-primary shadow-md overflow-hidden relative z-10">
-                  {installer.logo_url ? (
+                  <span className="text-lg font-bold text-white">
+                    {installer.company_name.charAt(0)}
+                  </span>
+                  {installer.logo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={installer.logo_url}
                       alt={`${installer.company_name} logo`}
-                      className="h-full w-full object-cover"
+                      className="absolute inset-0 h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
                     />
-                  ) : (
-                    <span className="text-lg font-bold text-white">
-                      {installer.company_name.charAt(0)}
-                    </span>
                   )}
                 </div>
 
