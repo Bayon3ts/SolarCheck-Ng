@@ -4,6 +4,7 @@ import { CheckCircle2, TrendingUp, Users, Zap, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import { createServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "For Solar Installers | Grow Your Business with SolarCheck",
@@ -33,7 +34,11 @@ const BENEFITS = [
   }
 ];
 
-export default function ForInstallersPage() {
+export default async function ForInstallersPage() {
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isLoggedIn = !!user;
+
   return (
     <>
       <Navbar />
@@ -125,7 +130,9 @@ export default function ForInstallersPage() {
                   <li className="flex items-center gap-3 text-text-muted opacity-50"><CheckCircle2 className="h-5 w-5 text-gray-300" /> Pay-per-lead only</li>
                 </ul>
                 <Button variant="outline" className="w-full" asChild>
-                  <Link href="/installers/register?plan=free">Get Started Free</Link>
+                  <Link href={isLoggedIn ? "/dashboard?tab=settings" : "/installers/register?plan=free"}>
+                    {isLoggedIn ? "Upgrade in Dashboard" : "Get Started Free"}
+                  </Link>
                 </Button>
               </div>
 
@@ -146,7 +153,9 @@ export default function ForInstallersPage() {
                   <li className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-accent" /> Priority Support</li>
                 </ul>
                 <Button variant="secondary" className="w-full text-primary-dark" asChild>
-                  <Link href="/installers/register?plan=featured">Choose Featured</Link>
+                  <Link href={isLoggedIn ? "/dashboard?tab=settings" : "/installers/register?plan=featured"}>
+                    {isLoggedIn ? "Upgrade in Dashboard" : "Choose Featured"}
+                  </Link>
                 </Button>
               </div>
 
@@ -164,7 +173,9 @@ export default function ForInstallersPage() {
                   <li className="flex items-center gap-3 text-text-muted"><CheckCircle2 className="h-5 w-5 text-primary" /> Access to Exclusive Leads</li>
                 </ul>
                 <Button variant="outline" className="w-full" asChild>
-                  <Link href="/installers/register?plan=premium">Choose Premium</Link>
+                  <Link href={isLoggedIn ? "/dashboard?tab=settings" : "/installers/register?plan=premium"}>
+                    {isLoggedIn ? "Upgrade in Dashboard" : "Choose Premium"}
+                  </Link>
                 </Button>
               </div>
             </div>
