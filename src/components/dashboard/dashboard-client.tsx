@@ -260,7 +260,31 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+
   const router = useRouter();
+
+  const handleUpgrade = async (plan: 'featured' | 'premium') => {
+    setUpgradeLoading(true);
+    try {
+      const res = await fetch('/api/payments/initialize-upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.data?.checkoutUrl) {
+        window.location.href = data.data.checkoutUrl;
+      } else {
+        throw new Error(data.error || 'Failed to initialize payment');
+      }
+    } catch (err: any) {
+      console.error('Upgrade failed:', err);
+      alert(`Upgrade failed: ${err.message}`);
+      setUpgradeLoading(false);
+    }
+  };
 
   const toggle = (key: 'services' | 'states_covered', val: string) =>
     setForm(p => ({
@@ -297,11 +321,75 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
               : 'No active subscription'}
           </p>
         </div>
-        <Link href="/for-installers/apply?plan=featured"
-          className="bg-[#1A5E38] text-white text-xs font-bold px-4 py-2.5 rounded-full hover:bg-[#0F3D24] transition-colors">
+        <button 
+          onClick={() => setShowUpgradeModal(true)}
+          className="bg-[#1A5E38] text-white text-xs font-bold px-4 py-2.5 rounded-full hover:bg-[#0F3D24] transition-colors"
+        >
           Upgrade
-        </Link>
+        </button>
       </div>
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', background: 'rgba(13,27,18,0.55)' }}>
+          <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8">
+            <button 
+              onClick={() => setShowUpgradeModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+            <h2 className="text-2xl font-black text-gray-900 mb-2">Upgrade Your Plan</h2>
+            <p className="text-gray-500 mb-8">Choose the plan that fits your business goals.</p>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Featured */}
+              <div className="border-2 border-[#1A5E38] rounded-2xl p-6 relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1A5E38] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">
+                  Most Popular
+                </div>
+                <h3 className="font-bold text-lg mb-1 text-gray-900">Featured</h3>
+                <div className="text-2xl font-black text-[#1A5E38] mb-4">₦25k <span className="text-sm font-normal text-gray-500">/month</span></div>
+                <ul className="space-y-2 mb-6 text-sm text-gray-600">
+                  <li>✅ Priority listing in search results</li>
+                  <li>✅ Up to 20 shared leads/month</li>
+                  <li>✅ Featured badge on profile</li>
+                  <li>✅ Analytics dashboard</li>
+                  <li>✅ WhatsApp lead notifications</li>
+                </ul>
+                <button 
+                  onClick={() => handleUpgrade('featured')}
+                  disabled={upgradeLoading}
+                  className="w-full bg-[#1A5E38] text-white font-bold py-3 rounded-xl hover:bg-[#0F3D24] transition-colors disabled:opacity-50"
+                >
+                  {upgradeLoading ? 'Processing...' : 'Choose Featured'}
+                </button>
+              </div>
+
+              {/* Premium */}
+              <div className="border-2 border-gray-200 rounded-2xl p-6">
+                <h3 className="font-bold text-lg mb-1 text-gray-900">Premium Partner</h3>
+                <div className="text-2xl font-black text-gray-900 mb-4">₦75k <span className="text-sm font-normal text-gray-500">/month</span></div>
+                <ul className="space-y-2 mb-6 text-sm text-gray-600">
+                  <li>✅ Top of search results</li>
+                  <li>✅ Unlimited shared leads</li>
+                  <li>✅ Exclusive leads option</li>
+                  <li>✅ Premium badge + verified seal</li>
+                  <li>✅ Priority customer support</li>
+                </ul>
+                <button 
+                  onClick={() => handleUpgrade('premium')}
+                  disabled={upgradeLoading}
+                  className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  {upgradeLoading ? 'Processing...' : 'Choose Premium'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-[#FFFFFF] rounded-2xl border border-[#E5E5E0] shadow-sm p-8 space-y-8">
         <section className="space-y-4">
