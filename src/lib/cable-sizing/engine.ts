@@ -19,21 +19,35 @@ export interface CableSpec {
 }
 
 const COPPER_COST_PER_METER: Record<number, { min: number; max: number }> = {
-  1.5: { min: 350, max: 550 },
-  2.5: { min: 550, max: 850 },
-  4: { min: 850, max: 1300 },
-  6: { min: 1250, max: 1900 },
-  10: { min: 2000, max: 3000 },
-  16: { min: 3200, max: 4800 },
-  25: { min: 5000, max: 7500 },
-  35: { min: 7000, max: 10500 },
-  50: { min: 9500, max: 14500 },
-  70: { min: 13500, max: 20000 },
-  95: { min: 18000, max: 27000 },
-  120: { min: 23000, max: 34000 },
+  1.5: { min: 800, max: 1200 },
+  2.5: { min: 1500, max: 2500 },
+  4: { min: 2000, max: 4000 },
+  6: { min: 2500, max: 5000 },
+  10: { min: 5000, max: 8000 },
+  16: { min: 5700, max: 7000 }, // Based on ~2850-3500 per single core, doubled for +/-
+  25: { min: 8400, max: 10000 },
+  35: { min: 12000, max: 17000 },
+  50: { min: 18000, max: 24000 },
+  70: { min: 26000, max: 34000 },
+  95: { min: 36000, max: 54000 },
+  120: { min: 46000, max: 68000 },
 };
 
-function selectGauge(amps: number): number {
+function selectSolarToMpptGauge(amps: number): number {
+  if (amps <= 15) return 2.5;
+  if (amps <= 30) return 4;
+  if (amps <= 40) return 6;
+  if (amps <= 50) return 10;
+  if (amps <= 80) return 16;
+  if (amps <= 100) return 25;
+  if (amps <= 140) return 35;
+  if (amps <= 170) return 50;
+  if (amps <= 250) return 70;
+  return 95; 
+}
+
+function selectInverterToBatteryGauge(amps: number): number {
+  // Temporary fallback until updated by user
   if (amps < 10) return 2.5;
   if (amps < 20) return 4;
   if (amps < 30) return 6;
@@ -42,14 +56,30 @@ function selectGauge(amps: number): number {
   if (amps < 80) return 25;
   if (amps < 120) return 35;
   if (amps < 150) return 50;
-  return 70; // Max allowed by spec up to 200A
+  return 70; 
 }
+
+function selectInverterToDbGauge(amps: number): number {
+  // Temporary fallback until updated by user
+  if (amps < 10) return 2.5;
+  if (amps < 20) return 4;
+  if (amps < 30) return 6;
+  if (amps < 40) return 10;
+  if (amps < 60) return 16;
+  if (amps < 80) return 25;
+  if (amps < 120) return 35;
+  if (amps < 150) return 50;
+  return 70; 
+}
+
+type SystemPart = 'solar-to-mppt' | 'battery-to-inverter' | 'inverter-to-db';
 
 function buildCableSpec(
   label: string,
   totalPowerW: number,
   voltageV: number,
   systemType: 'DC' | 'AC Single Phase' | 'AC Three Phase',
+  systemPart: SystemPart,
   runLengthM?: number
 ): CableSpec {
   if (totalPowerW == null || voltageV == null || !systemType) {
@@ -57,7 +87,14 @@ function buildCableSpec(
   }
 
   const calculatedAmps = totalPowerW / voltageV;
-  const gaugeMm2 = selectGauge(calculatedAmps);
+  let gaugeMm2 = 6;
+  if (systemPart === 'solar-to-mppt') {
+    gaugeMm2 = selectSolarToMpptGauge(calculatedAmps);
+  } else if (systemPart === 'battery-to-inverter') {
+    gaugeMm2 = selectInverterToBatteryGauge(calculatedAmps);
+  } else if (systemPart === 'inverter-to-db') {
+    gaugeMm2 = selectInverterToDbGauge(calculatedAmps);
+  }
   const pricePerMeter = COPPER_COST_PER_METER[gaugeMm2] ?? { min: 0, max: 0 };
 
   let totalCostNaira: { min: number; max: number } | undefined;
@@ -122,6 +159,7 @@ export function buildCableSpecReport(input: CableSizingInput): FullCableSpecRepo
     inverterKva * 1000,
     batteryVoltage,
     'DC',
+    'battery-to-inverter',
     batteryToInverterM
   );
 
@@ -131,6 +169,7 @@ export function buildCableSpecReport(input: CableSizingInput): FullCableSpecRepo
     totalPanelWatts,
     batteryVoltage,
     'DC',
+    'solar-to-mppt',
     panelsToMpptM
   );
 
@@ -140,6 +179,7 @@ export function buildCableSpecReport(input: CableSizingInput): FullCableSpecRepo
     inverterKva * 1000,
     230, // Using 230V Single Phase
     'AC Single Phase',
+    'inverter-to-db',
     inverterToDbM
   );
 
