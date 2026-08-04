@@ -678,6 +678,14 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
 
         {/* 3. NEPA Bill */}
         <div className="mb-6">
+          {inputs.systemMode === 'off-grid' && (
+            <div className="mb-2 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+              <span className="text-blue-500 text-xs mt-0.5 shrink-0">ℹ️</span>
+              <p className="text-xs text-blue-800 leading-relaxed">
+                Off-grid systems eliminate grid &amp; generator dependency. These values are used only to calculate your payback period.
+              </p>
+            </div>
+          )}
           <NairaInput
             label="Monthly NEPA Bill"
             sublabel="Your average electricity bill per month"
@@ -819,7 +827,16 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                       type="radio"
                       name="systemMode"
                       checked={inputs.systemMode === mode.id}
-                      onChange={() => onChange({ systemMode: mode.id as import("@/lib/calculator/types").SystemMode })}
+                      onChange={() => {
+                        const newMode = mode.id as import("@/lib/calculator/types").SystemMode;
+                        // Auto-upgrade autonomy to 2 days when switching to off-grid
+                        // (0.5 and 1 day are invalid for pure off-grid operation)
+                        if (newMode === 'off-grid' && inputs.autonomyDays < 1.5) {
+                          onChange({ systemMode: newMode, autonomyDays: 2 });
+                        } else {
+                          onChange({ systemMode: newMode });
+                        }
+                      }}
                       className="accent-primary w-4 h-4"
                     />
                     <div>
@@ -837,27 +854,67 @@ export default function CalcInputSidebar({ inputs, onChange, onCalculate, hasCal
                 <div className="flex justify-between items-end">
                   <div>
                     <label className="block text-sm font-semibold text-text-primary">Autonomy Requirement</label>
-                    <p className="text-xs text-text-muted mt-0.5">How long the battery lasts without sun/grid</p>
+                    <p className="text-xs text-text-muted mt-0.5">
+                      {inputs.systemMode === 'off-grid'
+                        ? 'Days of power without sun or generator'
+                        : 'How long the battery lasts without sun/grid'}
+                    </p>
                   </div>
-                  <span className="text-sm font-bold text-primary">{inputs.autonomyDays === 0.5 ? "Half Day" : inputs.autonomyDays === 1 ? "1 Day" : "2+ Days"}</span>
+                  <span className="text-sm font-bold text-primary">
+                    {inputs.systemMode === 'off-grid'
+                      ? (inputs.autonomyDays >= 2.5 ? '2.5 Days' : inputs.autonomyDays >= 2 ? '2 Days' : '1.5 Days')
+                      : (inputs.autonomyDays === 0.5 ? 'Half Day' : inputs.autonomyDays === 1 ? '1 Day' : '2+ Days')}
+                  </span>
                 </div>
-                <input
-                  type="range"
-                  min={0.5} max={2.5} step={0.5}
-                  value={inputs.autonomyDays}
-                  onChange={e => {
-                    const val = Number(e.target.value);
-                    // Snap to valid values (0.5, 1, 2)
-                    const snapped = val <= 0.5 ? 0.5 : val <= 1.5 ? 1 : 2;
-                    onChange({ autonomyDays: snapped });
-                  }}
-                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary"
-                />
-                <div className="flex justify-between text-[10px] text-text-muted px-1 font-medium">
-                  <span>0.5 Day (Night only)</span>
-                  <span>1 Day (Standard)</span>
-                  <span>2+ Days (Resilient)</span>
-                </div>
+
+                {inputs.systemMode === 'off-grid' ? (
+                  /* Off-grid slider: min 1.5 days, steps [1.5, 2, 2.5] */
+                  <>
+                    <input
+                      type="range"
+                      min={1.5} max={2.5} step={0.5}
+                      value={Math.max(inputs.autonomyDays, 1.5)}
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        const snapped = val <= 1.5 ? 1.5 : val <= 2 ? 2 : 2.5;
+                        onChange({ autonomyDays: snapped });
+                      }}
+                      className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                    />
+                    <div className="flex justify-between text-[10px] text-text-muted px-1 font-medium">
+                      <span>1.5 Days (Min.)</span>
+                      <span>2 Days (Recommended)</span>
+                      <span>2.5 Days (Extreme)</span>
+                    </div>
+                    {/* Off-grid autonomy warning banner */}
+                    <div className="mt-2 flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2.5">
+                      <span className="text-orange-500 text-sm mt-0.5 shrink-0">⚠️</span>
+                      <p className="text-xs text-orange-800 leading-relaxed">
+                        <strong>Off-grid minimum:</strong> 1.5–2 days of battery autonomy is required to survive multi-day rainy/cloudy periods <strong>without a generator.</strong>
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  /* Hybrid slider: 0.5 / 1 / 2 days */
+                  <>
+                    <input
+                      type="range"
+                      min={0.5} max={2.5} step={0.5}
+                      value={inputs.autonomyDays}
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        const snapped = val <= 0.5 ? 0.5 : val <= 1.5 ? 1 : 2;
+                        onChange({ autonomyDays: snapped });
+                      }}
+                      className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary"
+                    />
+                    <div className="flex justify-between text-[10px] text-text-muted px-1 font-medium">
+                      <span>0.5 Day (Night only)</span>
+                      <span>1 Day (Standard)</span>
+                      <span>2+ Days (Resilient)</span>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

@@ -299,40 +299,155 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit, nasaMet
           <div className="mt-2"><SufficiencyBadge val={r.batterySufficiency} /></div>
         </div>
 
-        {/* Night Autonomy */}
+        {/* Night / Power Autonomy */}
         <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200/60 rounded-2xl p-4">
-          <div className="text-2xl mb-1">🌙</div>
+          <div className="text-2xl mb-1">{inputs.systemMode === 'off-grid' ? '⚡' : '🌙'}</div>
           {r.nightLoadKwh > 0 ? (
             <>
-              <div className="text-2xl font-black text-slate-700 leading-none">{r.autonomyHours.toFixed(1)}<span className="text-base font-semibold">hrs</span></div>
-              <div className="text-xs text-text-muted mt-1">Night autonomy</div>
-              <div className="mt-2">
-                {/* Badge driven by nightCoverageRatio, not capped autonomyHours —
-                    autonomyHours hits a 12h ceiling (or multi-night uncapped values)
-                    regardless of true safety margin, which previously caused
-                    "Full night covered" / "Limited night backup" mislabels. */}
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.nightCoverageRatio >= 1.3 ? 'bg-green-100 text-green-700' :
-                  r.nightCoverageRatio >= 1.1 ? 'bg-amber-100 text-amber-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>{r.nightCoverageRatio >= 1.3 ? 'Full night covered' : r.nightCoverageRatio >= 1.1 ? 'Tight — expect drops' : 'Limited night backup'}</span>
-              </div>
+              {inputs.systemMode === 'off-grid' && r.offGridResilience ? (
+                <>
+                  <div className="text-2xl font-black text-slate-700 leading-none">
+                    {r.offGridResilience.autonomyBufferDays.toFixed(1)}<span className="text-base font-semibold">d</span>
+                  </div>
+                  <div className="text-xs text-text-muted mt-1">Power autonomy</div>
+                  <div className="mt-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                      {r.offGridResilience.autonomyBufferDays >= 2 ? 'Resilient' : 'Minimum'} off-grid
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-black text-slate-700 leading-none">{r.autonomyHours.toFixed(1)}<span className="text-base font-semibold">hrs</span></div>
+                  <div className="text-xs text-text-muted mt-1">Night autonomy</div>
+                  <div className="mt-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.nightCoverageRatio >= 1.3 ? 'bg-green-100 text-green-700' :
+                      r.nightCoverageRatio >= 1.1 ? 'bg-amber-100 text-amber-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>{r.nightCoverageRatio >= 1.3 ? 'Full night covered' : r.nightCoverageRatio >= 1.1 ? 'Tight — expect drops' : 'Limited night backup'}</span>
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <>
               <div className="text-2xl font-black text-slate-700 leading-none">—</div>
-              <div className="text-xs text-text-muted mt-1">Night autonomy</div>
+              <div className="text-xs text-text-muted mt-1">{inputs.systemMode === 'off-grid' ? 'Power autonomy' : 'Night autonomy'}</div>
               <div className="mt-2">
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">No night loads</span>
               </div>
             </>
           )}
-          {r.autonomyNote && r.nightLoadKwh > 0 && (
+          {r.autonomyNote && r.nightLoadKwh > 0 && inputs.systemMode !== 'off-grid' && (
             <div className="mt-2 text-[10px] text-slate-500 leading-tight italic">
               Low night load → extends battery life
             </div>
           )}
         </div>
       </div>
+
+      {/* ── OFF-GRID RESILIENCE & RELIABILITY BREAKDOWN ──────────────────── */}
+      {inputs.systemMode === 'off-grid' && r.offGridResilience && (() => {
+        const og = r.offGridResilience!;
+        const rechargeDays = og.arrayRechargeHours / og.designPSH;
+        const rechargeLabel = rechargeDays <= 1.1
+          ? `${og.arrayRechargeHours.toFixed(1)} hrs rated (within 1 day)`
+          : `${og.arrayRechargeHours.toFixed(1)} hrs rated (~${rechargeDays.toFixed(1)} peak-sun days to full)`;
+        return (
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-slate-700 shadow-lg p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">🛡️</span>
+              <div className="flex-1">
+                <h3 className="font-bold text-white text-base leading-tight">Resilience &amp; Reliability Breakdown</h3>
+                <p className="text-slate-400 text-xs mt-0.5">
+                  Off-grid sizing — <span className="font-semibold text-yellow-300">{og.designPSH} PSH</span> worst-case month
+                </p>
+              </div>
+              {/* NASA data source badge */}
+              {inputs.solarData ? (
+                <span className="shrink-0 inline-flex items-center gap-1 bg-[#F5A623] text-slate-900 text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm">
+                  🛰️ Live NASA
+                </span>
+              ) : (
+                <span className="shrink-0 inline-flex items-center gap-1 bg-slate-600/40 border border-slate-500/30 text-slate-400 text-[10px] font-bold px-2 py-1 rounded-full">
+                  📋 Default
+                </span>
+              )}
+            </div>
+
+            {/* Key metrics grid */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-white/5 rounded-xl p-3">
+                <p className="text-slate-400 text-[10px] uppercase tracking-wide">Gross Energy Target</p>
+                <p className="text-white font-black text-lg leading-none mt-1">{og.grossEnergyTargetKwh.toFixed(2)}<span className="text-slate-400 text-sm font-normal"> kWh/day</span></p>
+                <p className="text-slate-500 text-[10px] mt-1">After all system losses</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-3">
+                <p className="text-slate-400 text-[10px] uppercase tracking-wide">Autonomy Buffer</p>
+                <p className="text-white font-black text-lg leading-none mt-1">{og.autonomyBufferDays.toFixed(1)}<span className="text-slate-400 text-sm font-normal"> days</span></p>
+                <p className="text-slate-500 text-[10px] mt-1">Zero-sun power reserve</p>
+              </div>
+            </div>
+
+            {/* Cloud & Recovery Multiplier badge */}
+            <div className="flex items-center gap-2 bg-[#F5A623]/10 border border-[#F5A623]/30 rounded-xl px-3 py-2.5 mb-3">
+              <span className="text-[#F5A623] text-base shrink-0">☁️</span>
+              <div>
+                <p className="text-[#F5A623] text-xs font-bold">Cloud &amp; Recovery Multiplier: {og.cloudRecoveryMult.toFixed(2)}×</p>
+                <p className="text-slate-400 text-[10px] mt-0.5">Array sized {og.cloudRecoveryMult.toFixed(2)}× above daily load so a depleted battery recharges within ~1 sunny day</p>
+              </div>
+            </div>
+
+            {/* Battery detail */}
+            <div className="bg-white/5 rounded-xl p-3 mb-3 space-y-2">
+              <p className="text-slate-300 text-xs font-semibold uppercase tracking-wide mb-2">🔋 Battery Bank</p>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 text-xs">Gross nameplate</span>
+                <span className="text-white font-bold text-sm">{og.batteryGrossKwh.toFixed(2)} kWh</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 text-xs">Usable (80% DoD)</span>
+                <span className="text-emerald-400 font-bold text-sm">{og.batteryUsableKwh.toFixed(2)} kWh</span>
+              </div>
+              {inputs.solarData && (
+                <div className="flex items-center justify-between pt-1 border-t border-slate-700">
+                  <span className="text-slate-400 text-xs">Thermal derating ({inputs.solarData.peakMaxTempC.toFixed(0)}°C peak)</span>
+                  <span className="text-orange-300 font-bold text-sm">{(inputs.solarData.thermalDeratingFactor * 100).toFixed(1)}% efficiency</span>
+                </div>
+              )}
+              {/* DoD bar */}
+              <div className="pt-1">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-slate-600 rounded-full h-1.5">
+                    <div className="h-1.5 rounded-full bg-emerald-400" style={{ width: '80%' }} />
+                  </div>
+                  <span className="text-[10px] text-slate-400">80% DoD</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Recharge time */}
+            <div className="flex items-start gap-2 bg-white/5 rounded-xl px-3 py-2.5 mb-3">
+              <span className="text-yellow-400 text-base shrink-0">⚡</span>
+              <div>
+                <p className="text-slate-300 text-xs font-semibold">Array Recharge Time</p>
+                <p className="text-white text-sm font-bold">{rechargeLabel}</p>
+                <p className="text-slate-500 text-[10px] mt-0.5">Designed to replenish 1 day of storage per worst-case PSH day</p>
+              </div>
+            </div>
+
+            {/* Surge upscale */}
+            <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${
+              og.hasSurgeUpscale
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                : 'bg-green-500/20 text-green-300 border border-green-500/30'
+            }`}>
+              <span>{og.hasSurgeUpscale ? '⚡' : '✅'}</span>
+              <span>Inverter surge: {og.hasSurgeUpscale ? 'Upscaled 1.5× for inductive loads (AC / pump / fridge)' : 'Standard — no high-surge loads detected'}</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── FRAGILE BATTERY WARNING ─────────────────────────────────────────── */}
       {r.isFragileBatteryWarning && (
@@ -532,14 +647,20 @@ export default function CalcResultsView({ results, inputs, onLeadSubmit, nasaMet
         {/* Grid reliance indicator */}
         <div className="flex items-center justify-between text-xs">
           <span className="text-slate-500 font-medium">Grid reliance</span>
-          <span className={`font-bold px-2 py-0.5 rounded-full ${r.systemVerdict?.systemClass === 'FULL_SOLAR' ? 'bg-green-100 text-green-700' :
-            r.systemVerdict?.systemClass === 'GRID_ASSISTED' ? 'bg-amber-100 text-amber-800' :
-              'bg-orange-100 text-orange-800'
-            }`}>
-            {r.systemVerdict?.systemClass === 'FULL_SOLAR' ? 'Low — solar first' :
-              r.systemVerdict?.systemClass === 'GRID_ASSISTED' ? 'Medium — seasonal' :
-                'High — solar offset'}
-          </span>
+          {inputs.systemMode === 'off-grid' ? (
+            <span className="font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+              None — fully standalone
+            </span>
+          ) : (
+            <span className={`font-bold px-2 py-0.5 rounded-full ${r.systemVerdict?.systemClass === 'FULL_SOLAR' ? 'bg-green-100 text-green-700' :
+              r.systemVerdict?.systemClass === 'GRID_ASSISTED' ? 'bg-amber-100 text-amber-800' :
+                'bg-orange-100 text-orange-800'
+              }`}>
+              {r.systemVerdict?.systemClass === 'FULL_SOLAR' ? 'Low — solar first' :
+                r.systemVerdict?.systemClass === 'GRID_ASSISTED' ? 'Medium — seasonal' :
+                  'High — solar offset'}
+            </span>
+          )}
         </div>
       </div>
 

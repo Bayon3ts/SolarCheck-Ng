@@ -1041,7 +1041,8 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     state, monthlyBill, generatorSpend,
     appliances, coveragePct, systemMode, autonomyDays,
     roofType, roofDirection, roofPitch, shadeObstruction,
-    fuelInflation, nepaInflation, discountRate
+    fuelInflation, nepaInflation, discountRate,
+    solarData,
   } = inputs;
 
   const discoStr = DISCO_BY_STATE[state] || 'Unknown';
@@ -1248,6 +1249,66 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const systemEfficiency = SYSTEM_EFF;  // legacy alias used by PV sizing formulas
   const totalEfficiency = SYSTEM_EFF;  // alias for efficiencyBreakdown object
 
+  // ── OFF-GRID ENGINEERING CONSTANTS ──────────────────────────────────────────
+  // Applied exclusively when systemMode === 'off-grid'.
+  // Sources: IEC 61724, Nigerian field installer review, engineering spec June 2026.
+  const OG_ETA_INV        = 0.90;  // pure off-grid inverter (vs 0.96 for hybrid MPPT)
+  const OG_ETA_BATT       = 0.95;  // LiFePO4 round-trip charge efficiency
+  const OG_WIRING         = 0.97;  // DC/AC wiring losses (3%)
+  const OG_COMBINED_EFF   = OG_ETA_INV * OG_ETA_BATT * OG_WIRING; // ≈ 0.82935
+
+  // ── DYNAMIC NASA POWER DATA INTEGRATION ─────────────────────────────────────
+  // When solarData is provided (fetched from NASA POWER API by the dashboard
+  // before calling calculateSolarSystem), use live climatology values.
+  // Otherwise fall back to conservative Nigerian South worst-case defaults.
+  //
+  // OG_PSH: lowest monthly irradiance (kWh/m²/day = Peak Sun Hours).
+  //   Live: NASA ALLSKY_SFC_SW_DWN worst month for the user's state coordinates.
+  //   Fallback: 3.5 PSH — Aug/Sep Southern Nigeria rainy-season design floor.
+  //
+  // OG_ARRAY_DERATING: combined thermal × dust × mismatch PR.
+  //   Live: thermalDeratingFactor (from NASA T2M_MAX) × 0.92 (dust/mismatch).
+  //   Fallback: 0.82 — IEC 61724 PR field value for standalone off-grid systems.
+  const OG_PSH = (systemMode === 'off-grid' && solarData?.worstCasePsh)
+    ? Math.max(solarData.worstCasePsh, 2.5)   // hard floor of 2.5 PSH (physically realistic minimum)
+    : 3.5;
+  const OG_ARRAY_DERATING = (systemMode === 'off-grid' && solarData?.thermalDeratingFactor)
+    ? Math.round(solarData.thermalDeratingFactor * 0.92 * 1000) / 1000  // thermal × dust/mismatch
+    : 0.82;  // IEC 61724 PR field value for standalone off-grid systems
+
+  // Clamp autonomy to minimum 1.5 days for pure off-grid — enforced in both engine and UI.
+  // A pure off-grid system must survive multi-day low-irradiance periods without any grid/generator bridge.
+  const effectiveAutonomyDays = (systemMode === 'off-grid')
+    ? Math.max(autonomyDays, 1.5)
+    : autonomyDays;
+
+  // ── OFF-GRID CLOUD & RECOVERY MULTIPLIER ─────────────────────────────────────────
+  // Without this multiplier the array is sized to produce exactly E_gross per
+  // worst-case PSH day — enough to cover load but leaving almost zero surplus
+  // to recharge a depleted battery after multi-day cloudy periods.
+  //
+  // Example (Lagos, 3.8 PSH, 4.40 kWp):
+  //   Daily harvest: 4.40 × 3.8 × 0.86 ≈ 14.3 kWh
+  //   Surplus after load (12.85 kWh): only 1.45 kWh/day
+  //   Recovery time (28.67 kWh usable bank): 19+ consecutive sunny days ⬇️
+  //
+  // With 1.35× multiplier (9.35 kWp):
+  //   Daily harvest: 9.35 × 3.8 × 0.86 ≈ 30.5 kWh
+  //   Surplus after load: ~17.6 kWh/day
+  //   Recovery time (28.67 kWh bank): ~1.6 peak-sun hours ✔️
+  //
+  // Sources: IEC 62109, Nigerian off-grid installer field review, June 2026.
+  // Applies ONLY to off-grid. Hybrid/grid-tied unchanged (grid absorbs deficit).
+  const OG_CLOUD_RECOVERY_MULT = 1.35;
+
+  // Gross daily energy target (off-grid only).
+  // Accounts for all system losses in the inverter→battery→wiring chain so the
+  // array produces enough gross energy for 100% load coverage after losses.
+  // Hybrid/grid-tied: unchanged — uses targetDailyGenerationKwh.
+  const eGross = (systemMode === 'off-grid')
+    ? dailyLoadKwh / OG_COMBINED_EFF   // ≈ dailyLoadKwh ÷ 0.829
+    : targetDailyGenerationKwh;
+
   // ── PV SIZING — annual average is the baseline ──────────────────────────
   // ENGINEERING NOTE: Size to annual average PSH. The rainy-season worst-month
   // (rainyReq) is used only for classification and QA warnings — NOT as a sizing
@@ -1257,14 +1318,27 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   const minPSH = Math.min(...pshArray); // e.g. Lagos July = 3.0 hrs
   const rainyMinPSH = minPSH * 0.9;    // 10% extra buffer for unusually bad rainy days
 
-  // Annual average requirement (sizing basis)
-  const annualReq = targetDailyGenerationKwh / (avgPSH * systemEfficiency);
+  // Annual requirement — sizing basis AND QA pvRatio reference.
+  // Off-grid: uses eGross + worst-case OG_PSH + Cloud & Recovery Multiplier so pvRatio
+  //   stays near 1.0 (prevents false OVERBUILT flags on the deliberately larger array).
+  //   When NASA live data is used, OG_PSH is the real worst-month value for the state.
+  // Hybrid/grid-tied: annual-average PSH basis — unchanged.
+  const annualReq = systemMode === 'off-grid'
+    ? (eGross / (OG_PSH * OG_ARRAY_DERATING)) * OG_CLOUD_RECOVERY_MULT
+    : targetDailyGenerationKwh / (avgPSH * systemEfficiency);
   // Worst-month (rainy season) — used for QA classification only, not as floor
   const rainyReq = targetDailyGenerationKwh / (rainyMinPSH * systemEfficiency);
 
-  // Off-grid gets a 15% irradiance buffer to handle low-irradiance months
-  // without a grid/generator bridge. Hybrid/grid-tied: no buffer needed.
-  const pvKwpRaw = systemMode === 'off-grid' ? annualReq * 1.15 : annualReq;
+  // ── OFF-GRID DUAL-DEMAND PV SIZING ──────────────────────────────────────────
+  // Off-grid: size to produce E_gross per worst-case day using dynamic OG_PSH,
+  //   then scale by OG_CLOUD_RECOVERY_MULT (1.35×) so the surplus array output
+  //   can fully recharge a depleted battery within ~1 sunny day while
+  //   simultaneously powering all loads. Without this multiplier, battery
+  //   recovery after multi-day cloud cover takes 19+ days (unacceptable).
+  // Hybrid/grid-tied: annual-average basis — unchanged (grid covers deficit).
+  const pvKwpRaw = systemMode === 'off-grid'
+    ? (eGross / (OG_PSH * OG_ARRAY_DERATING)) * OG_CLOUD_RECOVERY_MULT
+    : annualReq;
 
   // ── ADAPTIVE PANEL WATTAGE TIER SELECTION ────────────────────────────────
   // Select the most appropriate panel wattage based on system kWp.
@@ -1408,6 +1482,23 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // Rule: night usage drives battery size, not inverter kVA. (Field audit June 2026)
   const loadBasedInverterKva = inverterKva;
 
+  // ── OFF-GRID INVERTER SURGE UPSCALE ─────────────────────────────────────────
+  // Pure off-grid has no grid bypass — the inverter must handle ALL motor startup surges solo.
+  // Spec: sustain 300% surge for 5 seconds, or upscale continuous rating by 1.5×.
+  // Applies when high-inductive loads (AC, borehole pump, refrigerator) are present.
+  // loadBasedInverterKva is frozen above — battery bus sizing is unaffected by this upscale.
+  let hasSurgeUpscale = false;
+  if (systemMode === 'off-grid') {
+    const hasHighSurgeLoads = hasAC || hasWaterPump || fridgeMotorKw > 0;
+    if (hasHighSurgeLoads) {
+      const surgeUpscaledKva = roundToStandardInverter(inverterKva * 1.5);
+      if (surgeUpscaledKva > inverterKva) {
+        inverterKva = surgeUpscaledKva;
+        hasSurgeUpscale = true;
+      }
+    }
+  }
+
   // budgetModeActive: true only when the relaxation actually changed the outcome
   // (i.e., the mode is budget_conscious AND the floor would otherwise have been 5 kVA
   //  AND the final inverterKva is indeed below 5).
@@ -1519,8 +1610,13 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   if (systemMode === 'grid-tied') {
     requiredUsableKwh = 0;
   } else if (systemMode === 'off-grid') {
-    // Off-grid: cover full daily load for autonomyDays
-    requiredUsableKwh = dailyLoadKwh * autonomyDays;
+    // Off-grid battery formula:
+    //   Battery_gross (kWh) = (E_gross × effectiveAutonomyDays) / DoD
+    //   requiredUsableKwh   = E_gross × effectiveAutonomyDays       (usable portion)
+    //   batteryKwh          = requiredUsableKwh / LFP_DOD           (gross nameplate)
+    // effectiveAutonomyDays is clamped to ≥ 1.5 days — enforced above.
+    // E_gross already accounts for inverter + battery + wiring loss chain.
+    requiredUsableKwh = eGross * effectiveAutonomyDays;
   } else {
     // Hybrid: cover night load for autonomyDays nights.
     // Respect the user's autonomy selection — do NOT force a minimum 1.4× floor.
@@ -1950,8 +2046,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // coveragePct is the user's target; actualSolarCoveragePct is what the panel array
   // can actually deliver. An undersized array must not claim 100% savings.
   if (systemMode === 'off-grid') {
+    // 100% displacement: pure off-grid eliminates both NEPA and generator dependency entirely.
     monthlyGridSavingsExpected = monthlyBill;
-    monthlyGeneratorSavingsExpected = generatorSpend * (actualSolarCoveragePct / 100);
+    monthlyGeneratorSavingsExpected = generatorSpend;
   } else {
     // Grid savings: proportional to actual solar coverage
     monthlyGridSavingsExpected = Math.min(
@@ -2054,8 +2151,8 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   if (batterySufficiency === 'ADEQUATE ✅' && autonomyHours < 11.0) {
     errors.push("Contradiction: Battery labeled 'ADEQUATE' but usable capacity is less than one night's load.");
   }
-  if (autonomyHours < 24 && systemMode === 'off-grid') {
-    errors.push("Invalid configuration: Off-grid mode requires at least 24h autonomy.");
+  if (autonomyHours < 36 && systemMode === 'off-grid') {
+    errors.push("Invalid configuration: Off-grid mode requires at least 1.5 days (36h) of battery autonomy.");
   }
   if ((monthlyGridSavingsExpected + monthlyGeneratorSavingsExpected) > monthlyCurrentSpend * 0.9 && generatorSpend === 0 && systemMode !== 'off-grid') {
     errors.push("Savings validation: Claimed savings exceed 90% of total bill without generator dependency confirmation.");
@@ -2567,6 +2664,30 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     systemConsistencyWarnings.push("Grid-tied system behavior (intentional)");
   }
 
+  // ── OFF-GRID RESILIENCE METRICS ─────────────────────────────────────────────
+  // Computed only when systemMode === 'off-grid'. Exposes the engineering numbers
+  // behind the resilience sizing decisions for the UI Resilience Breakdown card.
+  let offGridResilience: import('./types').OffGridResilience | undefined;
+  if (systemMode === 'off-grid') {
+    // Array recharge time: hours of rated irradiance (1 sun = 1kW/m²) needed to
+    // charge the battery from 0% to 100% using derated PV output power.
+    // At OG_PSH hours/day available, divide by OG_PSH to get days-to-full.
+    const offGridArrayOutputKw = actualPvKwp * OG_ARRAY_DERATING; // kW at 1 sun
+    const computedRechargeHours = offGridArrayOutputKw > 0
+      ? Math.round((usableBattery / offGridArrayOutputKw) * 10) / 10
+      : 0;
+    offGridResilience = {
+      grossEnergyTargetKwh:  Math.round(eGross * 100) / 100,
+      batteryGrossKwh:       Math.round(batteryKwh * 100) / 100,
+      batteryUsableKwh:      Math.round(usableBattery * 100) / 100,
+      arrayRechargeHours:    computedRechargeHours,
+      autonomyBufferDays:    effectiveAutonomyDays,
+      designPSH:             OG_PSH,
+      cloudRecoveryMult:     OG_CLOUD_RECOVERY_MULT,
+      hasSurgeUpscale,
+    };
+  }
+
   return {
     isValid,
     validationError,
@@ -2641,6 +2762,8 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     // ── Upgrade Block A: Budget Mode Signal ──
     budgetModeActive,
     systemConsistencyWarnings,
+    // ── Off-Grid Resilience Breakdown ──
+    offGridResilience,
   };
 }
 

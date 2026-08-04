@@ -14,6 +14,7 @@ import { FitCheckDisplay } from '@/components/rooftop/fit-check-result';
 import { checkPanelFit, FitCheckResult } from '@/lib/rooftop/panel-footprint';
 import { LatLng } from '@/lib/rooftop/roof-area';
 import { getNasaSolarMetrics, NasaSolarMetrics } from '@/lib/nasaSolar';
+import { fetchStateSolarData, STATE_COORDINATES, SolarClimatology } from '@/lib/nasa-power';
 
 const RoofCanvas = dynamic(() => import('@/components/rooftop/RoofCanvas'), {
   ssr: false,
@@ -58,6 +59,7 @@ export default function CalculatorDashboard() {
   const [geoCoords, setGeoCoords] = useState<LatLng | null>(null);
   const [fitAnalysis, setFitAnalysis] = useState<FitCheckResult | null>(null);
   const [nasaMetrics, setNasaMetrics] = useState<NasaSolarMetrics | null>(null);
+  const [solarDataLoading, setSolarDataLoading] = useState(false);
 
   const calcRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
@@ -95,6 +97,32 @@ export default function CalculatorDashboard() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   }
+
+  // ── NASA POWER: Fetch live solar climatology for off-grid state ─────────────
+  // Triggered whenever the user selects a state AND is in off-grid mode.
+  // The result is injected into inputs.solarData so the calculation engine
+  // can use real worst-case PSH and dynamic thermal derating instead of hardcoded values.
+  useEffect(() => {
+    if (inputs.systemMode !== 'off-grid' || !inputs.state) {
+      // Clear stale solar data when leaving off-grid mode or deselecting state
+      if (inputs.solarData) setInputs(prev => ({ ...prev, solarData: undefined }));
+      return;
+    }
+    const coords = STATE_COORDINATES[inputs.state];
+    if (!coords) return;
+
+    setSolarDataLoading(true);
+    fetchStateSolarData(coords.lat, coords.lon)
+      .then((data: SolarClimatology) => {
+        setInputs(prev => ({ ...prev, solarData: data }));
+        setSolarDataLoading(false);
+      })
+      .catch(() => {
+        // Fetch failed — leave solarData undefined so the engine uses its fallback
+        setSolarDataLoading(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputs.state, inputs.systemMode]);
 
   const results = useMemo(() => {
     // Require state + at least one appliance — bill can be 0 (generator-only users)
@@ -195,6 +223,26 @@ export default function CalculatorDashboard() {
           <span>✓</span> {toastMessage}
         </div>
       </div>
+
+      {/* NASA Solar Data Loading Badge (off-grid only) */}
+      {solarDataLoading && (
+        <div className="fixed bottom-6 right-4 z-50 animate-fade-in">
+          <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg font-medium text-sm flex items-center gap-2">
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            Loading NASA solar data…
+          </div>
+        </div>
+      )}
+      {!solarDataLoading && inputs.systemMode === 'off-grid' && inputs.solarData && (
+        <div className="fixed bottom-6 right-4 z-50 transition-all duration-300">
+          <div className="bg-[#F5A623] text-slate-900 px-4 py-2 rounded-lg shadow-lg font-bold text-sm flex items-center gap-2">
+            <span>🛰️</span> Live NASA data: {inputs.solarData.worstCasePsh.toFixed(1)} PSH worst-case
+          </div>
+        </div>
+      )}
 
       {/* ── MAIN CALCULATOR ───────────────────────────────────── */}
       <div ref={calcRef}>

@@ -68,6 +68,8 @@ export interface CalculatorInputs {
    *   load is below 2 200 W; UI must display a load-management warning banner.
    */
   optimizationMode?: 'maximum_protection' | 'budget_conscious';
+  
+  solarData?: import('../nasa-power').SolarClimatology;
 }
 
 export interface CostBand {
@@ -187,6 +189,25 @@ export interface TruthQAReport {
   flags: { pvBias: boolean; savingsBias: boolean; autonomyBias: boolean };
   finalVerdict: 'Physics-Accurate' | 'Installer-Conservative' | 'Marketing-Biased';
   warnings: string[];
+}
+
+export interface OffGridResilience {
+  /** Gross daily energy target after all system losses (kWh/day) */
+  grossEnergyTargetKwh: number;
+  /** Nameplate battery bank size after snapping to standard rack units (kWh) */
+  batteryGrossKwh: number;
+  /** Usable battery capacity at 80% DoD (kWh) */
+  batteryUsableKwh: number;
+  /** Hours at rated irradiance (1 sun) to charge battery 0→100% */
+  arrayRechargeHours: number;
+  /** Effective autonomy days used for sizing (always ≥ 1.5 for off-grid) */
+  autonomyBufferDays: number;
+  /** Design worst-case PSH floor used for array sizing */
+  designPSH: number;
+  /** Cloud & Recovery Multiplier applied to the PV array (1.35× for standalone off-grid) */
+  cloudRecoveryMult: number;
+  /** True when inverter was upscaled 1.5× for motor/inductive surge loads */
+  hasSurgeUpscale: boolean;
 }
 
 export interface CalculatorResults {
@@ -333,6 +354,14 @@ export interface CalculatorResults {
    * The UI must render a Load Management Alert Banner when this flag is true.
    */
   budgetModeActive: boolean;
+
+  /**
+   * Off-grid resilience engineering breakdown.
+   * Defined only when systemMode === 'off-grid'.
+   * Exposes gross energy target, battery gross/usable, recharge time,
+   * autonomy buffer, design PSH, and inverter surge upscale status.
+   */
+  offGridResilience?: OffGridResilience;
 }
 
 export interface LeadCaptureData {
