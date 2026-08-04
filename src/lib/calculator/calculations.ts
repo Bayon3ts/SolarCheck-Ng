@@ -1056,6 +1056,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   let dayActiveKw = 0;
   let nightActiveKw = 0;
   let simultaneousLoadKw = 0; // for inverter sizing
+  let essentialDayKwh = 0;
   let hasAC = false;
   let hasWaterPump = false;
 
@@ -1107,6 +1108,9 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
 
       const appDayKwh = getApplianceKwh(appDef, dayHrs, 0) * qty * climateFactor;
       dailyLoadKwh += appDayKwh;
+      if (!appDef.id.startsWith('ac_')) {
+        essentialDayKwh += appDayKwh;
+      }
 
       const nightKwh = getApplianceKwh(appDef, 0, nightHrs) * qty * climateFactor;
       nightLoadKwh += nightKwh;
@@ -1610,23 +1614,25 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   if (systemMode === 'grid-tied') {
     requiredUsableKwh = 0;
   } else if (systemMode === 'off-grid') {
-    // Off-grid battery formula:
-    //   Battery_gross (kWh) = (E_gross × effectiveAutonomyDays) / DoD
-    //   requiredUsableKwh   = E_gross × effectiveAutonomyDays       (usable portion)
-    //   batteryKwh          = requiredUsableKwh / LFP_DOD           (gross nameplate)
-    // effectiveAutonomyDays is clamped to ≥ 1.5 days — enforced above.
-    // E_gross already accounts for inverter + battery + wiring loss chain.
-    requiredUsableKwh = eGross * effectiveAutonomyDays;
+    // Off-grid battery formula (separated day/night):
+    // Battery Usable Capacity (kWh) = (Night kWh * Autonomy Days) + (Essential Day kWh * 0.25)
+    requiredUsableKwh = (nightLoadKwh * effectiveAutonomyDays) + (essentialDayKwh * 0.25);
   } else {
     // Hybrid: cover night load for autonomyDays nights.
     // Respect the user's autonomy selection — do NOT force a minimum 1.4× floor.
     requiredUsableKwh = nightLoadKwh * autonomyDays;
   }
 
-  // batteryKwh = requiredUsable / LFP_DOD  (RT_EFF excluded — see note above)
-  let batteryKwh = requiredUsableKwh > 0
-    ? requiredUsableKwh / LFP_DOD
-    : 0;
+  let batteryKwh = 0;
+  if (requiredUsableKwh > 0) {
+    if (systemMode === 'off-grid') {
+      const TEMP_DERATING = 0.87;
+      const OG_ETA_INV = 0.90;
+      batteryKwh = requiredUsableKwh / (LFP_DOD * OG_ETA_INV * TEMP_DERATING);
+    } else {
+      batteryKwh = requiredUsableKwh / LFP_DOD;
+    }
+  }
 
   if (systemMode !== 'grid-tied') {
     if (batteryKwh > 0) {
@@ -1981,6 +1987,7 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
     batteryVoltage,
     inverterKva,
     totalPanelWatts,
+    panelCount: panelsNeeded,
   });
 
   const monthlyCurrentSpend = monthlyBill + generatorSpend;

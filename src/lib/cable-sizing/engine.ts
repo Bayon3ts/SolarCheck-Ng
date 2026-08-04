@@ -33,6 +33,14 @@ const COPPER_COST_PER_METER: Record<number, { min: number; max: number }> = {
   120: { min: 46000, max: 68000 },
 };
 
+// Panel-to-controller cable gauge — keyed by number of panels (installer spec)
+function selectPanelToControllerGaugeByCount(numPanels: number): number {
+  if (numPanels <= 4)  return 4;
+  if (numPanels <= 7)  return 6;
+  if (numPanels <= 10) return 10;
+  return 16; // 12+ panels
+}
+
 function selectSolarToMpptGauge(amps: number): number {
   if (amps <= 15) return 2.5;
   if (amps <= 30) return 4;
@@ -43,7 +51,7 @@ function selectSolarToMpptGauge(amps: number): number {
   if (amps <= 140) return 35;
   if (amps <= 170) return 50;
   if (amps <= 250) return 70;
-  return 95; 
+  return 95;
 }
 
 function selectInverterToBatteryGauge(amps: number): number {
@@ -80,7 +88,8 @@ function buildCableSpec(
   voltageV: number,
   systemType: 'DC' | 'AC Single Phase' | 'AC Three Phase',
   systemPart: SystemPart,
-  runLengthM?: number
+  runLengthM?: number,
+  panelCount?: number
 ): CableSpec {
   if (totalPowerW == null || voltageV == null || !systemType) {
     throw new Error('Missing required inputs for cable sizing validation.');
@@ -89,7 +98,12 @@ function buildCableSpec(
   const calculatedAmps = totalPowerW / voltageV;
   let gaugeMm2 = 6;
   if (systemPart === 'solar-to-mppt') {
-    gaugeMm2 = selectSolarToMpptGauge(calculatedAmps);
+    // panelCount takes priority; fall back to ampacity table if not provided
+    if (panelCount != null && panelCount > 0) {
+      gaugeMm2 = selectPanelToControllerGaugeByCount(panelCount);
+    } else {
+      gaugeMm2 = selectSolarToMpptGauge(calculatedAmps);
+    }
   } else if (systemPart === 'battery-to-inverter') {
     gaugeMm2 = selectInverterToBatteryGauge(calculatedAmps);
   } else if (systemPart === 'inverter-to-db') {
@@ -123,6 +137,7 @@ export interface CableSizingInput {
   batteryVoltage: 12 | 24 | 48;
   inverterKva: number;
   totalPanelWatts: number;
+  panelCount?: number;           // used for panel-to-controller cable gauge lookup
   batteryToInverterM?: number;
   panelsToMpptM?: number;
   inverterToDbM?: number;
@@ -163,14 +178,15 @@ export function buildCableSpecReport(input: CableSizingInput): FullCableSpecRepo
     batteryToInverterM
   );
 
-  // Panels to MPPT
+  // Panels to MPPT (charge controller)
   const panelsToMppt = buildCableSpec(
-    'Solar Panels to MPPT',
+    'Solar Panels to MPPT Controller',
     totalPanelWatts,
     batteryVoltage,
     'DC',
     'solar-to-mppt',
-    panelsToMpptM
+    panelsToMpptM,
+    input.panelCount
   );
 
   // Inverter to DB Board
