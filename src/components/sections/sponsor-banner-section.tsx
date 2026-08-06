@@ -12,7 +12,7 @@ export default async function SponsorBannerSection() {
 
   const { data } = await supabase
     .from("sponsor_banners")
-    .select("id, company_name, logo_url, headline, cta_text, cta_url, plan, placement_location")
+    .select("id, company_name, logo_url, headline, cta_text, cta_url, plan, placement_location, bg_image_url")
     .eq("is_active", true)
     .gt("ends_at", new Date().toISOString())
     .order("plan", { ascending: false });

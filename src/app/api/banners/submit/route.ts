@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { company_name, logo_url, headline, cta_text, cta_url, plan, placementLocation, duration } = body;
+    const { company_name, logo_url, headline, cta_text, cta_url, plan, placementLocation, duration, bg_image_url } = body;
 
     // ── Basic field validation ──────────────────────────────────────────────
     if (!company_name?.trim()) {
@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
         is_active: false,
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
+        ...(bg_image_url ? { bg_image_url: bg_image_url.trim() } : {}),
       })
       .select("id")
       .single();

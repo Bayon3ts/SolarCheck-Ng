@@ -110,8 +110,11 @@ export default function SponsorBannerCarousel({ banners, previewMode = false }: 
         {/* Animated glow accent — only visible when no bg image */}
         {!hasBgImage && (
           <>
-            <div className="pointer-events-none absolute -top-16 -right-16 w-72 h-72 rounded-full bg-emerald-500/20 blur-3xl animate-pulse" />
-            <div className="pointer-events-none absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-emerald-700/10 blur-2xl animate-pulse [animation-delay:1.5s]" />
+            {/* Sunshine effect on the right */}
+            <div className="pointer-events-none absolute -top-16 -right-16 w-80 h-80 rounded-full bg-accent/40 blur-[60px] animate-pulse" />
+            <div className="pointer-events-none absolute top-1/2 -right-10 -translate-y-1/2 w-72 h-72 rounded-full bg-yellow-500/30 blur-[50px] animate-pulse [animation-delay:1s]" />
+            {/* Dark green ambient glow on the left */}
+            <div className="pointer-events-none absolute -bottom-10 -left-10 w-64 h-64 rounded-full bg-emerald-500/20 blur-[50px] animate-pulse [animation-delay:2s]" />
           </>
         )}
 
@@ -123,7 +126,7 @@ export default function SponsorBannerCarousel({ banners, previewMode = false }: 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1, transition: { duration: 0.5 } }}
               exit={{ opacity: 0, transition: { duration: 0.3 } }}
-              className="absolute inset-0 z-0"
+              className="absolute inset-0"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -135,8 +138,7 @@ export default function SponsorBannerCarousel({ banners, previewMode = false }: 
                   setFailedBgs((prev) => new Set(prev).add(activeBanner.id))
                 }
               />
-              {/* Dark left-biased scrim so text is readable while right side shows image */}
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/95 via-emerald-950/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/80 via-emerald-950/20 to-transparent" />
             </motion.div>
           )}
         </AnimatePresence>
