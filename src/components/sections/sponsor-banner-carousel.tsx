@@ -111,10 +111,10 @@ export default function SponsorBannerCarousel({ banners, previewMode = false }: 
         {!hasBgImage && (
           <>
             {/* Sunshine effect on the right */}
-            <div className="pointer-events-none absolute -top-16 -right-16 w-80 h-80 rounded-full bg-accent/40 blur-[60px] animate-pulse" />
-            <div className="pointer-events-none absolute top-1/2 -right-10 -translate-y-1/2 w-72 h-72 rounded-full bg-yellow-500/30 blur-[50px] animate-pulse [animation-delay:1s]" />
+            {/* Subtle emerald glow on the right */}
+            <div className="pointer-events-none absolute -top-16 -right-16 w-80 h-80 rounded-full bg-emerald-500/10 blur-[60px] animate-pulse" />
             {/* Dark green ambient glow on the left */}
-            <div className="pointer-events-none absolute -bottom-10 -left-10 w-64 h-64 rounded-full bg-emerald-500/20 blur-[50px] animate-pulse [animation-delay:2s]" />
+            <div className="pointer-events-none absolute -bottom-10 -left-10 w-64 h-64 rounded-full bg-emerald-500/10 blur-[50px] animate-pulse [animation-delay:2s]" />
           </>
         )}
 
