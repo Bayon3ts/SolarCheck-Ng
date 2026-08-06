@@ -12,7 +12,7 @@ export default async function AdminSponsorsPage() {
   const { data: banners } = await supabase
     .from("sponsor_banners")
     .select(
-      "id, company_name, plan, payment_status, is_active, starts_at, ends_at, impressions, clicks, created_at"
+      "id, company_name, logo_url, headline, cta_text, cta_url, plan, payment_status, is_active, starts_at, ends_at, impressions, clicks, created_at"
     )
     .order("created_at", { ascending: false });
 

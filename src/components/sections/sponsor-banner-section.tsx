@@ -1,24 +1,21 @@
 import { createServerClient } from "@/lib/supabase/server";
 import SponsorBannerCarousel, { type BannerData } from "@/components/sections/sponsor-banner-carousel";
 
-/* ═══════════════════════════════════════ */
-/* SponsorBannerSection — async server    */
-/* component, mirrors the pattern in      */
-/* featured-installers-section.tsx        */
-/* Returns null when no active banners    */
-/* (same convention as testimonials)      */
-/* ═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════ */
+/* SponsorBannerSection — async server component          */
+/* Full-width hero carousel; returns null when no         */
+/* active banners exist                                   */
+/* ═══════════════════════════════════════════════════════ */
 
 export default async function SponsorBannerSection() {
   const supabase = await createServerClient();
 
   const { data } = await supabase
     .from("sponsor_banners")
-    .select("id, company_name, logo_url, headline, cta_text, cta_url, plan")
+    .select("id, company_name, logo_url, headline, cta_text, cta_url, plan, placement_location")
     .eq("is_active", true)
     .gt("ends_at", new Date().toISOString())
-    .order("plan", { ascending: false }); // 'standard' < 'featured' alphabetically puts featured last —
-    // we'll handle weighting in JS below
+    .order("plan", { ascending: false });
 
   if (!data || data.length === 0) return null;
 
@@ -27,7 +24,7 @@ export default async function SponsorBannerSection() {
   for (const banner of data as BannerData[]) {
     weighted.push(banner);
     if (banner.plan === "featured") {
-      weighted.push({ ...banner }); // duplicate to achieve 2x rotation weight
+      weighted.push({ ...banner }); // 2x rotation weight
     }
   }
 
@@ -38,9 +35,8 @@ export default async function SponsorBannerSection() {
   }
 
   return (
-    // py-6 intentional — slim banner strip, not a full content section
-    <section className="py-6 bg-background">
-      <div className="container-custom">
+    <section className="py-8 bg-background">
+      <div className="group w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SponsorBannerCarousel banners={weighted} />
       </div>
     </section>

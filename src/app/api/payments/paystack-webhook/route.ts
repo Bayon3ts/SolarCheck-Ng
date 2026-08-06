@@ -53,20 +53,22 @@ export async function POST(request: NextRequest) {
       if (bannerId) {
         const bannerPlan = data.metadata?.plan as string;
 
-        // Safety: validate amount matches expected plan price
-        const { BANNER_PLANS } = await import("@/lib/paystack");
-        const planConfig = bannerPlan in BANNER_PLANS
-          ? BANNER_PLANS[bannerPlan as keyof typeof BANNER_PLANS]
-          : null;
+        // Safety: validate amount matches expected price from matrix
+        const { BANNER_PRICING_MATRIX } = await import("@/lib/paystack");
+        const durationDays = Number(data.metadata?.duration_days ?? 30) as 7 | 14 | 30;
 
-        if (!planConfig) {
-          console.error("[Paystack Webhook] Unknown banner plan:", bannerPlan);
-          return NextResponse.json({ success: true, message: "Acknowledged but unknown plan" });
+        const validDurations = [7, 14, 30];
+        if (!bannerPlan || !(bannerPlan in BANNER_PRICING_MATRIX) || !validDurations.includes(durationDays)) {
+          console.error("[Paystack Webhook] Unknown banner plan or duration:", bannerPlan, durationDays);
+          return NextResponse.json({ success: true, message: "Acknowledged but unknown plan/duration" });
         }
 
-        if (data.amount !== planConfig.priceKobo) {
+        const tier = bannerPlan as keyof typeof BANNER_PRICING_MATRIX;
+        const priceRow = BANNER_PRICING_MATRIX[tier][durationDays];
+
+        if (data.amount !== priceRow.priceKobo) {
           console.error(
-            `[Paystack Webhook] Banner amount mismatch: got ${data.amount}, expected ${planConfig.priceKobo}`
+            `[Paystack Webhook] Banner amount mismatch: got ${data.amount}, expected ${priceRow.priceKobo}`
           );
           return NextResponse.json({ success: true, message: "Acknowledged but amount mismatch" });
         }
@@ -83,10 +85,10 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: true, message: "Already processed" });
         }
 
-        // Calculate run window (starts_at/ends_at driven by durationDays)
+        // Calculate run window using the confirmed duration
         const startsAt = new Date();
         const endsAt = new Date();
-        endsAt.setDate(endsAt.getDate() + planConfig.durationDays);
+        endsAt.setDate(endsAt.getDate() + durationDays);
 
         // Update banner: payment confirmed, but leave is_active = false for admin review
         const { error: bannerUpdateError } = await supabase

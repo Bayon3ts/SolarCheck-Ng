@@ -131,16 +131,31 @@ export const SUBSCRIPTION_PLANS = {
 } as const;
 
 /**
- * Banner advertising plan pricing (in Naira).
+ * Banner advertising pricing matrix.
+ * Keys: tier → duration in days → price in Naira.
+ * This is the SINGLE source of truth — used by the UI to show dynamic prices
+ * and by the API to resolve the actual amount charged, preventing client-side tampering.
  */
+export const BANNER_PRICING_MATRIX = {
+  standard: {
+    7:  { priceNgn: 15000, priceKobo: 1500000 },
+    14: { priceNgn: 28000, priceKobo: 2800000 },
+    30: { priceNgn: 50000, priceKobo: 5000000 },
+  },
+  featured: {
+    7:  { priceNgn: 35000, priceKobo: 3500000 },
+    14: { priceNgn: 65000, priceKobo: 6500000 },
+    30: { priceNgn: 120000, priceKobo: 12000000 },
+  },
+} as const;
 
+export type BannerTier = keyof typeof BANNER_PRICING_MATRIX;
+export type BannerDuration = keyof typeof BANNER_PRICING_MATRIX[BannerTier];
 
 export const BANNER_PLANS = {
   standard: {
     name: "Standard Banner",
-    price: 50000,
-    priceKobo: 5000000,
-    durationDays: 30,
+    startingFrom: BANNER_PRICING_MATRIX.standard[7].priceNgn,
     features: [
       "Rotates in homepage banner slot",
       "Equal rotation weight with other active banners",
@@ -149,14 +164,12 @@ export const BANNER_PLANS = {
   },
   featured: {
     name: "Featured Banner",
-    price: 120000,
-    priceKobo: 12000000,
-    durationDays: 30,
+    startingFrom: BANNER_PRICING_MATRIX.featured[7].priceNgn,
     features: [
       "2x rotation weight vs standard banners",
       "Priority placement (shown first in rotation)",
       "Impressions + clicks report",
-      "\"Featured Partner\" badge on the banner",
+      '"Featured Partner" badge on the banner',
     ],
   },
 } as const;

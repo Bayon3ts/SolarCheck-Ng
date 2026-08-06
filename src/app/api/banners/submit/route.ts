@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { initializePayment, BANNER_PLANS } from "@/lib/paystack";
+import { initializePayment, BANNER_PLANS, BANNER_PRICING_MATRIX, type BannerDuration } from "@/lib/paystack";
 
 /* ═══════════════════════════════════════ */
 /* POST /api/banners/submit                */
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { company_name, logo_url, headline, cta_text, cta_url, plan } = body;
+    const { company_name, logo_url, headline, cta_text, cta_url, plan, placementLocation, duration } = body;
 
     // ── Basic field validation ──────────────────────────────────────────────
     if (!company_name?.trim()) {
@@ -42,8 +42,19 @@ export async function POST(request: NextRequest) {
     if (!plan || !(plan in BANNER_PLANS)) {
       return NextResponse.json({ success: false, error: "Invalid plan selected." }, { status: 400 });
     }
+    if (!['calculator', 'directory', 'guides'].includes(placementLocation)) {
+      return NextResponse.json({ success: false, error: "Invalid placement selected." }, { status: 400 });
+    }
+    const validDurations = [7, 14, 30];
+    const durationDays = Number(duration);
+    if (!validDurations.includes(durationDays)) {
+      return NextResponse.json({ success: false, error: "Invalid campaign duration. Choose 7, 14, or 30 days." }, { status: 400 });
+    }
 
-    const planConfig = BANNER_PLANS[plan as keyof typeof BANNER_PLANS];
+    // ── Resolve price from the matrix server-side (prevents client tampering) ──
+    const tier = plan as keyof typeof BANNER_PRICING_MATRIX;
+    const priceRow = BANNER_PRICING_MATRIX[tier][durationDays as BannerDuration];
+    const { priceNgn, priceKobo } = priceRow;
     const supabase = createAdminClient();
 
     // ── Generate a unique payment reference ─────────────────────────────────
@@ -52,7 +63,7 @@ export async function POST(request: NextRequest) {
     // ── Calculate placeholder starts_at / ends_at (will be overwritten by webhook) ─
     const startsAt = new Date();
     const endsAt = new Date();
-    endsAt.setDate(endsAt.getDate() + planConfig.durationDays);
+    endsAt.setDate(endsAt.getDate() + durationDays);
 
     // ── Insert pending row ───────────────────────────────────────────────────
     const { data: banner, error: insertError } = await supabase
@@ -64,7 +75,8 @@ export async function POST(request: NextRequest) {
         cta_text: cta_text.trim(),
         cta_url: cta_url.trim(),
         plan,
-        amount_paid: planConfig.priceKobo,
+        placement_location: placementLocation,
+        amount_paid: priceNgn,
         payment_reference: paymentReference,
         payment_status: "pending",
         is_active: false,
@@ -76,22 +88,28 @@ export async function POST(request: NextRequest) {
 
     if (insertError || !banner) {
       console.error("[Banners/Submit] Insert error:", insertError);
-      return NextResponse.json({ success: false, error: "Failed to create banner record." }, { status: 500 });
+      return NextResponse.json({
+        success: false,
+        error: "Failed to create banner record.",
+        detail: insertError?.message ?? "Unknown insert error",
+        hint: insertError?.hint ?? null,
+        code: insertError?.code ?? null,
+      }, { status: 500 });
     }
 
     // ── Initialise Paystack payment ─────────────────────────────────────────
     const paystackRes = await initializePayment({
-      // We need an email — use a placeholder for the advertiser since
-      // we don't collect email on this form (they're businesses, not accounts).
-      // In practice you'd collect it in the form; for now we embed company_name.
       email: `sponsor+${banner.id}@solarcheckng.com`,
-      amount: planConfig.priceKobo,
+      amount: priceKobo,
       reference: paymentReference,
       callback_url: `${process.env.NEXT_PUBLIC_SITE_URL}/advertise?status=success`,
       metadata: {
         banner_id: banner.id,
         plan,
+        duration_days: durationDays,
+        amount_ngn: priceNgn,
         company_name: company_name.trim(),
+        placement_location: placementLocation,
       },
     });
 
