@@ -17,6 +17,7 @@ const RESOURCE_LINKS = [
   { href: "/solar-calculator", label: "Solar calculator" },
   { href: "/get-quotes", label: "Get free quotes" },
   { href: "/for-installers", label: "For installers" },
+  { href: "/advertise", label: "Advertise with Us" },
   { href: "/blog", label: "Blog" },
 ];
 

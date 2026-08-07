@@ -15,6 +15,7 @@ export const revalidate = 0;
 
 import BlogTeaser from "@/components/sections/blog-teaser";
 import FinalCTA from "@/components/sections/final-cta";
+import B2BCalloutSection from "@/components/sections/b2b-callout-section";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { getSiteStats } from "@/lib/supabase/stats";
@@ -134,6 +135,7 @@ export default async function HomePage() {
         <TestimonialsSection />
         <BlogTeaser />
         <FinalCTA leadCount={totalLeads > 0 ? totalLeads : undefined} />
+        <B2BCalloutSection />
       </main>
       <Footer />
     </>

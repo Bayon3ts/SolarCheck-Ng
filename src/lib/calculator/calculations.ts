@@ -1256,10 +1256,10 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
   // ── OFF-GRID ENGINEERING CONSTANTS ──────────────────────────────────────────
   // Applied exclusively when systemMode === 'off-grid'.
   // Sources: IEC 61724, Nigerian field installer review, engineering spec June 2026.
-  const OG_ETA_INV        = 0.90;  // pure off-grid inverter (vs 0.96 for hybrid MPPT)
-  const OG_ETA_BATT       = 0.95;  // LiFePO4 round-trip charge efficiency
-  const OG_WIRING         = 0.97;  // DC/AC wiring losses (3%)
-  const OG_COMBINED_EFF   = OG_ETA_INV * OG_ETA_BATT * OG_WIRING; // ≈ 0.82935
+  const OG_ETA_INV = 0.90;  // pure off-grid inverter (vs 0.96 for hybrid MPPT)
+  const OG_ETA_BATT = 0.95;  // LiFePO4 round-trip charge efficiency
+  const OG_WIRING = 0.97;  // DC/AC wiring losses (3%)
+  const OG_COMBINED_EFF = OG_ETA_INV * OG_ETA_BATT * OG_WIRING; // ≈ 0.82935
 
   // ── DYNAMIC NASA POWER DATA INTEGRATION ─────────────────────────────────────
   // When solarData is provided (fetched from NASA POWER API by the dashboard
@@ -2684,13 +2684,13 @@ export function calculateSolarSystem(inputs: CalculatorInputs): CalculatorResult
       ? Math.round((usableBattery / offGridArrayOutputKw) * 10) / 10
       : 0;
     offGridResilience = {
-      grossEnergyTargetKwh:  Math.round(eGross * 100) / 100,
-      batteryGrossKwh:       Math.round(batteryKwh * 100) / 100,
-      batteryUsableKwh:      Math.round(usableBattery * 100) / 100,
-      arrayRechargeHours:    computedRechargeHours,
-      autonomyBufferDays:    effectiveAutonomyDays,
-      designPSH:             OG_PSH,
-      cloudRecoveryMult:     OG_CLOUD_RECOVERY_MULT,
+      grossEnergyTargetKwh: Math.round(eGross * 100) / 100,
+      batteryGrossKwh: Math.round(batteryKwh * 100) / 100,
+      batteryUsableKwh: Math.round(usableBattery * 100) / 100,
+      arrayRechargeHours: computedRechargeHours,
+      autonomyBufferDays: effectiveAutonomyDays,
+      designPSH: OG_PSH,
+      cloudRecoveryMult: OG_CLOUD_RECOVERY_MULT,
       hasSurgeUpscale,
     };
   }

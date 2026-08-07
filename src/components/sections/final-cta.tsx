@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, Phone } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, Phone, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NIGERIAN_STATES } from "@/lib/validations";
 import ScrollReveal from "@/components/animations/scroll-reveal";
@@ -30,11 +31,11 @@ export default function FinalCTA({ leadCount }: FinalCTAProps) {
   return (
     <section className="bg-primary-dark section-padding">
       <div className="container-custom text-center">
-        <ScrollReveal>
-          <h2 className="text-3xl font-bold tracking-tight text-white md:text-5xl">
+        <ScrollReveal className="flex flex-col items-center">
+          <h2 className="order-1 text-3xl font-bold tracking-tight text-white md:text-5xl">
             Ready to stop overpaying for power?
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-white/70">
+          <p className="order-2 mx-auto mt-4 max-w-xl text-lg text-white/70">
             {leadCount && leadCount > 0
               ? `Join ${leadCount.toLocaleString()}+ Nigerian homeowners who found trusted solar installers through SolarCheck. It's free.`
               : "Join thousands of Nigerian homeowners who found trusted solar installers through SolarCheck. It's free."}

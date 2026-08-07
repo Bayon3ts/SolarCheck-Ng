@@ -207,21 +207,43 @@ export default function Navbar() {
               </button>
             </div>
 
-            <Link
-              href="/for-installers"
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname === "/for-installers"
-                  ? showTransparent
-                    ? "text-white"
-                    : "text-primary"
-                  : showTransparent
-                    ? "text-white/80"
-                    : "text-text-muted"
-              )}
-            >
-              For Installers
-            </Link>
+            {/* For Installers Dropdown */}
+            <div className="group relative h-full flex items-center">
+              <Link
+                href="/for-installers"
+                className={cn(
+                  "flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary",
+                  pathname === "/for-installers" || pathname === "/advertise"
+                    ? showTransparent
+                      ? "text-white"
+                      : "text-primary"
+                    : showTransparent
+                      ? "text-white/80"
+                      : "text-text-muted"
+                )}
+              >
+                For Installers
+                <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+              </Link>
+              
+              {/* Dropdown Menu */}
+              <div className="absolute top-[calc(100%-1rem)] left-1/2 -translate-x-1/2 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-48 flex flex-col">
+                  <Link 
+                    href="/for-installers"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                  >
+                    Installer Dashboard
+                  </Link>
+                  <Link 
+                    href="/advertise"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                  >
+                    Advertise / Get Featured
+                  </Link>
+                </div>
+              </div>
+            </div>
 
             <Link
               href="/solar-calculator"
@@ -653,18 +675,42 @@ export default function Navbar() {
                 </AnimatePresence>
               </div>
 
-              <Link
-                href="/for-installers"
-                className={cn(
-                  "flex items-center justify-between rounded-xl px-4 py-4 text-lg font-medium transition-colors",
-                  pathname === "/for-installers"
-                    ? "bg-primary/5 text-primary"
-                    : "text-text-primary hover:bg-gray-50"
-                )}
-              >
-                For Installers
-                <ChevronRight className="h-5 w-5 text-text-muted" />
-              </Link>
+              <div className="flex flex-col rounded-xl overflow-hidden bg-white">
+                <button
+                  onClick={() => toggleAccordion('for-installers')}
+                  className={cn(
+                    "flex items-center justify-between px-4 py-4 text-lg font-medium transition-colors",
+                    expandedSection === 'for-installers' || pathname === "/for-installers" || pathname === "/advertise"
+                      ? "bg-primary/5 text-primary"
+                      : "text-text-primary hover:bg-gray-50"
+                  )}
+                >
+                  For Installers
+                  <ChevronDown className={cn(
+                    "h-5 w-5 transition-transform",
+                    expandedSection === 'for-installers' ? "rotate-180 text-primary" : "text-text-muted"
+                  )} />
+                </button>
+                <AnimatePresence>
+                  {expandedSection === 'for-installers' && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden bg-gray-50/50"
+                    >
+                      <div className="px-6 py-3 space-y-3 flex flex-col">
+                        <Link href="/for-installers" onClick={() => setIsMobileOpen(false)} className="text-base font-medium text-text-primary hover:text-primary py-1">
+                          Installer Dashboard
+                        </Link>
+                        <Link href="/advertise" onClick={() => setIsMobileOpen(false)} className="text-base font-medium text-text-primary hover:text-primary py-1">
+                          Advertise / Get Featured
+                        </Link>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               <div className="mt-6 space-y-3 px-4">
                 {/* Sign In + Register side by side on mobile */}
