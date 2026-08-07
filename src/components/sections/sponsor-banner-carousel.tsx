@@ -213,7 +213,7 @@ export default function SponsorBannerCarousel({ banners, previewMode = false }: 
         </AnimatePresence>
 
         {/* Sponsored disclosure */}
-        <span className="absolute top-3.5 right-4 z-20 text-[10px] uppercase font-semibold text-white/30 tracking-wider select-none pointer-events-none">
+        <span className="absolute top-4 right-4 z-20 inline-flex items-center text-[10px] uppercase font-bold text-white/80 bg-black/20 backdrop-blur-sm px-2 py-1 rounded-md tracking-wider select-none pointer-events-none">
           Sponsored
         </span>
 
