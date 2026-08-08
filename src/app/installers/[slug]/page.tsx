@@ -1,24 +1,131 @@
 import { Metadata } from "next";
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; // Disable static caching so profile updates appear immediately
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronRight, MapPin, BadgeCheck, CheckCircle2, Star } from "lucide-react";
+import {
+  ChevronRight,
+  MapPin,
+  BadgeCheck,
+  CheckCircle2,
+  Clock,
+  Calendar,
+  Users,
+  Award,
+  Video,
+  ShieldCheck,
+  Zap,
+  ThumbsUp,
+} from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
-import { Button } from "@/components/ui/button";
 import StarRating from "@/components/ui/star-rating";
 import InstallerSidebar from "./installer-sidebar";
+import ClientReviews from "./client-reviews";
+import ClientStickyNav from "./client-sticky-nav";
+import { enrichInstallerWithMockData, MOCK_WORKFLOW_STEPS } from "@/lib/mock-installer-data";
+import { SimilarInstaller } from "@/types/installer";
+
+// ─── Types & Helpers ─────────────────────────────────────────────────────────
+
+type BusinessHoursEntry = { open: string; close: string; closed: boolean };
+type BusinessHours = Partial<Record<string, BusinessHoursEntry>>;
+
+function isOpenNow(businessHours: BusinessHours): boolean | null {
+  if (!businessHours || Object.keys(businessHours).length === 0) return null;
+  const nowUtc = new Date();
+  const lagosOffset = 60;
+  const lagosMs = nowUtc.getTime() + lagosOffset * 60 * 1000;
+  const lagosDate = new Date(lagosMs);
+  const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const todayKey = dayNames[lagosDate.getUTCDay()];
+  const entry = businessHours[todayKey];
+  if (!entry || entry.closed) return false;
+  const hh = lagosDate.getUTCHours();
+  const mm = lagosDate.getUTCMinutes();
+  const nowMins = hh * 60 + mm;
+  const [openH, openM] = entry.open.split(":").map(Number);
+  const [closeH, closeM] = entry.close.split(":").map(Number);
+  const openMins = openH * 60 + openM;
+  const closeMins = closeH * 60 + closeM;
+  return nowMins >= openMins && nowMins < closeMins;
+}
+
+function formatTime(time: string): string {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+function getVideoEmbed(url: string): { type: "youtube" | "vimeo" | "direct"; embedUrl: string } | null {
+  if (!url) return null;
+  const youtubeMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
+  if (youtubeMatch) return { type: "youtube", embedUrl: `https://www.youtube.com/embed/${youtubeMatch[1]}` };
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return { type: "vimeo", embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
+  if (url.match(/\.(mp4|webm|ogg)(\?|$)/i)) return { type: "direct", embedUrl: url };
+  return null;
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function OpenNowBadge({ isOpen }: { isOpen: boolean | null }) {
+  if (isOpen === null) return null;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${
+        isOpen ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
+      }`}
+    >
+      <span className={`h-2 w-2 rounded-full ${isOpen ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+      {isOpen ? "Open now" : "Closed now"}
+    </span>
+  );
+}
+
+function PhotoGallery({ photos }: { photos: string[] }) {
+  if (!photos || photos.length === 0) return null;
+  const primary = photos[0];
+  const thumbnails = photos.slice(1, 3); // TripAdvisor style: 1 large, 2 stacked on the right
+  const remaining = photos.length - 3;
+
+  return (
+    <div className={`grid gap-2 rounded-2xl overflow-hidden ${thumbnails.length > 0 ? "grid-cols-[2fr_1fr]" : ""}`}>
+      <div className="relative h-[300px] md:h-[400px] bg-gray-100">
+        <Image src={primary} alt="Primary installation photo" fill unoptimized={true} className="object-cover" sizes="(max-width: 768px) 100vw, 66vw" />
+      </div>
+      {thumbnails.length > 0 && (
+        <div className={`grid gap-2 ${thumbnails.length >= 2 ? "grid-rows-2" : "grid-rows-1"}`}>
+          {thumbnails.map((url, i) => {
+            const isLast = i === thumbnails.length - 1 && remaining > 0;
+            return (
+              <div key={i} className="relative bg-gray-100 overflow-hidden h-full">
+                <Image src={url} alt={`Installation photo ${i + 2}`} fill unoptimized={true} className="object-cover" sizes="(max-width: 768px) 50vw, 33vw" />
+                {isLast && remaining > 0 && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer hover:bg-black/40 transition-colors">
+                    <span className="text-white text-xl md:text-2xl font-bold">+{remaining} Photos</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Static Generation ───────────────────────────────────────────────────────
 
 export async function generateStaticParams() {
-  // Use the cookie-free admin client — cookies() cannot be called at build time
   const supabase = createAdminClient();
-  const { data: installers } = await supabase
-    .from("installers")
-    .select("slug")
-    .eq("is_active", true);
-
+  const { data: installers } = await supabase.from("installers").select("slug").eq("is_active", true);
   return installers?.map((installer) => ({ slug: installer.slug })) || [];
 }
 
@@ -33,22 +140,29 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!installer) return { title: "Installer Not Found" };
 
   return {
-    title: `${installer.company_name} | Solar Installer in ${installer.city}, ${installer.state}`,
-    description: installer.description ? installer.description.substring(0, 160) + "..." : `View ${installer.company_name}'s profile and reviews on SolarCheck.`,
+    title: `${installer.company_name} | Top Solar Installer in ${installer.city}, ${installer.state}`,
+    description: installer.description
+      ? installer.description.substring(0, 160) + "..."
+      : `View ${installer.company_name}'s profile, pricing, reviews, and portfolio on SolarCheck.`,
   };
 }
 
+// ─── Page Component ──────────────────────────────────────────────────────────
+
 export default async function InstallerProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const supabase = await createServerClient();
+  const slug = (await params).slug;
 
-  const { data: installer } = await supabase
+  const { data: rawInstaller } = await supabase
     .from("installers")
     .select("*")
-    .eq("slug", (await params).slug)
+    .eq("slug", slug)
     .eq("is_active", true)
     .single();
 
-  if (!installer) notFound();
+  if (!rawInstaller) notFound();
+
+  const installer = enrichInstallerWithMockData(rawInstaller);
 
   // Fetch verified reviews
   const { data: reviews } = await supabase
@@ -59,175 +173,293 @@ export default async function InstallerProfilePage({ params }: { params: Promise
     .eq("is_deleted", false)
     .order("created_at", { ascending: false });
 
+  // Fetch similar installers
+  const { data: similarInstallersData } = await supabase
+    .from("installers")
+    .select("id, company_name, slug, city, state, average_rating, total_reviews, services, logo_url")
+    .eq("state", installer.state)
+    .neq("slug", slug)
+    .eq("is_active", true)
+    .limit(3);
+
+  const similarInstallers: SimilarInstaller[] = (similarInstallersData || []).map((si: any) => ({
+    ...si,
+    starting_price: 950 + Math.floor(Math.random() * 200), // mock competitive pricing
+  }));
+
+  const businessHours = (installer.business_hours ?? {}) as BusinessHours;
+  const hoursExist = Object.keys(businessHours).length > 0;
+  const openStatus = isOpenNow(businessHours);
+  const photoUrls: string[] = installer.photo_urls ?? [];
+  const hasPhotos = photoUrls.length > 0;
+  const certifications: string[] = installer.certifications ?? [];
+  const tags = ["Clear Pricing", "Fast Permitting", "Clean Installation", "Great Communication"]; // Mock tags
+
   return (
     <>
       <Navbar />
 
-      {/* LocalBusiness JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "LocalBusiness",
-            "name": installer.company_name,
-            "image": installer.logo_url || installer.cover_image_url || "https://solarcheckng.com/default-installer.png",
+            name: installer.company_name,
+            image:
+              photoUrls[0] ||
+              installer.logo_url ||
+              installer.cover_image_url ||
+              "https://solarcheckng.com/default-installer.png",
             "@id": `https://solarcheckng.com/installers/${installer.slug}`,
-            "url": `https://solarcheckng.com/installers/${installer.slug}`,
-            "telephone": installer.phone || "",
-            "address": {
+            url: `https://solarcheckng.com/installers/${installer.slug}`,
+            telephone: installer.phone || "",
+            address: {
               "@type": "PostalAddress",
-              "streetAddress": installer.address,
-              "addressLocality": installer.city,
-              "addressRegion": installer.state,
-              "addressCountry": "NG"
+              streetAddress: installer.address,
+              addressLocality: installer.city,
+              addressRegion: installer.state,
+              addressCountry: "NG",
             },
-            "geo": {
-              "@type": "GeoCoordinates",
-              "latitude": "9.0820",
-              "longitude": "8.6753"
-            },
-            "aggregateRating": installer.total_reviews > 0 ? {
-              "@type": "AggregateRating",
-              "ratingValue": installer.average_rating,
-              "reviewCount": installer.total_reviews
-            } : undefined
+            aggregateRating:
+              installer.total_reviews > 0
+                ? {
+                    "@type": "AggregateRating",
+                    ratingValue: installer.average_rating,
+                    reviewCount: installer.total_reviews,
+                  }
+                : undefined,
           }),
         }}
       />
 
+      <ClientStickyNav price={installer.starting_price} installerName={installer.company_name} />
+
       <main className="min-h-screen bg-background pt-24 pb-20">
         <div className="container-custom">
           {/* Breadcrumbs */}
-          <nav className="mb-8 flex items-center gap-2 text-sm text-text-muted">
+          <nav className="mb-6 flex items-center gap-2 text-sm text-text-muted">
             <Link href="/" className="hover:text-primary">Home</Link>
             <ChevronRight className="h-4 w-4" />
             <Link href="/solar-installers" className="hover:text-primary">Installers</Link>
             <ChevronRight className="h-4 w-4" />
-            <span className="text-text-primary font-medium">{installer.company_name}</span>
+            <span className="hover:text-primary cursor-pointer">{installer.state}</span>
+            <ChevronRight className="h-4 w-4" />
+            <span className="hover:text-primary cursor-pointer">{installer.city}</span>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-text-primary font-medium truncate max-w-[200px]">
+              {installer.company_name}
+            </span>
           </nav>
 
-          <div className="grid gap-8 lg:grid-cols-3">
-            {/* Main Content (Left) */}
+          {/* Listing Header / Photos */}
+          <div className="grid gap-8 lg:grid-cols-3 relative mt-6">
+            {/* ── Main Content Column (Left) ── */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Profile Header Card */}
-              <div className="card overflow-hidden">
-                {/* Cover Image Placeholder */}
-                <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 w-full object-cover relative">
-                  {installer.cover_image_url && (
-                    <Image
-                      src={installer.cover_image_url}
-                      alt={`${installer.company_name} cover`}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw, 50vw"
-                      className="object-cover"
-                    />
-                  )}
-                </div>
-
-                <div className="p-8">
-                  <div className="flex flex-col md:flex-row gap-6 items-start">
-                    {/* Logo */}
-                    <div className="-mt-16 h-24 w-24 shrink-0 rounded-xl border-4 border-white bg-white shadow-md overflow-hidden relative">
-                      {installer.logo_url ? (
-                        <Image src={installer.logo_url} alt="Logo" fill className="object-contain" />
-                      ) : (
-                        <div className="w-full h-full bg-primary flex items-center justify-center text-3xl font-bold text-white">
-                          {installer.company_name.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h1 className="text-3xl font-bold text-text-primary">{installer.company_name}</h1>
-                        {installer.is_verified && (
-                          <span className="badge-verified"><BadgeCheck className="h-4 w-4" /> Verified Installer</span>
-                        )}
+              
+              {/* Header Info */}
+              <div id="overview" className="space-y-4">
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  <div className={`h-24 w-24 shrink-0 rounded-xl border border-border bg-white shadow-sm overflow-hidden relative flex items-center justify-center ${!hasPhotos ? 'mt-0' : ''}`}>
+                    {installer.logo_url ? (
+                      <Image src={installer.logo_url} alt="Logo" fill className="object-contain p-2" />
+                    ) : (
+                      <span className="text-4xl font-bold text-primary">{installer.company_name.charAt(0)}</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1">
+                    <h1 className="text-3xl font-bold text-text-primary mb-1">{installer.company_name}</h1>
+                    <p className="text-lg text-text-muted mb-3">{installer.tagline}</p>
+                    
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-text-muted">
+                      <div className="flex items-center gap-1.5">
+                        <StarRating rating={installer.average_rating || 0} size="sm" />
+                        <span className="font-bold text-text-primary">{Number(installer.average_rating || 0).toFixed(1)}</span>
+                        <span className="underline cursor-pointer">({installer.total_reviews} reviews)</span>
                       </div>
-
-                      <div className="mt-2 flex flex-wrap items-center gap-4 text-text-muted">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          {installer.address}, {installer.city}, {installer.state}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <StarRating rating={installer.average_rating} size="sm" />
-                          <span className="font-medium text-text-primary ml-1">{installer.average_rating.toFixed(1)}</span>
-                          <span>({installer.total_reviews} reviews)</span>
-                        </div>
+                      <div className="flex items-center gap-1.5 font-medium text-green-700">
+                        <ThumbsUp className="h-4 w-4" /> {installer.recommendation_percentage}% recommended
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" /> {installer.city}, {installer.state}
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  <div className="mt-8">
-                    <h2 className="text-xl font-bold text-text-primary mb-3">About Us</h2>
-                    <p className="text-text-muted leading-relaxed whitespace-pre-wrap">
-                      {installer.description}
-                    </p>
+                {installer.demand_badge && (
+                  <div className="inline-block bg-orange-100 text-orange-800 text-sm font-semibold px-4 py-2 rounded-lg">
+                    {installer.demand_badge}
+                  </div>
+                )}
+              </div>
+
+              {/* Photo Gallery - Positioned exactly like TripAdvisor (below title) */}
+              {hasPhotos && (
+                <div className="mt-6 mb-8">
+                  <PhotoGallery photos={photoUrls} />
+                </div>
+              )}
+
+              {/* Value Guarantees Banner */}
+              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="h-8 w-8 text-primary shrink-0" />
+                  <div>
+                    <h4 className="font-bold text-text-primary">SolaCheck Verified Guarantee</h4>
+                    <p className="text-sm text-text-muted">Lowest Price Guarantee &amp; Free Cancellation.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm font-bold text-primary whitespace-nowrap bg-white px-4 py-2 rounded-xl shadow-sm">
+                  <Zap className="h-4 w-4 fill-primary" />
+                  ₦0 Down Payment Financing
+                </div>
+              </div>
+
+              {/* Tag Filter & Featured Testimonial */}
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold">Why Homeowners Love This Installer</h3>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <span key={tag} className="px-4 py-1.5 bg-white border border-border rounded-full text-sm font-medium text-text-primary shadow-sm hover:border-primary transition-colors cursor-default">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                {installer.featured_testimonial && (
+                  <blockquote className="border-l-4 border-primary pl-4 py-1 italic text-text-muted">
+                    "{installer.featured_testimonial}"
+                  </blockquote>
+                )}
+              </div>
+
+              <hr className="border-border" />
+
+              {/* Description */}
+              {installer.description && (
+                <div className="space-y-3">
+                  <h3 className="text-xl font-bold">About {installer.company_name}</h3>
+                  <p className="text-text-muted whitespace-pre-wrap">{installer.description}</p>
+                </div>
+              )}
+
+              {/* Key Specifications Grid */}
+              <div id="specifications" className="space-y-4 pt-4">
+                <h3 className="text-xl font-bold">Key Specifications</h3>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="card p-4 space-y-1">
+                    <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Coverage Area</div>
+                    <div className="font-medium">{installer.city} &amp; surrounding areas ({installer.state})</div>
+                  </div>
+                  <div className="card p-4 space-y-1">
+                    <div className="text-xs font-bold text-text-muted uppercase tracking-wider">System Capacities</div>
+                    <div className="font-medium">{installer.system_sizes.join(", ")}</div>
+                  </div>
+                  <div className="card p-4 space-y-1">
+                    <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Typical Timeline</div>
+                    <div className="font-medium">2-4 Weeks (Consultation to PTO)</div>
+                  </div>
+                  <div className="card p-4 space-y-1">
+                    <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Languages</div>
+                    <div className="font-medium">{installer.supported_languages?.join(", ")}</div>
+                  </div>
+                  <div className="card p-4 space-y-1 sm:col-span-2">
+                    <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Warranties</div>
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      <div>
+                        <span className="text-sm font-semibold block">{installer.warranties?.workmanship}</span>
+                        <span className="text-xs text-text-muted">Workmanship</span>
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold block">{installer.warranties?.roof_leak}</span>
+                        <span className="text-xs text-text-muted">Roof Leak</span>
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold block">{installer.warranties?.equipment}</span>
+                        <span className="text-xs text-text-muted">Equipment</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
+              <hr className="border-border" />
+
+              {/* Step-by-Step Installation Workflow */}
+              <div id="workflow" className="space-y-6 pt-4">
+                <h3 className="text-xl font-bold">Installation Itinerary</h3>
+                <p className="text-text-muted mb-6">What to expect when you book with {installer.company_name}.</p>
+                <div className="relative pl-6 border-l-2 border-primary/20 space-y-8">
+                  {MOCK_WORKFLOW_STEPS.map((step, index) => (
+                    <div key={step.id} className="relative">
+                      <div className="absolute -left-[35px] top-1 h-4 w-4 rounded-full bg-primary ring-4 ring-white" />
+                      <h4 className="font-bold text-text-primary">{index === 0 ? "Start: " : index === MOCK_WORKFLOW_STEPS.length - 1 ? "End: " : `Step ${index}: `}{step.title}</h4>
+                      <p className="text-sm text-text-muted mt-1">{step.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <hr className="border-border" />
+
               {/* Reviews Section */}
-              <div className="card p-8">
-                <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-bold text-text-primary">Customer Reviews</h2>
+              <div id="reviews" className="space-y-6 pt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-text-primary">Ratings &amp; Reviews</h3>
                   <Button variant="outline" asChild>
                     <Link href={`/installers/${installer.slug}/review`}>Write a Review</Link>
                   </Button>
                 </div>
-
-                {reviews && reviews.length > 0 ? (
-                  <div className="space-y-6 divide-y divide-border">
-                    {reviews.map((review) => (
-                      <div key={review.id} className="pt-6 first:pt-0">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-text-primary">{review.reviewer_name}</span>
-                              {review.is_verified && (
-                                <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <CheckCircle2 className="h-3 w-3" /> Verified Customer
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-text-muted mt-1">
-                              {new Date(review.created_at).toLocaleDateString()}
-                              {review.system_size && ` • ${review.system_size} System`}
-                            </div>
-                          </div>
-                          <StarRating rating={review.rating} size="sm" />
-                        </div>
-                        <h4 className="font-bold text-text-primary mt-3">{review.title}</h4>
-                        <p className="text-text-muted mt-2">{review.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-text-muted">
-                    <Star className="h-12 w-12 mx-auto text-gray-200 mb-3" />
-                    <p>No reviews yet. Be the first to share your experience!</p>
-                  </div>
-                )}
+                
+                <ClientReviews reviews={reviews || []} overallRating={installer.average_rating || 0} />
               </div>
+
             </div>
 
-            {/* Sidebar (Right) — blur-gated client component */}
-            <InstallerSidebar
-              installer={{
-                id: installer.id,
-                company_name: installer.company_name,
-                phone: installer.phone,
-                website: installer.website,
-                services: installer.services,
-                system_sizes: installer.system_sizes,
-                brands_used: installer.brands_used,
-                cac_number: installer.cac_number,
-                slug: installer.slug,
-              }}
-            />
+            {/* ── Sidebar Column (Right) ── */}
+            <div id="company" className="lg:col-span-1">
+              {/* Note: In a real layout, the sidebar itself is sticky, but ClientStickyNav already handles top bar. We apply sticky to the sidebar wrapper. */}
+              <div className="sticky top-32 space-y-6">
+                <InstallerSidebar installer={installer} />
+              </div>
+            </div>
           </div>
+
+          {/* Similar Installers Matrix */}
+          {similarInstallers.length > 0 && (
+            <div className="mt-16 pt-12 border-t border-border">
+              <h3 className="text-2xl font-bold mb-6">Similar Verified Installers in {installer.state}</h3>
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {similarInstallers.map((si) => (
+                  <Link key={si.id} href={`/installers/${si.slug}`} className="card hover:shadow-lg transition-shadow group flex flex-col h-full overflow-hidden">
+                    <div className="h-32 bg-gray-100 flex items-center justify-center p-4 relative">
+                      {si.logo_url ? (
+                        <Image src={si.logo_url} alt={si.company_name} fill className="object-contain p-4 mix-blend-multiply" />
+                      ) : (
+                        <span className="text-3xl font-bold text-gray-300">{si.company_name.charAt(0)}</span>
+                      )}
+                    </div>
+                    <div className="p-5 flex-1 flex flex-col">
+                      <h4 className="font-bold text-lg group-hover:text-primary transition-colors">{si.company_name}</h4>
+                      <div className="flex items-center gap-1.5 text-sm text-text-muted mt-2 mb-4">
+                        <StarRating rating={si.average_rating} size="sm" />
+                        <span className="font-semibold">{Number(si.average_rating).toFixed(1)}</span>
+                        <span>({si.total_reviews})</span>
+                      </div>
+                      <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+                        <span className="text-sm font-medium text-text-primary">From ₦{si.starting_price}/W</span>
+                        <span className="text-primary text-sm font-semibold flex items-center gap-1">
+                          View Profile <ChevronRight className="h-3 w-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
       <Footer />

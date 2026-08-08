@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, X, Plus } from 'lucide-react';
 import { InstallerMediaUpload } from '@/components/ui/installer-media-upload';
-
+import { InstallerMultiMediaUpload } from '@/components/ui/installer-multi-media-upload';
 
 import { SidebarNav } from './sidebar-nav';
 import { StatCard } from './stat-card';
@@ -24,6 +24,11 @@ interface Installer {
   services: string[];
   states_covered: string[];
   years_in_business: string;
+  crew_size: string;
+  certifications: string[];
+  photo_urls: string[];
+  video_url: string;
+  business_hours: Record<string, { open: string; close: string; closed: boolean }>;
   logo_url: string;
   cover_image_url: string;
   subscription_tier: string;
@@ -228,7 +233,7 @@ function LoginOverlay() {
 }
 
 /* ═══════════════════════════════════════════════
-   SETTINGS TAB (Carried over & restyled slightly)
+   SETTINGS TAB
 ═══════════════════════════════════════════════ */
 
 const NIGERIAN_STATES = [
@@ -244,6 +249,117 @@ const SERVICES_LIST = [
   'Off-Grid Systems', 'Hybrid Systems'
 ];
 
+const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+type Day = typeof DAYS[number];
+const DAY_LABELS: Record<Day, string> = {
+  mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday',
+  fri: 'Friday', sat: 'Saturday', sun: 'Sunday'
+};
+
+interface HoursEntry { open: string; close: string; closed: boolean; }
+type BusinessHours = Partial<Record<Day, HoursEntry>>;
+
+const DEFAULT_HOURS: HoursEntry = { open: '08:00', close: '18:00', closed: false };
+
+function CertificationTagInput({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (tags: string[]) => void;
+}) {
+  const [input, setInput] = useState('');
+  const addTag = () => {
+    const trimmed = input.trim();
+    if (trimmed && !value.includes(trimmed)) {
+      onChange([...value, trimmed]);
+    }
+    setInput('');
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2 min-h-[36px]">
+        {value.map((tag) => (
+          <span key={tag} className="flex items-center gap-1 bg-[#1A5E38]/10 text-[#1A5E38] text-xs font-semibold px-3 py-1 rounded-full">
+            {tag}
+            <button type="button" onClick={() => onChange(value.filter(t => t !== tag))} className="hover:text-red-600 ml-1">
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(); } }}
+          placeholder="e.g. NABCEP Certified, ISO 9001…"
+          className="flex-1 border border-[#E5E5E0] rounded-xl px-4 py-2.5 text-sm focus:border-[#1A5E38] outline-none"
+        />
+        <button type="button" onClick={addTag} className="flex items-center gap-1 bg-[#1A5E38] text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-[#0F3D24] transition-colors">
+          <Plus className="h-3.5 w-3.5" /> Add
+        </button>
+      </div>
+      <p className="text-[10px] text-gray-400">Press Enter or comma to add a tag.</p>
+    </div>
+  );
+}
+
+function BusinessHoursEditor({
+  value,
+  onChange,
+}: {
+  value: BusinessHours;
+  onChange: (hours: BusinessHours) => void;
+}) {
+  const getDay = (day: Day): HoursEntry => value[day] ?? { ...DEFAULT_HOURS };
+
+  const updateDay = (day: Day, field: keyof HoursEntry, val: string | boolean) => {
+    onChange({ ...value, [day]: { ...getDay(day), [field]: val } });
+  };
+
+  return (
+    <div className="space-y-3">
+      {DAYS.map(day => {
+        const entry = getDay(day);
+        return (
+          <div key={day} className="grid grid-cols-[120px_1fr] sm:grid-cols-[140px_1fr] items-center gap-4 py-2 border-b border-[#F0F0EC] last:border-0">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!entry.closed}
+                onChange={e => updateDay(day, 'closed', !e.target.checked)}
+                className="w-4 h-4 rounded accent-[#1A5E38]"
+              />
+              <span className="text-sm font-semibold text-[#1A1A1A]">{DAY_LABELS[day]}</span>
+            </label>
+            {entry.closed ? (
+              <span className="text-xs text-gray-400 font-medium">Closed</span>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  value={entry.open}
+                  onChange={e => updateDay(day, 'open', e.target.value)}
+                  className="border border-[#E5E5E0] rounded-lg px-3 py-1.5 text-sm focus:border-[#1A5E38] outline-none"
+                />
+                <span className="text-gray-400 text-xs">to</span>
+                <input
+                  type="time"
+                  value={entry.close}
+                  onChange={e => updateDay(day, 'close', e.target.value)}
+                  className="border border-[#E5E5E0] rounded-lg px-3 py-1.5 text-sm focus:border-[#1A5E38] outline-none"
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLoggedIn: boolean }) {
   const [form, setForm] = useState({
     company_name: installer.company_name || '',
@@ -254,12 +370,17 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
     services: installer.services || [],
     states_covered: installer.states_covered || [],
     years_in_business: installer.years_in_business || '',
+    crew_size: installer.crew_size || '',
+    certifications: installer.certifications || [],
+    photo_urls: installer.photo_urls || [],
+    video_url: installer.video_url || '',
+    business_hours: (installer.business_hours || {}) as BusinessHours,
     logo_url: installer.logo_url || '',
     cover_image_url: installer.cover_image_url || '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-
+  const [saveError, setSaveError] = useState('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
 
@@ -279,9 +400,10 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
       } else {
         throw new Error(data.error || 'Failed to initialize payment');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
       console.error('Upgrade failed:', err);
-      alert(`Upgrade failed: ${err.message}`);
+      alert(`Upgrade failed: ${message}`);
       setUpgradeLoading(false);
     }
   };
@@ -295,15 +417,39 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
   const save = async () => {
     if (!isLoggedIn) return;
     setSaving(true);
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { error } = await supabase.from('installers').update({ ...form }).eq('id', installer.id);
+    setSaveError('');
+    
+    // Clean up data
+    const dataToSave = { ...form };
+    if (dataToSave.website === 'https://') dataToSave.website = '';
+    
+    // Omit fields that are not in the database schema yet to prevent 400 errors
+    delete (dataToSave as any).states_covered;
+    
+    // Basic validation
+    if (!dataToSave.years_in_business) {
+      setSaveError('Please select Years in Business.');
+      setSaving(false);
+      return;
+    }
+    if (!dataToSave.crew_size) {
+      setSaveError('Please select Crew / Fleet Size.');
+      setSaving(false);
+      return;
+    }
+
+    // Call Server Action to bypass RLS policies which are missing for UPDATE
+    const { updateInstallerProfile } = await import('@/app/dashboard/actions');
+    const result = await updateInstallerProfile(installer.id, dataToSave);
+    
     setSaving(false);
-    if (!error) {
+    
+    if (!result.success) {
+      console.error('Save error raw:', result.error);
+      setSaveError(result.error || 'Database update failed. Check payload constraints.');
+    } else {
       setSaved(true);
-      router.refresh(); // Invalidate Next.js router cache to get fresh installer data
+      router.refresh();
       setTimeout(() => setSaved(false), 3000);
     }
   };
@@ -321,7 +467,7 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
               : 'No active subscription'}
           </p>
         </div>
-        <button 
+        <button
           onClick={() => setShowUpgradeModal(true)}
           className="bg-[#1A5E38] text-white text-xs font-bold px-4 py-2.5 rounded-full hover:bg-[#0F3D24] transition-colors"
         >
@@ -332,23 +478,14 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
       {/* Upgrade Modal */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-             style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', background: 'rgba(13,27,18,0.55)' }}>
+          style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', background: 'rgba(13,27,18,0.55)' }}>
           <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8">
-            <button 
-              onClick={() => setShowUpgradeModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              ✕
-            </button>
+            <button onClick={() => setShowUpgradeModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
             <h2 className="text-2xl font-black text-gray-900 mb-2">Upgrade Your Plan</h2>
             <p className="text-gray-500 mb-8">Choose the plan that fits your business goals.</p>
-            
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Featured */}
               <div className="border-2 border-[#1A5E38] rounded-2xl p-6 relative">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1A5E38] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">
-                  Most Popular
-                </div>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1A5E38] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">Most Popular</div>
                 <h3 className="font-bold text-lg mb-1 text-gray-900">Featured</h3>
                 <div className="text-2xl font-black text-[#1A5E38] mb-4">₦25k <span className="text-sm font-normal text-gray-500">/month</span></div>
                 <ul className="space-y-2 mb-6 text-sm text-gray-600">
@@ -358,16 +495,10 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
                   <li>✅ Analytics dashboard</li>
                   <li>✅ WhatsApp lead notifications</li>
                 </ul>
-                <button 
-                  onClick={() => handleUpgrade('featured')}
-                  disabled={upgradeLoading}
-                  className="w-full bg-[#1A5E38] text-white font-bold py-3 rounded-xl hover:bg-[#0F3D24] transition-colors disabled:opacity-50"
-                >
+                <button onClick={() => handleUpgrade('featured')} disabled={upgradeLoading} className="w-full bg-[#1A5E38] text-white font-bold py-3 rounded-xl hover:bg-[#0F3D24] transition-colors disabled:opacity-50">
                   {upgradeLoading ? 'Processing...' : 'Choose Featured'}
                 </button>
               </div>
-
-              {/* Premium */}
               <div className="border-2 border-gray-200 rounded-2xl p-6">
                 <h3 className="font-bold text-lg mb-1 text-gray-900">Premium Partner</h3>
                 <div className="text-2xl font-black text-gray-900 mb-4">₦75k <span className="text-sm font-normal text-gray-500">/month</span></div>
@@ -378,11 +509,7 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
                   <li>✅ Premium badge + verified seal</li>
                   <li>✅ Priority customer support</li>
                 </ul>
-                <button 
-                  onClick={() => handleUpgrade('premium')}
-                  disabled={upgradeLoading}
-                  className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50"
-                >
+                <button onClick={() => handleUpgrade('premium')} disabled={upgradeLoading} className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50">
                   {upgradeLoading ? 'Processing...' : 'Choose Premium'}
                 </button>
               </div>
@@ -391,33 +518,20 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
         </div>
       )}
 
-      <div className="bg-[#FFFFFF] rounded-2xl border border-[#E5E5E0] shadow-sm p-8 space-y-8">
-        <section className="space-y-4">
+      <div className="bg-[#FFFFFF] rounded-2xl border border-[#E5E5E0] shadow-sm p-8 space-y-10">
+        {/* Company Info */}
+        <section className="space-y-5">
           <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Company Info</h3>
 
           <div>
-            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">
-              Profile Banner
-            </label>
-            <p className="text-xs text-gray-400 mb-2">
-              This is the image shown at the top of your listing card in the installer directory.
-            </p>
-            <InstallerMediaUpload
-              kind="cover"
-              currentImage={form.cover_image_url || null}
-              onUpload={(url) => setForm({ ...form, cover_image_url: url })}
-            />
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Profile Banner</label>
+            <p className="text-xs text-gray-400 mb-2">This is the image shown at the top of your listing card in the installer directory.</p>
+            <InstallerMediaUpload kind="cover" currentImage={form.cover_image_url || null} onUpload={(url) => setForm({ ...form, cover_image_url: url })} />
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">
-              Company Logo
-            </label>
-            <InstallerMediaUpload
-              kind="logo"
-              currentImage={form.logo_url || null}
-              onUpload={(url) => setForm({ ...form, logo_url: url })}
-            />
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Company Logo</label>
+            <InstallerMediaUpload kind="logo" currentImage={form.logo_url || null} onUpload={(url) => setForm({ ...form, logo_url: url })} />
           </div>
 
           <div>
@@ -425,6 +539,7 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
             <input type="text" value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })}
               className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none" />
           </div>
+
           <div>
             <div className="flex justify-between mb-2">
               <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">Description</label>
@@ -433,21 +548,75 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
             <textarea rows={3} maxLength={300} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
               className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none resize-none" />
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Years in Business</label>
+              <select value={form.years_in_business} onChange={e => setForm({ ...form, years_in_business: e.target.value })}
+                className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none bg-white">
+                <option value="">Select...</option>
+                <option value="0-2">0 – 2 Years</option>
+                <option value="3-5">3 – 5 Years</option>
+                <option value="6-10">6 – 10 Years</option>
+                <option value="10+">10+ Years</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Crew / Fleet Size</label>
+              <select value={form.crew_size} onChange={e => setForm({ ...form, crew_size: e.target.value })}
+                className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none bg-white">
+                <option value="">Select...</option>
+                <option value="1-5">1 – 5 People</option>
+                <option value="6-15">6 – 15 People</option>
+                <option value="16-50">16 – 50 People</option>
+                <option value="50+">50+ People</option>
+              </select>
+            </div>
+          </div>
+
           <div>
-            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Years in Business</label>
-            <select value={form.years_in_business} onChange={e => setForm({ ...form, years_in_business: e.target.value })}
-              className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none bg-white">
-              <option value="">Select...</option>
-              <option value="0-2">0 – 2 Years</option>
-              <option value="3-5">3 – 5 Years</option>
-              <option value="6-10">6 – 10 Years</option>
-              <option value="10+">10+ Years</option>
-            </select>
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Certifications & Accreditations</label>
+            <CertificationTagInput value={form.certifications} onChange={tags => setForm({ ...form, certifications: tags })} />
           </div>
         </section>
 
+        {/* Photo Gallery */}
         <section className="space-y-4">
-          <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Contact & Lead Delivery</h3>
+          <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Photo Gallery</h3>
+          <p className="text-xs text-gray-500">Upload photos of your team, worksites, and completed installations. Listings with 10+ photos see roughly double the customer engagement.</p>
+          <InstallerMultiMediaUpload
+            currentImages={form.photo_urls}
+            onUpload={(urls) => setForm({ ...form, photo_urls: urls })}
+            maxPhotos={12}
+          />
+        </section>
+
+        {/* Intro Video */}
+        <section className="space-y-4">
+          <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Intro Video (Optional)</h3>
+          <div>
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">YouTube, Vimeo, or Direct Video URL</label>
+            <input
+              type="url"
+              value={form.video_url}
+              onChange={e => setForm({ ...form, video_url: e.target.value })}
+              placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+              className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">Paste a YouTube, Vimeo, or direct .mp4/.webm link. It will be embedded on your public profile.</p>
+          </div>
+        </section>
+
+        {/* Business Hours */}
+        <section className="space-y-4">
+          <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Business Hours</h3>
+          <p className="text-xs text-gray-500">Listings with hours posted see ~36% more customer engagement. Check the box to mark a day as open.</p>
+          <BusinessHoursEditor value={form.business_hours} onChange={hours => setForm({ ...form, business_hours: hours })} />
+        </section>
+
+        {/* Contact & Lead Delivery */}
+        <section className="space-y-4">
+          <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Contact &amp; Lead Delivery</h3>
           <div>
             <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">WhatsApp (receives leads)</label>
             <input type="tel" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
@@ -466,6 +635,7 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
           </div>
         </section>
 
+        {/* Services Offered */}
         <section className="space-y-4">
           <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Services Offered</h3>
           <div className="grid grid-cols-2 gap-3">
@@ -479,6 +649,7 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
           </div>
         </section>
 
+        {/* Service Areas */}
         <section className="space-y-4">
           <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Service Areas</h3>
           <div className="h-64 overflow-y-auto border border-[#E5E5E0] rounded-xl p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[#FAFAF8]">
@@ -493,7 +664,13 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
           <p className="text-[10px] uppercase font-bold text-[#6B6B6B]">Only receive leads from selected states.</p>
         </section>
 
+        {/* Save */}
         <div className="pt-4 border-t border-[#E5E5E0]">
+          {saveError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-center animate-in fade-in slide-in-from-bottom-2">
+              <p className="text-xs font-bold text-red-600">⚠️ {saveError}</p>
+            </div>
+          )}
           <button onClick={save} disabled={saving || !isLoggedIn}
             className="w-full bg-[#1A5E38] text-white font-bold py-4 rounded-full hover:bg-[#0F3D24] transition-colors disabled:opacity-50 text-sm">
             {saving ? 'Saving...' : 'Save Changes'}
@@ -578,7 +755,7 @@ export default function DashboardClient({ installer, leads: initialLeads, review
                 <h4 className="text-amber-900 font-bold text-lg mb-1">Your account is pending verification</h4>
                 <p className="text-amber-800 text-sm">
                   Welcome to SolarCheck! We are currently reviewing your registration.
-                  Your profile is not yet visible to the public, and you won't receive leads until approved.
+                  Your profile is not yet visible to the public, and you won&apos;t receive leads until approved.
                   This usually takes 24-48 hours.
                 </p>
               </div>
@@ -590,14 +767,12 @@ export default function DashboardClient({ installer, leads: initialLeads, review
             {/* ── LEADS TAB ── */}
             {activeTab === 'leads' && (
               <div className="space-y-10">
-                {/* Stats row */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                   <StatCard label="Total Leads" value={localLeads.length} icon="📥" />
                   <StatCard label="This Month" value={thisMonthCount} icon="📅" />
                   <StatCard label="Converted" value={wonCount} icon="🏆" />
                 </div>
 
-                {/* WhatsApp Connection Banner */}
                 {!installer.whatsapp && (
                   <div className="bg-[#FEF3E2] rounded-2xl p-6 border border-[#92610E]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -610,7 +785,6 @@ export default function DashboardClient({ installer, leads: initialLeads, review
                   </div>
                 )}
 
-                {/* Status Filter Tabs (Pill Style) */}
                 <div className="bg-[#FAFAF8] p-1.5 rounded-2xl border border-[#E5E5E0] inline-flex flex-wrap">
                   {[
                     { id: 'all', label: 'All Leads' },
@@ -624,8 +798,8 @@ export default function DashboardClient({ installer, leads: initialLeads, review
                       key={tab.id}
                       onClick={() => setStatusFilter(tab.id)}
                       className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${statusFilter === tab.id
-                          ? 'bg-[#FFFFFF] text-[#1A5E38] shadow-sm'
-                          : 'text-[#6B6B6B] hover:text-[#1A1A1A]'
+                        ? 'bg-[#FFFFFF] text-[#1A5E38] shadow-sm'
+                        : 'text-[#6B6B6B] hover:text-[#1A1A1A]'
                         }`}
                     >
                       {tab.label}
@@ -633,11 +807,10 @@ export default function DashboardClient({ installer, leads: initialLeads, review
                   ))}
                 </div>
 
-                {/* Leads List */}
                 {filteredLeads.length === 0 ? (
                   <div className="text-center py-20 bg-[#FFFFFF] rounded-2xl border border-[#E5E5E0] shadow-sm">
                     <p className="text-[10px] font-bold text-[#6B6B6B] uppercase tracking-widest mb-4">No Leads Found</p>
-                    <h3 className="font-bold text-lg text-[#1A1A1A] mb-2">You're all caught up.</h3>
+                    <h3 className="font-bold text-lg text-[#1A1A1A] mb-2">You&apos;re all caught up.</h3>
                     <p className="text-sm text-[#6B6B6B] max-w-sm mx-auto mb-6">
                       Leads arrive here when homeowners request quotes in your service area. Ensure your WhatsApp number is connected for instant alerts.
                     </p>

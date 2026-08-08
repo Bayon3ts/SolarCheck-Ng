@@ -21,6 +21,7 @@ export function InstallerMediaUpload({ currentImage, onUpload, kind }: Installer
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [imageError, setImageError] = useState(false);
 
   const isLogo = kind === 'logo';
   const recommended = isLogo ? '400\u00d7400px, square' : '1200\u00d7400px, wide banner';
@@ -43,6 +44,7 @@ export function InstallerMediaUpload({ currentImage, onUpload, kind }: Installer
     setUploading(true);
     setError(null);
     setProgress(0);
+    setImageError(false);
 
     try {
       const supabase = createBrowserClient(
@@ -129,10 +131,25 @@ export function InstallerMediaUpload({ currentImage, onUpload, kind }: Installer
           className="relative rounded-2xl overflow-hidden border border-gray-200 cursor-pointer group"
           onClick={() => !uploading && fileInputRef.current?.click()}
         >
-          <div className={`relative w-full ${heightClass} bg-gray-50`}>
-            <Image src={currentImage} alt={`${kind} preview`} fill className="object-cover transition-opacity group-hover:opacity-80" />
+          <div className={`relative w-full ${heightClass} bg-gray-50 flex flex-col items-center justify-center`}>
+            {!imageError ? (
+              <Image 
+                src={currentImage} 
+                alt={`${kind} preview`} 
+                fill 
+                unoptimized={true}
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover transition-opacity group-hover:opacity-80" 
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div className="flex flex-col items-center text-gray-400 p-2 text-center">
+                <span className="text-3xl mb-2">🖼️</span>
+                <span className="text-xs font-semibold">Image unavailable</span>
+              </div>
+            )}
           </div>
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 z-10">
             <span className="bg-white text-gray-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">
               Change {isLogo ? 'Logo' : 'Banner'}
             </span>
@@ -140,7 +157,7 @@ export function InstallerMediaUpload({ currentImage, onUpload, kind }: Installer
           <button
             type="button"
             onClick={handleRemove}
-            className="absolute top-3 right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors text-sm font-bold shadow-md z-10"
+            className="absolute top-3 right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors text-sm font-bold shadow-md z-20"
             title="Remove image"
           >
             &#10005;

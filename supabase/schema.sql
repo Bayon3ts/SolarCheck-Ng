@@ -33,6 +33,12 @@
     services TEXT[] DEFAULT '{}',
     system_sizes TEXT[] DEFAULT '{}',
     brands_used TEXT[] DEFAULT '{}',
+    photo_urls TEXT[] DEFAULT '{}',
+    video_url TEXT,
+    business_hours JSONB DEFAULT '{}',
+    years_in_business TEXT,
+    crew_size TEXT,
+    certifications TEXT[] DEFAULT '{}',
     average_rating NUMERIC(3,2) DEFAULT 0,
     total_reviews INTEGER DEFAULT 0,
     total_leads INTEGER DEFAULT 0,
@@ -340,3 +346,35 @@ CREATE INDEX IF NOT EXISTS idx_leads_user_id ON leads(user_id);
 
 ALTER TABLE warranty_registrations ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_warranty_user_id ON warranty_registrations(user_id);
+
+-- ═══════════════════════════════════════
+-- STORAGE BUCKETS
+-- ═══════════════════════════════════════
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'installer_public_media',
+  'installer_public_media',
+  true,
+  10485760, -- 10MB limit
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm']
+)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Access for installer_public_media" 
+ON storage.objects FOR SELECT 
+USING (bucket_id = 'installer_public_media');
+
+CREATE POLICY "Authenticated users can upload to installer_public_media" 
+ON storage.objects FOR INSERT 
+TO authenticated 
+WITH CHECK (bucket_id = 'installer_public_media');
+
+CREATE POLICY "Authenticated users can update installer_public_media" 
+ON storage.objects FOR UPDATE 
+TO authenticated 
+USING (bucket_id = 'installer_public_media');
+
+CREATE POLICY "Authenticated users can delete from installer_public_media" 
+ON storage.objects FOR DELETE 
+TO authenticated 
+USING (bucket_id = 'installer_public_media');
