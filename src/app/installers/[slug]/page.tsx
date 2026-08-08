@@ -311,10 +311,6 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                     <p className="text-sm text-text-muted">Lowest Price Guarantee &amp; Free Cancellation.</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm font-bold text-primary whitespace-nowrap bg-white px-4 py-2 rounded-xl shadow-sm">
-                  <Zap className="h-4 w-4 fill-primary" />
-                  ₦0 Down Payment Financing
-                </div>
               </div>
 
               {/* Tag Filter & Featured Testimonial */}
