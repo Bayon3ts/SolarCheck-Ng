@@ -52,6 +52,10 @@ const nextConfig = {
 
       "font-src 'self' data: https://fonts.gstatic.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      // media-src: allow self-hosted videos from Supabase storage.
+      // Without this, default-src 'self' blocks <video> from loading
+      // external URLs even when img-src and connect-src allow them.
+      "media-src 'self' https://*.supabase.co https://*.supabase.in",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

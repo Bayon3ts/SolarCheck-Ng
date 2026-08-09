@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Eye, EyeOff, X, Plus } from 'lucide-react';
 import { InstallerMediaUpload } from '@/components/ui/installer-media-upload';
 import { InstallerMultiMediaUpload } from '@/components/ui/installer-multi-media-upload';
+import { InstallerVideoUpload } from '@/components/ui/installer-video-upload';
 
 import { SidebarNav } from './sidebar-nav';
 import { StatCard } from './stat-card';
@@ -643,18 +644,36 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
         </section>
 
         {/* Intro Video */}
+        {/* Intro Video */}
         <section className="space-y-4">
           <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Intro Video (Optional)</h3>
+
           <div>
-            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">YouTube, Vimeo, or Direct Video URL</label>
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Upload your own video</label>
+            <InstallerVideoUpload
+              currentVideoUrl={form.video_url}
+              onUpload={(url) => setForm({ ...form, video_url: url })}
+            />
+            <p className="text-[10px] text-gray-400 mt-1">
+              Recommended — plays directly on your profile with no dependency on YouTube/Vimeo's embedding settings.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Or paste a YouTube/Vimeo link instead</label>
             <input
               type="url"
-              value={form.video_url}
+              value={form.video_url.includes('installer_public_media') ? '' : form.video_url}
               onChange={e => setForm({ ...form, video_url: e.target.value })}
               placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
-              className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none"
+              disabled={form.video_url.includes('installer_public_media')}
+              className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none disabled:bg-gray-50 disabled:text-gray-400"
             />
-            <p className="text-[10px] text-gray-400 mt-1">Paste a YouTube, Vimeo, or direct .mp4/.webm link. It will be embedded on your public profile.</p>
+            <p className="text-[10px] text-gray-400 mt-1">
+              {form.video_url.includes('installer_public_media')
+                ? 'Remove your uploaded video above to use a link instead.'
+                : "Note: some YouTube videos have embedding disabled by their uploader, which can show as blocked on your profile. Uploading your own file avoids this."}
+            </p>
           </div>
         </section>
 

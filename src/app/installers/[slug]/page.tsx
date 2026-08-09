@@ -136,8 +136,9 @@ function VideoEmbed({ url }: { url: string }) {
       </h3>
       <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
         {embed.type === "direct" ? (
-          <video controls className="w-full h-full">
-            <source src={embed.embedUrl} />
+          <video key={embed.embedUrl} controls preload="metadata" crossOrigin="anonymous" className="w-full h-full">
+            <source src={embed.embedUrl} type="video/mp4" />
+            Your browser does not support the video tag.
           </video>
         ) : (
           <iframe
