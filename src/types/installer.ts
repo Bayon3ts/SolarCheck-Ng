@@ -18,6 +18,7 @@ export interface InstallerProfile {
   is_verified?: boolean;
   average_rating?: number;
   total_reviews: number;
+  price_per_watt?: number;
   subscription_tier: string;
   business_hours?: Record<string, { open: string; close: string; closed: boolean }>;
   photo_urls?: string[];
@@ -26,18 +27,12 @@ export interface InstallerProfile {
   video_url?: string;
   is_active: boolean;
 
-  // Mockable Tripadvisor-style fields
-  tagline?: string;
-  demand_badge?: string;
-  starting_price?: number;
-  warranties?: {
-    workmanship: string;
-    roof_leak: string;
-    equipment: string;
-  };
-  supported_languages?: string[];
-  featured_testimonial?: string;
-  recommendation_percentage?: number;
+
+
+  warranty_workmanship?: string;
+  warranty_roof_leak?: string;
+  warranty_equipment?: string;
+  languages_spoken?: string[];
 }
 
 export interface WorkflowStep {
@@ -67,7 +62,7 @@ export interface SimilarInstaller {
   state: string;
   average_rating: number;
   total_reviews: number;
-  starting_price?: number;
+  price_per_watt?: number;
   services: string[];
   logo_url?: string;
 }
