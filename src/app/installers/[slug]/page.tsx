@@ -27,7 +27,12 @@ import StarRating from "@/components/ui/star-rating";
 import InstallerSidebar from "./installer-sidebar";
 import ClientReviews from "./client-reviews";
 import ClientStickyNav from "./client-sticky-nav";
-import { enrichInstallerWithMockData, MOCK_WORKFLOW_STEPS } from "@/lib/mock-installer-data";
+import {
+  computeRecommendationPercentage,
+  getFeaturedTestimonial,
+  computeTrustBadges,
+  computeDemandBadge,
+} from "@/lib/installer-derived-data";
 import { SimilarInstaller } from "@/types/installer";
 
 // ─── Types & Helpers ─────────────────────────────────────────────────────────
@@ -79,9 +84,8 @@ function OpenNowBadge({ isOpen }: { isOpen: boolean | null }) {
   if (isOpen === null) return null;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${
-        isOpen ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
-      }`}
+      className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${isOpen ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
+        }`}
     >
       <span className={`h-2 w-2 rounded-full ${isOpen ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
       {isOpen ? "Open now" : "Closed now"}
@@ -117,6 +121,34 @@ function PhotoGallery({ photos }: { photos: string[] }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function VideoEmbed({ url }: { url: string }) {
+  const embed = getVideoEmbed(url);
+  if (!embed) return null;
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-xl font-bold flex items-center gap-2">
+        <Video className="h-5 w-5 text-primary" /> Video
+      </h3>
+      <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
+        {embed.type === "direct" ? (
+          <video controls className="w-full h-full">
+            <source src={embed.embedUrl} />
+          </video>
+        ) : (
+          <iframe
+            src={embed.embedUrl}
+            title="Installer video"
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -162,7 +194,7 @@ export default async function InstallerProfilePage({ params }: { params: Promise
 
   if (!rawInstaller) notFound();
 
-  const installer = enrichInstallerWithMockData(rawInstaller);
+  const installer = rawInstaller;
 
   // Fetch verified reviews
   const { data: reviews } = await supabase
@@ -173,19 +205,28 @@ export default async function InstallerProfilePage({ params }: { params: Promise
     .eq("is_deleted", false)
     .order("created_at", { ascending: false });
 
+  const reviewList = reviews || [];
+
+  // Real quote-request count in the last 7 days — replaces the fixed
+  // "12+ installations booked this week" string that used to show on every
+  // installer's page regardless of actual demand.
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { count: recentLeadCount } = await supabase
+    .from("leads")
+    .select("id", { count: "exact", head: true })
+    .eq("installer_id", installer.id)
+    .gte("created_at", sevenDaysAgo);
+
   // Fetch similar installers
   const { data: similarInstallersData } = await supabase
     .from("installers")
-    .select("id, company_name, slug, city, state, average_rating, total_reviews, services, logo_url")
+    .select("id, company_name, slug, city, state, average_rating, total_reviews, services, logo_url, price_per_watt")
     .eq("state", installer.state)
     .neq("slug", slug)
     .eq("is_active", true)
     .limit(3);
 
-  const similarInstallers: SimilarInstaller[] = (similarInstallersData || []).map((si: any) => ({
-    ...si,
-    starting_price: 950 + Math.floor(Math.random() * 200), // mock competitive pricing
-  }));
+  const similarInstallers: SimilarInstaller[] = similarInstallersData || [];
 
   const businessHours = (installer.business_hours ?? {}) as BusinessHours;
   const hoursExist = Object.keys(businessHours).length > 0;
@@ -193,7 +234,26 @@ export default async function InstallerProfilePage({ params }: { params: Promise
   const photoUrls: string[] = installer.photo_urls ?? [];
   const hasPhotos = photoUrls.length > 0;
   const certifications: string[] = installer.certifications ?? [];
-  const tags = ["Clear Pricing", "Fast Permitting", "Clean Installation", "Great Communication"]; // Mock tags
+
+  // Real, computed replacements for what used to be fabricated defaults —
+  // each of these is null/empty (and hidden in the UI) unless there's real
+  // data behind it. See src/lib/installer-derived-data.ts.
+  const recommendationPercentage = computeRecommendationPercentage(reviewList);
+  const featuredTestimonial = getFeaturedTestimonial(reviewList);
+  const trustBadges = computeTrustBadges({
+    average_rating: installer.average_rating,
+    total_reviews: installer.total_reviews,
+    years_in_business: installer.years_in_business,
+    certifications,
+    crew_size: installer.crew_size,
+  });
+  const demandBadge = computeDemandBadge(recentLeadCount || 0);
+  const hasWarrantyInfo = !!(
+    installer.warranty_workmanship ||
+    installer.warranty_roof_leak ||
+    installer.warranty_equipment
+  );
+  const languagesSpoken: string[] = installer.languages_spoken ?? [];
 
   return (
     <>
@@ -224,16 +284,16 @@ export default async function InstallerProfilePage({ params }: { params: Promise
             aggregateRating:
               installer.total_reviews > 0
                 ? {
-                    "@type": "AggregateRating",
-                    ratingValue: installer.average_rating,
-                    reviewCount: installer.total_reviews,
-                  }
+                  "@type": "AggregateRating",
+                  ratingValue: installer.average_rating,
+                  reviewCount: installer.total_reviews,
+                }
                 : undefined,
           }),
         }}
       />
 
-      <ClientStickyNav price={installer.starting_price} installerName={installer.company_name} />
+      <ClientStickyNav price={installer.price_per_watt} installerName={installer.company_name} />
 
       <main className="min-h-screen bg-background pt-24 pb-20">
         <div className="container-custom">
@@ -256,7 +316,7 @@ export default async function InstallerProfilePage({ params }: { params: Promise
           <div className="grid gap-8 lg:grid-cols-3 relative mt-6">
             {/* ── Main Content Column (Left) ── */}
             <div className="lg:col-span-2 space-y-8">
-              
+
               {/* Header Info */}
               <div id="overview" className="space-y-4">
                 <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -267,20 +327,26 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                       <span className="text-4xl font-bold text-primary">{installer.company_name.charAt(0)}</span>
                     )}
                   </div>
-                  
+
                   <div className="flex-1">
                     <h1 className="text-3xl font-bold text-text-primary mb-1">{installer.company_name}</h1>
-                    <p className="text-lg text-text-muted mb-3">{installer.tagline}</p>
-                    
+                    {installer.description && (
+                      <p className="text-lg text-text-muted mb-3 line-clamp-1">
+                        {installer.description.split(/[.\n]/)[0]}
+                      </p>
+                    )}
+
                     <div className="flex flex-wrap items-center gap-4 text-sm text-text-muted">
                       <div className="flex items-center gap-1.5">
                         <StarRating rating={installer.average_rating || 0} size="sm" />
                         <span className="font-bold text-text-primary">{Number(installer.average_rating || 0).toFixed(1)}</span>
                         <span className="underline cursor-pointer">({installer.total_reviews} reviews)</span>
                       </div>
-                      <div className="flex items-center gap-1.5 font-medium text-green-700">
-                        <ThumbsUp className="h-4 w-4" /> {installer.recommendation_percentage}% recommended
-                      </div>
+                      {recommendationPercentage !== null && (
+                        <div className="flex items-center gap-1.5 font-medium text-green-700">
+                          <ThumbsUp className="h-4 w-4" /> {recommendationPercentage}% recommended
+                        </div>
+                      )}
                       <div className="flex items-center gap-1">
                         <MapPin className="h-4 w-4" /> {installer.city}, {installer.state}
                       </div>
@@ -288,9 +354,9 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                   </div>
                 </div>
 
-                {installer.demand_badge && (
+                {demandBadge && (
                   <div className="inline-block bg-orange-100 text-orange-800 text-sm font-semibold px-4 py-2 rounded-lg">
-                    {installer.demand_badge}
+                    🔥 {demandBadge}
                   </div>
                 )}
               </div>
@@ -302,6 +368,9 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                 </div>
               )}
 
+              {/* Video, if the installer has added one */}
+              {installer.video_url && <VideoEmbed url={installer.video_url} />}
+
               {/* Value Guarantees Banner */}
               <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -311,24 +380,36 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                     <p className="text-sm text-text-muted">Lowest Price Guarantee &amp; Free Cancellation.</p>
                   </div>
                 </div>
+                <div className="flex items-center gap-2 text-sm font-bold text-primary whitespace-nowrap bg-white px-4 py-2 rounded-xl shadow-sm">
+                  <Zap className="h-4 w-4 fill-primary" />
+                  ₦0 Down Payment Financing
+                </div>
               </div>
 
-              {/* Tag Filter & Featured Testimonial */}
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold">Why Homeowners Love This Installer</h3>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <span key={tag} className="px-4 py-1.5 bg-white border border-border rounded-full text-sm font-medium text-text-primary shadow-sm hover:border-primary transition-colors cursor-default">
-                      {tag}
-                    </span>
-                  ))}
+              {/* Trust badges (real, computed) & featured testimonial (a real review) */}
+              {(trustBadges.length > 0 || featuredTestimonial) && (
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold">Why Homeowners Choose This Installer</h3>
+                  {trustBadges.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {trustBadges.map((tag) => (
+                        <span key={tag} className="px-4 py-1.5 bg-white border border-border rounded-full text-sm font-medium text-text-primary shadow-sm hover:border-primary transition-colors cursor-default">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {featuredTestimonial && (
+                    <blockquote className="border-l-4 border-primary pl-4 py-1 italic text-text-muted">
+                      "{featuredTestimonial.body}"
+                      <footer className="not-italic text-xs text-text-muted mt-1">
+                        — {featuredTestimonial.reviewer_name}
+                        {featuredTestimonial.reviewer_city ? `, ${featuredTestimonial.reviewer_city}` : ""}
+                      </footer>
+                    </blockquote>
+                  )}
                 </div>
-                {installer.featured_testimonial && (
-                  <blockquote className="border-l-4 border-primary pl-4 py-1 italic text-text-muted">
-                    "{installer.featured_testimonial}"
-                  </blockquote>
-                )}
-              </div>
+              )}
 
               <hr className="border-border" />
 
@@ -352,48 +433,31 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                     <div className="text-xs font-bold text-text-muted uppercase tracking-wider">System Capacities</div>
                     <div className="font-medium">{installer.system_sizes.join(", ")}</div>
                   </div>
-                  <div className="card p-4 space-y-1">
-                    <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Typical Timeline</div>
-                    <div className="font-medium">2-4 Weeks (Consultation to PTO)</div>
-                  </div>
-                  <div className="card p-4 space-y-1">
-                    <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Languages</div>
-                    <div className="font-medium">{installer.supported_languages?.join(", ")}</div>
-                  </div>
-                  <div className="card p-4 space-y-1 sm:col-span-2">
-                    <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Warranties</div>
-                    <div className="grid grid-cols-3 gap-2 mt-2">
-                      <div>
-                        <span className="text-sm font-semibold block">{installer.warranties?.workmanship}</span>
-                        <span className="text-xs text-text-muted">Workmanship</span>
-                      </div>
-                      <div>
-                        <span className="text-sm font-semibold block">{installer.warranties?.roof_leak}</span>
-                        <span className="text-xs text-text-muted">Roof Leak</span>
-                      </div>
-                      <div>
-                        <span className="text-sm font-semibold block">{installer.warranties?.equipment}</span>
-                        <span className="text-xs text-text-muted">Equipment</span>
+                  {languagesSpoken.length > 0 && (
+                    <div className="card p-4 space-y-1">
+                      <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Languages</div>
+                      <div className="font-medium">{languagesSpoken.join(", ")}</div>
+                    </div>
+                  )}
+                  {hasWarrantyInfo && (
+                    <div className="card p-4 space-y-1 sm:col-span-2">
+                      <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Warranties</div>
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        <div>
+                          <span className="text-sm font-semibold block">{installer.warranty_workmanship || "—"}</span>
+                          <span className="text-xs text-text-muted">Workmanship</span>
+                        </div>
+                        <div>
+                          <span className="text-sm font-semibold block">{installer.warranty_roof_leak || "—"}</span>
+                          <span className="text-xs text-text-muted">Roof Leak</span>
+                        </div>
+                        <div>
+                          <span className="text-sm font-semibold block">{installer.warranty_equipment || "—"}</span>
+                          <span className="text-xs text-text-muted">Equipment</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              <hr className="border-border" />
-
-              {/* Step-by-Step Installation Workflow */}
-              <div id="workflow" className="space-y-6 pt-4">
-                <h3 className="text-xl font-bold">Installation Itinerary</h3>
-                <p className="text-text-muted mb-6">What to expect when you book with {installer.company_name}.</p>
-                <div className="relative pl-6 border-l-2 border-primary/20 space-y-8">
-                  {MOCK_WORKFLOW_STEPS.map((step, index) => (
-                    <div key={step.id} className="relative">
-                      <div className="absolute -left-[35px] top-1 h-4 w-4 rounded-full bg-primary ring-4 ring-white" />
-                      <h4 className="font-bold text-text-primary">{index === 0 ? "Start: " : index === MOCK_WORKFLOW_STEPS.length - 1 ? "End: " : `Step ${index}: `}{step.title}</h4>
-                      <p className="text-sm text-text-muted mt-1">{step.description}</p>
-                    </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -407,7 +471,7 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                     <Link href={`/installers/${installer.slug}/review`}>Write a Review</Link>
                   </Button>
                 </div>
-                
+
                 <ClientReviews reviews={reviews || []} overallRating={installer.average_rating || 0} />
               </div>
 
@@ -444,7 +508,11 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                         <span>({si.total_reviews})</span>
                       </div>
                       <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                        <span className="text-sm font-medium text-text-primary">From ₦{si.starting_price}/W</span>
+                        {si.price_per_watt ? (
+                          <span className="text-sm font-medium text-text-primary">From ₦{si.price_per_watt.toLocaleString()}/W</span>
+                        ) : (
+                          <span className="text-sm font-medium text-text-primary">Get a quote</span>
+                        )}
                         <span className="text-primary text-sm font-semibold flex items-center gap-1">
                           View Profile <ChevronRight className="h-3 w-3" />
                         </span>

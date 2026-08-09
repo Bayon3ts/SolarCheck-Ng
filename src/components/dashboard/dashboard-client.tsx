@@ -31,6 +31,11 @@ interface Installer {
   business_hours: Record<string, { open: string; close: string; closed: boolean }>;
   logo_url: string;
   cover_image_url: string;
+  price_per_watt: number | null;
+  warranty_workmanship: string;
+  warranty_roof_leak: string;
+  warranty_equipment: string;
+  languages_spoken: string[];
   subscription_tier: string;
   subscription_expires_at: string | null;
   slug: string;
@@ -377,6 +382,11 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
     business_hours: (installer.business_hours || {}) as BusinessHours,
     logo_url: installer.logo_url || '',
     cover_image_url: installer.cover_image_url || '',
+    price_per_watt: installer.price_per_watt ?? null,
+    warranty_workmanship: installer.warranty_workmanship || '',
+    warranty_roof_leak: installer.warranty_roof_leak || '',
+    warranty_equipment: installer.warranty_equipment || '',
+    languages_spoken: installer.languages_spoken || [],
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -418,14 +428,14 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
     if (!isLoggedIn) return;
     setSaving(true);
     setSaveError('');
-    
+
     // Clean up data
     const dataToSave = { ...form };
     if (dataToSave.website === 'https://') dataToSave.website = '';
-    
+
     // Omit fields that are not in the database schema yet to prevent 400 errors
     delete (dataToSave as any).states_covered;
-    
+
     // Basic validation
     if (!dataToSave.years_in_business) {
       setSaveError('Please select Years in Business.');
@@ -441,9 +451,9 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
     // Call Server Action to bypass RLS policies which are missing for UPDATE
     const { updateInstallerProfile } = await import('@/app/dashboard/actions');
     const result = await updateInstallerProfile(installer.id, dataToSave);
-    
+
     setSaving(false);
-    
+
     if (!result.success) {
       console.error('Save error raw:', result.error);
       setSaveError(result.error || 'Database update failed. Check payload constraints.');
@@ -577,6 +587,47 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
           <div>
             <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Certifications & Accreditations</label>
             <CertificationTagInput value={form.certifications} onChange={tags => setForm({ ...form, certifications: tags })} />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Languages Spoken (optional)</label>
+            <CertificationTagInput
+              value={form.languages_spoken}
+              onChange={tags => setForm({ ...form, languages_spoken: tags })}
+            />
+            <p className="text-[10px] text-gray-400 mt-1">e.g. English, Yoruba, Hausa, Igbo, Pidgin</p>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Starting Price (₦ per Watt, optional)</label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={form.price_per_watt ?? ''}
+              onChange={e => setForm({ ...form, price_per_watt: e.target.value === '' ? null : Number(e.target.value) })}
+              placeholder="e.g. 950"
+              className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">
+              Shown as "Starting from ₦X/Watt" on your public profile. Leave blank to hide pricing until you're ready to quote one.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-2">Warranties (optional)</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <input type="text" value={form.warranty_workmanship} onChange={e => setForm({ ...form, warranty_workmanship: e.target.value })}
+                placeholder="Workmanship, e.g. 10 Years"
+                className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none" />
+              <input type="text" value={form.warranty_roof_leak} onChange={e => setForm({ ...form, warranty_roof_leak: e.target.value })}
+                placeholder="Roof Leak, e.g. 5 Years"
+                className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none" />
+              <input type="text" value={form.warranty_equipment} onChange={e => setForm({ ...form, warranty_equipment: e.target.value })}
+                placeholder="Equipment, e.g. 25 Years"
+                className="w-full border border-[#E5E5E0] rounded-xl px-4 py-3 text-sm focus:border-[#1A5E38] outline-none" />
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Only real terms you actually offer — leave any blank to hide it.</p>
           </div>
         </section>
 
