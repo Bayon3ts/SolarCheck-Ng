@@ -298,9 +298,12 @@ export default async function InstallerProfilePage({ params }: { params: Promise
               photoUrls[0] ||
               installer.logo_url ||
               installer.cover_image_url ||
-              "https://solarcheckng.com/default-installer.png",
-            "@id": `https://solarcheckng.com/installers/${installer.slug}`,
-            url: `https://solarcheckng.com/installers/${installer.slug}`,
+              "https://solar-check-ng-zx7q.vercel.app/default-installer.png",
+            "@id": `https://solar-check-ng-zx7q.vercel.app/installers/${installer.slug}`,
+            url: `https://solar-check-ng-zx7q.vercel.app/installers/${installer.slug}`,
+            //"https://solarcheckng.com/default-installer.png",
+            //"@id": `https://solarcheckng.com/installers/${installer.slug}`,
+            //url: `https://solarcheckng.com/installers/${installer.slug}`,
             // Intentionally NOT including telephone here. The UI blurs the
             // phone number behind "Request a quote to unlock contact
             // details" as the core lead-capture mechanic — putting it in
