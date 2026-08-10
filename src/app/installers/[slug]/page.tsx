@@ -185,7 +185,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const shareImage =
     installer.photo_urls?.[0] || installer.cover_image_url || installer.logo_url;
 
-  const url = `https://solarcheckng.com/installers/${installer.slug}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://solarcheckng.com";
+  const url = `${siteUrl}/installers/${installer.slug}`;
+
+  // Route the raw uploaded photo through Next.js's image optimizer instead
+  // of serving it straight from Supabase storage. Raw phone-camera uploads
+  // are typically 2000-3000px wide and several MB — WhatsApp in particular
+  // is much stricter about image weight than Facebook/Twitter and can
+  // silently show no preview at all for an oversized image, even when the
+  // declared og:image:width/height are otherwise correct. Resizing to a
+  // real ~1200px-wide, compressed JPEG fixes this at the source rather than
+  // declaring dimensions we can't actually guarantee.
+  const ogImage = shareImage
+    ? `${siteUrl}/_next/image?url=${encodeURIComponent(shareImage)}&w=1200&q=75`
+    : undefined;
 
   return {
     title,
@@ -196,13 +209,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url,
       siteName: "SolarCheck Nigeria",
       type: "website",
-      images: shareImage ? [{ url: shareImage, width: 1200, height: 630, alt: installer.company_name }] : undefined,
+      // No explicit width/height: the source photo's own aspect ratio
+      // varies per installer, and declaring a fixed 1200x630 here when the
+      // actual served image doesn't match that ratio is what OpenGraph.xyz
+      // flagged as "Image aspect ratio is wrong" — better to let crawlers
+      // read the real dimensions themselves.
+      images: ogImage ? [{ url: ogImage, alt: installer.company_name }] : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: shareImage ? [shareImage] : undefined,
+      images: ogImage ? [ogImage] : undefined,
     },
   };
 }
@@ -301,9 +319,9 @@ export default async function InstallerProfilePage({ params }: { params: Promise
               "https://solar-check-ng-zx7q.vercel.app/default-installer.png",
             "@id": `https://solar-check-ng-zx7q.vercel.app/installers/${installer.slug}`,
             url: `https://solar-check-ng-zx7q.vercel.app/installers/${installer.slug}`,
-            //"https://solarcheckng.com/default-installer.png",
-            //"@id": `https://solarcheckng.com/installers/${installer.slug}`,
-            //url: `https://solarcheckng.com/installers/${installer.slug}`,
+            //`${process.env.NEXT_PUBLIC_SITE_URL || "https://solarcheckng.com"}/default-installer.png`,
+            //"@id": `${process.env.NEXT_PUBLIC_SITE_URL || "https://solarcheckng.com"}/installers/${installer.slug}`,
+            //url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://solarcheckng.com"}/installers/${installer.slug}`,
             // Intentionally NOT including telephone here. The UI blurs the
             // phone number behind "Request a quote to unlock contact
             // details" as the core lead-capture mechanic — putting it in
