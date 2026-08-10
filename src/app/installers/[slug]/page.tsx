@@ -164,19 +164,46 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const supabase = createAdminClient();
+  const slug = (await params).slug;
   const { data: installer } = await supabase
     .from("installers")
-    .select("company_name, city, state, description")
-    .eq("slug", (await params).slug)
+    .select("company_name, city, state, description, slug, photo_urls, logo_url, cover_image_url, average_rating, total_reviews")
+    .eq("slug", slug)
     .single();
 
   if (!installer) return { title: "Installer Not Found" };
 
+  const title = `${installer.company_name} | Top Solar Installer in ${installer.city}, ${installer.state}`;
+  const description = installer.description
+    ? installer.description.substring(0, 160) + "..."
+    : `View ${installer.company_name}'s profile, pricing, reviews, and portfolio on SolarCheck.`;
+
+  // Prefer a real gallery photo for the share-card image, then cover image,
+  // then logo — whichever the installer actually has. Without this, sharing
+  // a profile link on WhatsApp (the most common way these links spread)
+  // shows a blank generic preview instead of the installer's own photo.
+  const shareImage =
+    installer.photo_urls?.[0] || installer.cover_image_url || installer.logo_url;
+
+  const url = `https://solarcheckng.com/installers/${installer.slug}`;
+
   return {
-    title: `${installer.company_name} | Top Solar Installer in ${installer.city}, ${installer.state}`,
-    description: installer.description
-      ? installer.description.substring(0, 160) + "..."
-      : `View ${installer.company_name}'s profile, pricing, reviews, and portfolio on SolarCheck.`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: "SolarCheck Nigeria",
+      type: "website",
+      images: shareImage ? [{ url: shareImage, width: 1200, height: 630, alt: installer.company_name }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: shareImage ? [shareImage] : undefined,
+    },
   };
 }
 
@@ -274,7 +301,12 @@ export default async function InstallerProfilePage({ params }: { params: Promise
               "https://solarcheckng.com/default-installer.png",
             "@id": `https://solarcheckng.com/installers/${installer.slug}`,
             url: `https://solarcheckng.com/installers/${installer.slug}`,
-            telephone: installer.phone || "",
+            // Intentionally NOT including telephone here. The UI blurs the
+            // phone number behind "Request a quote to unlock contact
+            // details" as the core lead-capture mechanic — putting it in
+            // this schema block would expose it in plain text to search
+            // engines and anyone viewing page source, bypassing that gate
+            // entirely.
             address: {
               "@type": "PostalAddress",
               streetAddress: installer.address,

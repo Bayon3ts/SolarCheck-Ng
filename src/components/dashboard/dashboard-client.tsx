@@ -270,9 +270,11 @@ const DEFAULT_HOURS: HoursEntry = { open: '08:00', close: '18:00', closed: false
 function CertificationTagInput({
   value,
   onChange,
+  placeholder = 'e.g. NABCEP Certified, ISO 9001…',
 }: {
   value: string[];
   onChange: (tags: string[]) => void;
+  placeholder?: string;
 }) {
   const [input, setInput] = useState('');
   const addTag = () => {
@@ -300,7 +302,7 @@ function CertificationTagInput({
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(); } }}
-          placeholder="e.g. NABCEP Certified, ISO 9001…"
+          placeholder={placeholder}
           className="flex-1 border border-[#E5E5E0] rounded-xl px-4 py-2.5 text-sm focus:border-[#1A5E38] outline-none"
         />
         <button type="button" onClick={addTag} className="flex items-center gap-1 bg-[#1A5E38] text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-[#0F3D24] transition-colors">
@@ -433,9 +435,6 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
     // Clean up data
     const dataToSave = { ...form };
     if (dataToSave.website === 'https://') dataToSave.website = '';
-
-    // Omit fields that are not in the database schema yet to prevent 400 errors
-    delete (dataToSave as any).states_covered;
 
     // Basic validation
     if (!dataToSave.years_in_business) {
@@ -595,6 +594,7 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
             <CertificationTagInput
               value={form.languages_spoken}
               onChange={tags => setForm({ ...form, languages_spoken: tags })}
+              placeholder="e.g. English, Yoruba, Hausa, Igbo…"
             />
             <p className="text-[10px] text-gray-400 mt-1">e.g. English, Yoruba, Hausa, Igbo, Pidgin</p>
           </div>

@@ -378,3 +378,14 @@ CREATE POLICY "Authenticated users can delete from installer_public_media"
 ON storage.objects FOR DELETE 
 TO authenticated 
 USING (bucket_id = 'installer_public_media');
+
+USING (bucket_id = 'installer_public_media');
+-- ═══════════════════════════════════════
+-- Replace fabricated installer-profile data with real, optional fields
+-- Added August 2026 — see migration 20260808140000 for detail.
+-- ═══════════════════════════════════════
+ALTER TABLE installers ADD COLUMN IF NOT EXISTS price_per_watt NUMERIC;
+ALTER TABLE installers ADD COLUMN IF NOT EXISTS warranty_workmanship TEXT;
+ALTER TABLE installers ADD COLUMN IF NOT EXISTS warranty_roof_leak TEXT;
+ALTER TABLE installers ADD COLUMN IF NOT EXISTS warranty_equipment TEXT;
+ALTER TABLE installers ADD COLUMN IF NOT EXISTS languages_spoken TEXT[] DEFAULT '{}';

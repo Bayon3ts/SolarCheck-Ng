@@ -5,11 +5,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export async function updateInstallerProfile(installerId: string, dataToSave: any) {
   try {
     const supabase = createAdminClient();
-    
-    // Explicitly delete states_covered to prevent 400 errors, just in case
-    if (dataToSave.states_covered) {
-      delete dataToSave.states_covered;
-    }
 
     const { error } = await supabase
       .from('installers')
