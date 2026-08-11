@@ -14,6 +14,18 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Only /admin and /dashboard actually need an auth check below — every
+  // other route (including public pages like /installers/[slug], which
+  // social-media link-preview crawlers fetch) was still paying for a full
+  // Supabase session round-trip on every single request for no reason.
+  // WhatsApp's crawler in particular is known to have a much shorter fetch
+  // timeout than most; this unnecessary latency on a public page is a
+  // plausible contributor to previews failing there specifically while
+  // more lenient crawlers (Telegram, Facebook's debugger) still succeed.
+  if (!path.startsWith('/admin') && !path.startsWith('/dashboard')) {
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -81,8 +93,8 @@ export async function proxy(request: NextRequest) {
     }
 
     const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
-    const isAdmin = 
-      session.user?.user_metadata?.role === 'admin' || 
+    const isAdmin =
+      session.user?.user_metadata?.role === 'admin' ||
       (session.user?.email && adminEmails.includes(session.user.email.toLowerCase()));
 
     if (!isAdmin) {
