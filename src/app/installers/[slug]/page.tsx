@@ -26,6 +26,7 @@ import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import StarRating from "@/components/ui/star-rating";
 import InstallerSidebar from "./installer-sidebar";
+import WorkflowTimeline from "./workflow-timeline";
 import ClientReviews from "./client-reviews";
 import ClientStickyNav from "./client-sticky-nav";
 import {
@@ -530,27 +531,10 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                 </div>
               </div>
               
-              {installer.workflow && installer.workflow.length > 0 && (
-                <>
-                  <hr className="border-border" />
-                  <div id="workflow" className="space-y-4 pt-4">
-                    <h3 className="text-xl font-bold">How We Work</h3>
-                    <div className="space-y-6">
-                      {(installer.workflow as import("@/types/installer").WorkflowStep[]).map((step, index) => (
-                        <div key={step.id || index} className="flex gap-4">
-                          <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-text-primary">{step.title}</h4>
-                            <p className="text-text-muted text-sm mt-1">{step.description}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
+              <WorkflowTimeline 
+                workflow={installer.workflow as import("@/types/installer").WorkflowStep[]} 
+                companyName={installer.company_name} 
+              />
 
               <hr className="border-border" />
 
