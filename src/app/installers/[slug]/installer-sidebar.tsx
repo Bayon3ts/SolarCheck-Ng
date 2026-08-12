@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { NIGERIAN_STATES, MONTHLY_BILL_RANGES, SYSTEM_SIZES } from "@/lib/validations";
 import { InstallerProfile } from "@/types/installer";
+import InstallerQRCode from "./installer-qr-code";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -755,6 +756,9 @@ export default function InstallerSidebar({ installer }: InstallerSidebarProps) {
             )}
           </div>
         </div>
+
+        {/* QR Code Card */}
+        <InstallerQRCode installerName={installer.company_name} installerSlug={installer.slug} />
       </div>
     </>
   );

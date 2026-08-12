@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-import { Loader2, Eye, EyeOff, X, Plus } from 'lucide-react';
+import { Loader2, Eye, EyeOff, X, Plus, Download, Printer } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { InstallerMediaUpload } from '@/components/ui/installer-media-upload';
 import { InstallerMultiMediaUpload } from '@/components/ui/installer-multi-media-upload';
 import { InstallerVideoUpload } from '@/components/ui/installer-video-upload';
@@ -840,6 +841,21 @@ export default function DashboardClient({ installer, leads: initialLeads, review
 
   const router = useRouter();
 
+  const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/installers/${installer.slug}` : `https://solarcheck.ng/installers/${installer.slug}`;
+
+  const downloadQRCode = () => {
+    const canvas = document.getElementById("qr-gen") as HTMLCanvasElement;
+    if (canvas) {
+      const pngUrl = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `${installer.company_name.replace(/\s+/g, '_')}_QR.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    }
+  };
+
   const newLeadsCount = localLeads.filter(l => l.status === 'new').length;
 
   const updateLeadStatus = async (leadId: string, status: string) => {
@@ -984,14 +1000,62 @@ export default function DashboardClient({ installer, leads: initialLeads, review
 
             {/* ── PROFILE TAB ── */}
             {activeTab === 'profile' && (
-              <div className="text-center py-24 bg-[#FFFFFF] rounded-2xl border border-[#E5E5E0] shadow-sm max-w-3xl">
-                <div className="text-5xl mb-4 opacity-50">👤</div>
-                <h3 className="font-bold text-xl text-[#1A1A1A] mb-2">Public Profile</h3>
-                <p className="text-[#6B6B6B] text-sm mb-6 max-w-sm mx-auto">This is how customers see your company on SolarCheck.</p>
-                <Link href={`/installers/${installer.slug}`} target="_blank"
-                  className="inline-block bg-[#1A5E38] text-white text-sm font-bold px-8 py-3 rounded-full hover:bg-[#0F3D24] transition-colors">
-                  View Public Profile →
-                </Link>
+              <div className="space-y-6 max-w-3xl">
+                <div className="bg-[#FFFFFF] rounded-2xl border border-[#E5E5E0] shadow-sm p-8 text-center sm:text-left sm:flex sm:items-center sm:justify-between gap-6">
+                  <div>
+                    <h3 className="font-black text-2xl text-[#1A1A1A] mb-2">Your Public Profile</h3>
+                    <p className="text-[#6B6B6B] text-sm mb-6 max-w-md leading-relaxed">
+                      This is your business&apos;s digital storefront. Customers can see your reviews, photos, services, and request quotes directly from this page.
+                    </p>
+                    <Link href={`/installers/${installer.slug}`} target="_blank"
+                      className="inline-block bg-[#1A5E38] text-white text-sm font-bold px-8 py-3.5 rounded-full hover:bg-[#0F3D24] transition-colors">
+                      View Public Profile →
+                    </Link>
+                  </div>
+                  <div className="hidden sm:block text-8xl opacity-5 grayscale">👤</div>
+                </div>
+
+                <div className="bg-gradient-to-br from-[#1A5E38] to-[#0D361E] rounded-2xl shadow-lg p-1">
+                  <div className="bg-[#FFFFFF] rounded-[14px] p-8 sm:p-10 flex flex-col md:flex-row items-center gap-10">
+                    <div className="flex-1 text-center md:text-left">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#EAF6EE] text-[#1A5E38] mb-6">
+                        <Printer className="w-6 h-6" />
+                      </div>
+                      <h3 className="font-black text-2xl text-[#1A1A1A] mb-3">Offline to Online</h3>
+                      <p className="text-[#6B6B6B] text-sm mb-6 leading-relaxed">
+                        Download your unique QR code and print it on your <strong>business cards, invoices, or work van</strong>. Customers can scan it with their phone to instantly see your profile, read your reviews, and request a quote.
+                      </p>
+                      <button onClick={downloadQRCode}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#1A1A1A] text-white text-sm font-bold px-8 py-3.5 rounded-full hover:bg-black transition-colors shadow-md">
+                        <Download className="w-4 h-4" />
+                        Download High-Res QR Code
+                      </button>
+                      <p className="text-[10px] text-[#1A5E38] mt-4 uppercase font-bold tracking-widest">The most useful tool for physical marketing</p>
+                    </div>
+                    <div className="flex-shrink-0 bg-[#FAFAF8] p-6 rounded-2xl border border-[#E5E5E0] shadow-inner flex flex-col items-center">
+                      <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-4">
+                        <QRCodeCanvas
+                          id="qr-gen"
+                          value={profileUrl}
+                          size={180}
+                          level={"H"}
+                          includeMargin={true}
+                          bgColor={"#ffffff"}
+                          fgColor={"#1A1A1A"}
+                          imageSettings={installer.logo_url ? {
+                            src: installer.logo_url,
+                            x: undefined,
+                            y: undefined,
+                            height: 40,
+                            width: 40,
+                            excavate: true,
+                          } : undefined}
+                        />
+                      </div>
+                      <span className="text-xs font-bold text-[#1A1A1A] uppercase tracking-wide">Scan to view profile</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
