@@ -26,6 +26,8 @@ export interface InstallerProfile {
   cover_image_url?: string;
   video_url?: string;
   is_active: boolean;
+  states_covered?: string[];
+  workflow?: WorkflowStep[];
 
 
 

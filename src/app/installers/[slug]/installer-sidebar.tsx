@@ -15,6 +15,7 @@ import {
   Calendar,
   Users,
   Award,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NIGERIAN_STATES, MONTHLY_BILL_RANGES, SYSTEM_SIZES } from "@/lib/validations";
@@ -24,6 +25,14 @@ import { InstallerProfile } from "@/types/installer";
 
 interface InstallerSidebarProps {
   installer: InstallerProfile;
+}
+
+function formatTimeSidebar(time: string): string {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${period}`;
 }
 
 // ─── Mini Quote Form (3 steps) ────────────────────────────────────────────────
@@ -615,7 +624,7 @@ export default function InstallerSidebar({ installer }: InstallerSidebarProps) {
                 <Phone className="h-4 w-4 text-primary" />
               </div>
               <span className={!isUnlocked ? "blur-sm select-none pointer-events-none" : ""}>
-                {installer.phone}
+                {isUnlocked ? installer.phone : "+234 ••• ••• ••••"}
               </span>
             </div>
           )}
@@ -627,7 +636,7 @@ export default function InstallerSidebar({ installer }: InstallerSidebarProps) {
               </div>
               {isUnlocked ? (
                 <a
-                  href={installer.website}
+                  href={installer.website.startsWith('http') ? installer.website : `https://${installer.website}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-primary underline-offset-4 hover:underline"
@@ -640,6 +649,33 @@ export default function InstallerSidebar({ installer }: InstallerSidebarProps) {
             </div>
           )}
         </div>
+
+        {/* Business Hours Card */}
+        {installer.business_hours && Object.keys(installer.business_hours).length > 0 && (
+          <div className="card p-6 relative overflow-hidden">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="h-5 w-5 text-primary" />
+              <h3 className="font-bold text-text-primary">Business Hours</h3>
+            </div>
+            <div className="space-y-3">
+              {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((dayKey) => {
+                const entry = (installer.business_hours as any)[dayKey];
+                if (!entry) return null;
+                const labels: Record<string, string> = { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' };
+                return (
+                  <div key={dayKey} className="flex justify-between items-center text-sm border-b border-border last:border-0 pb-2 last:pb-0">
+                    <span className="font-medium text-text-muted capitalize">{labels[dayKey]}</span>
+                    {entry.closed ? (
+                      <span className="text-red-500 font-semibold text-xs">Closed</span>
+                    ) : (
+                      <span className="text-text-primary font-medium">{formatTimeSidebar(entry.open)} - {formatTimeSidebar(entry.close)}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Details Summary Card */}
         <div className="card p-6 relative overflow-hidden">

@@ -41,6 +41,7 @@ interface Installer {
   subscription_expires_at: string | null;
   slug: string;
   is_verified: boolean;
+  workflow: { id: string; title: string; description: string }[];
 }
 
 interface Props {
@@ -390,6 +391,7 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
     warranty_roof_leak: installer.warranty_roof_leak || '',
     warranty_equipment: installer.warranty_equipment || '',
     languages_spoken: installer.languages_spoken || [],
+    workflow: installer.workflow || [],
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -681,7 +683,18 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
         <section className="space-y-4">
           <h3 className="font-bold text-sm text-[#1A1A1A] border-b border-[#E5E5E0] pb-2 uppercase tracking-wide">Business Hours</h3>
           <p className="text-xs text-gray-500">Listings with hours posted see ~36% more customer engagement. Check the box to mark a day as open.</p>
-          <BusinessHoursEditor value={form.business_hours} onChange={hours => setForm({ ...form, business_hours: hours })} />
+          <BusinessHoursEditor value={
+            Object.keys(form.business_hours || {}).length === 0 ? 
+            {
+              mon: { ...DEFAULT_HOURS },
+              tue: { ...DEFAULT_HOURS },
+              wed: { ...DEFAULT_HOURS },
+              thu: { ...DEFAULT_HOURS },
+              fri: { ...DEFAULT_HOURS },
+              sat: { ...DEFAULT_HOURS },
+              sun: { ...DEFAULT_HOURS },
+            } : form.business_hours
+          } onChange={hours => setForm({ ...form, business_hours: hours })} />
         </section>
 
         {/* Contact & Lead Delivery */}
@@ -732,6 +745,69 @@ function SettingsTab({ installer, isLoggedIn }: { installer: Installer; isLogged
             ))}
           </div>
           <p className="text-[10px] uppercase font-bold text-[#6B6B6B]">Only receive leads from selected states.</p>
+        </section>
+
+        {/* Workflow / Installation Itinerary */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between border-b border-[#E5E5E0] pb-2">
+            <h3 className="font-bold text-sm text-[#1A1A1A] uppercase tracking-wide">Workflow (Installation Itinerary)</h3>
+            <button
+              onClick={() => setForm({ ...form, workflow: [...form.workflow, { id: crypto.randomUUID(), title: '', description: '' }] })}
+              className="flex items-center gap-1 text-[#1A5E38] text-xs font-bold hover:underline"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Step
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">Explain your typical installation process to customers (e.g. 1. Consultation, 2. Site Visit, 3. Installation).</p>
+          
+          <div className="space-y-4">
+            {form.workflow.map((step, index) => (
+              <div key={step.id} className="p-4 border border-[#E5E5E0] rounded-xl relative bg-[#FAFAF8]">
+                <button
+                  onClick={() => setForm({ ...form, workflow: form.workflow.filter((_, i) => i !== index) })}
+                  className="absolute top-3 right-3 text-red-500 hover:text-red-700"
+                  aria-label="Remove step"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-1">Step {index + 1} Title</label>
+                    <input
+                      type="text"
+                      value={step.title}
+                      onChange={e => {
+                        const newWorkflow = [...form.workflow];
+                        newWorkflow[index].title = e.target.value;
+                        setForm({ ...form, workflow: newWorkflow });
+                      }}
+                      placeholder="e.g. Initial Consultation"
+                      className="w-full border border-[#E5E5E0] rounded-xl px-4 py-2.5 text-sm focus:border-[#1A5E38] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider mb-1">Description</label>
+                    <textarea
+                      value={step.description}
+                      onChange={e => {
+                        const newWorkflow = [...form.workflow];
+                        newWorkflow[index].description = e.target.value;
+                        setForm({ ...form, workflow: newWorkflow });
+                      }}
+                      rows={2}
+                      placeholder="Briefly describe what happens in this step..."
+                      className="w-full border border-[#E5E5E0] rounded-xl px-4 py-2.5 text-sm focus:border-[#1A5E38] outline-none resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {form.workflow.length === 0 && (
+              <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                No workflow steps added yet.
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Save */}

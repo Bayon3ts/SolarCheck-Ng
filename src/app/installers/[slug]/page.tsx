@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Zap,
   ThumbsUp,
+  Globe,
 } from "lucide-react";
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -404,6 +405,16 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                       <div className="flex items-center gap-1">
                         <MapPin className="h-4 w-4" /> {installer.city}, {installer.state}
                       </div>
+                      {installer.website && (
+                        <a
+                          href={installer.website.startsWith('http') ? installer.website : `https://${installer.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-primary hover:underline font-medium"
+                        >
+                          <Globe className="h-4 w-4" /> Visit Website
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -480,8 +491,12 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                 <h3 className="text-xl font-bold">Key Specifications</h3>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="card p-4 space-y-1">
-                    <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Coverage Area</div>
-                    <div className="font-medium">{installer.city} &amp; surrounding areas ({installer.state})</div>
+                    <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Service Areas</div>
+                    <div className="font-medium">
+                      {installer.states_covered && installer.states_covered.length > 0 
+                        ? installer.states_covered.join(", ")
+                        : `${installer.city} & surrounding areas (${installer.state})`}
+                    </div>
                   </div>
                   <div className="card p-4 space-y-1">
                     <div className="text-xs font-bold text-text-muted uppercase tracking-wider">System Capacities</div>
@@ -514,6 +529,28 @@ export default async function InstallerProfilePage({ params }: { params: Promise
                   )}
                 </div>
               </div>
+              
+              {installer.workflow && installer.workflow.length > 0 && (
+                <>
+                  <hr className="border-border" />
+                  <div id="workflow" className="space-y-4 pt-4">
+                    <h3 className="text-xl font-bold">How We Work</h3>
+                    <div className="space-y-6">
+                      {(installer.workflow as import("@/types/installer").WorkflowStep[]).map((step, index) => (
+                        <div key={step.id || index} className="flex gap-4">
+                          <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-text-primary">{step.title}</h4>
+                            <p className="text-text-muted text-sm mt-1">{step.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
 
               <hr className="border-border" />
 
